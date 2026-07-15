@@ -6,3 +6,5 @@ data/*.npy
 data/*.npz
 output/
 logs/
+results/*
+!results/.gitkeep

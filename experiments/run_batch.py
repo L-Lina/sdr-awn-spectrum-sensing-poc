@@ -44,6 +44,20 @@ def build_batch_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--burst-len", type=int, default=600)
     parser.add_argument("--output-dir", type=str, default="results/batch_run", help="Base directory for per-combo subdirs + batch_summary.csv")
     parser.add_argument("--dry-run", action="store_true", help="Run the placeholder pipeline (required in this phase)")
+    parser.add_argument("--use-real-topk", action="store_true",
+                        help="Route the Top-K defense through TopKAdapter (real fft_topk_denoise if torch is "
+                             "available, else falls back to the numpy dummy with notes in summary.csv)")
+    parser.add_argument("--use-real-awn", action="store_true",
+                        help="Route AWN inference through AWNModelAdapter (real AWN model + checkpoint if "
+                             "torch is available, else falls back to the numpy dummy with notes in summary.csv)")
+    parser.add_argument("--use-real-attack", action="store_true",
+                        help="Route the attack through AttackAdapter (real torchattacks-based attack if torch, "
+                             "torchattacks, and a real AWN model are all available, else falls back to the "
+                             "numpy dummy with notes in summary.csv)")
+    parser.add_argument("--attack-eps", type=float, default=0.03, help="Attack epsilon (Linf budget for fgsm/pgd)")
+    parser.add_argument("--checkpoint", type=str, default="external/adversarial-rf/2016.10a_AWN.pkl",
+                        help="Path to the AWN checkpoint (.pkl) used when --use-real-awn is set")
+    parser.add_argument("--device", type=str, default="cpu", help="torch device for real AWN inference (cpu or cuda)")
     return parser
 
 
@@ -83,6 +97,12 @@ def main() -> None:
             burst_len=args.burst_len,
             output_dir=str(run_dir),
             dry_run=True,
+            use_real_topk=args.use_real_topk,
+            use_real_awn=args.use_real_awn,
+            checkpoint=args.checkpoint,
+            device=args.device,
+            attack_eps=args.attack_eps,
+            use_real_attack=args.use_real_attack,
         )
 
         try:

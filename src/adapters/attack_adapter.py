@@ -156,6 +156,17 @@ class AttackAdapter:
             return x, {"attack_backend": self.backend_name, "attack_status": "ok", "attack_notes": "attack='none' -> no-op"}
 
         if self.wrapped_model is not None:
+            # Model01Wrapper is a fresh nn.Module and defaults to train mode
+            # regardless of the real AWN submodule's eval() state, so
+            # torchattacks' internal restore-previous-mode logic (which reads
+            # this flag) leaves the wrapper -- and the real AWN model it
+            # wraps -- in train mode after the attack call. Record the
+            # pre-attack state, let torchattacks switch modes freely while it
+            # computes the attack, then force eval mode back unconditionally
+            # in `finally` so later attacked/defended AWN inference in this
+            # process is never corrupted by train-mode dropout/batchnorm
+            # behavior.
+            training_before = self.wrapped_model.training
             try:
                 import torch
 
@@ -173,6 +184,10 @@ class AttackAdapter:
                 backend = "dummy_attack"
                 status = "fallback"
                 notes = f"Real attack call failed at runtime ({type(exc).__name__}: {exc}); used numpy fallback."
+            finally:
+                if training_before:
+                    print("[attack_adapter] warning: wrapped model was already in train mode before this call")
+                self.wrapped_model.eval()
         else:
             x_adv = dummy_attack(x, attack=attack_name, epsilon=eps, seed=seed)
             backend, status, notes = self.backend_name, self.status, self.notes

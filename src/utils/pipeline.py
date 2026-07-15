@@ -14,7 +14,7 @@ from typing import Dict
 import numpy as np
 
 from src.adapters.attack_adapter import dummy_attack
-from src.adapters.awn_adapter import dummy_awn_inference
+from src.adapters.awn_adapter import AWNModelAdapter, dummy_awn_inference
 from src.adapters.defense_adapter import dummy_topk_defense
 from src.adapters.topk_adapter import TopKAdapter
 from src.sensing.energy_detection import (
@@ -61,9 +61,24 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     segments = normalize_segments(segments)
     x_clean = to_awn_input(segments, seg_len=cfg.window_size)
 
-    logits_clean = dummy_awn_inference(x_clean, seed=SEED)
+    if cfg.use_real_awn:
+        awn_adapter = AWNModelAdapter(checkpoint_path=cfg.checkpoint, device=cfg.device)
+
+        def run_awn(x):
+            return awn_adapter.infer(x, seed=SEED)
+    else:
+        def run_awn(x):
+            logits = dummy_awn_inference(x, seed=SEED)
+            meta = {
+                "awn_backend": "dummy_awn_inference",
+                "awn_status": "ok",
+                "awn_notes": "--use-real-awn not passed; using placeholder AWN inference by default.",
+            }
+            return logits, meta
+
+    logits_clean, awn_meta = run_awn(x_clean)
     x_adv = dummy_attack(x_clean, attack=cfg.attack, seed=SEED)
-    logits_attacked = dummy_awn_inference(x_adv, seed=SEED)
+    logits_attacked, _ = run_awn(x_adv)
 
     input_shape = x_adv.shape
     if cfg.use_real_topk:
@@ -78,7 +93,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     if x_defended.shape != input_shape:
         raise RuntimeError(f"Top-K defense output shape {x_defended.shape} != input shape {input_shape}")
 
-    logits_defended = dummy_awn_inference(x_defended, seed=SEED)
+    logits_defended, _ = run_awn(x_defended)
 
     pred_clean = np.argmax(logits_clean, axis=1)
     pred_attacked = np.argmax(logits_attacked, axis=1)
@@ -100,6 +115,9 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "topk_backend": topk_meta["topk_backend"],
             "topk_status": topk_meta["topk_status"],
             "topk_notes": topk_meta["topk_notes"],
+            "awn_backend": awn_meta["awn_backend"],
+            "awn_status": awn_meta["awn_status"],
+            "awn_notes": awn_meta["awn_notes"],
         })
 
     summary_csv_path = output_dir / "summary.csv"
@@ -117,7 +135,10 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         "gen_meta": gen_meta,
         "topk_input_shape": tuple(input_shape),
         "topk_output_shape": tuple(x_defended.shape),
+        "awn_input_shape": tuple(x_clean.shape),
+        "awn_logits_shape": tuple(logits_clean.shape),
         **topk_meta,
+        **awn_meta,
     }
 
     print("\n--- Dry-run summary ---")
@@ -125,6 +146,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     print(f"Occupied regions:   {len(regions)} -> {regions}")
     print(f"Number of segments: {result['n_segments']}")
     print(f"AWN input shape:    {x_clean.shape}")
+    print(f"AWN backend:        {awn_meta['awn_backend']} (status={awn_meta['awn_status']})")
+    print(f"AWN logits shape:   {result['awn_logits_shape']}")
     print(f"Top-K backend:      {topk_meta['topk_backend']} (status={topk_meta['topk_status']})")
     print(f"Top-K shape check:  input={result['topk_input_shape']} -> output={result['topk_output_shape']}")
     print(f"summary.csv:        {summary_csv_path}")

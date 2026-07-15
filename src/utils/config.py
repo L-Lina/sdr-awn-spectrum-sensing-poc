@@ -21,6 +21,9 @@ class ExperimentConfig:
     dry_run: bool
     n_samples: int = 8192
     use_real_topk: bool = False
+    use_real_awn: bool = False
+    checkpoint: str = "external/adversarial-rf/2016.10a_AWN.pkl"
+    device: str = "cpu"
 
 
 def build_arg_parser(description: str) -> argparse.ArgumentParser:
@@ -40,6 +43,12 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument("--use-real-topk", action="store_true",
                         help="Route the Top-K defense through TopKAdapter (real fft_topk_denoise if torch is "
                              "available, else falls back to the numpy dummy with notes in summary.csv)")
+    parser.add_argument("--use-real-awn", action="store_true",
+                        help="Route AWN inference through AWNModelAdapter (real AWN model + checkpoint if "
+                             "torch is available, else falls back to the numpy dummy with notes in summary.csv)")
+    parser.add_argument("--checkpoint", type=str, default="external/adversarial-rf/2016.10a_AWN.pkl",
+                        help="Path to the AWN checkpoint (.pkl) used when --use-real-awn is set")
+    parser.add_argument("--device", type=str, default="cpu", help="torch device for real AWN inference (cpu or cuda)")
     return parser
 
 
@@ -57,4 +66,7 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         output_dir=args.output_dir,
         dry_run=args.dry_run,
         use_real_topk=args.use_real_topk,
+        use_real_awn=args.use_real_awn,
+        checkpoint=args.checkpoint,
+        device=args.device,
     )

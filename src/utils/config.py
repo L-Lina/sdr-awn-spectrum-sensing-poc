@@ -20,6 +20,7 @@ class ExperimentConfig:
     output_dir: str
     dry_run: bool
     n_samples: int = 8192
+    use_real_topk: bool = False
 
 
 def build_arg_parser(description: str) -> argparse.ArgumentParser:
@@ -36,6 +37,9 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument("--burst-len", type=int, default=600, help="Synthetic burst length in samples")
     parser.add_argument("--output-dir", type=str, default="results/run", help="Directory for summary.csv and sensing_plot.png")
     parser.add_argument("--dry-run", action="store_true", help="Run the placeholder pipeline (required in this phase)")
+    parser.add_argument("--use-real-topk", action="store_true",
+                        help="Route the Top-K defense through TopKAdapter (real fft_topk_denoise if torch is "
+                             "available, else falls back to the numpy dummy with notes in summary.csv)")
     return parser
 
 
@@ -52,4 +56,5 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         burst_len=args.burst_len,
         output_dir=args.output_dir,
         dry_run=args.dry_run,
+        use_real_topk=args.use_real_topk,
     )

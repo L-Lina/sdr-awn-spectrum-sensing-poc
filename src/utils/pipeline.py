@@ -16,6 +16,7 @@ import numpy as np
 from src.adapters.attack_adapter import dummy_attack
 from src.adapters.awn_adapter import dummy_awn_inference
 from src.adapters.defense_adapter import dummy_topk_defense
+from src.adapters.topk_adapter import TopKAdapter
 from src.sensing.energy_detection import (
     energy_detect,
     filter_by_min_length,
@@ -63,7 +64,20 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     logits_clean = dummy_awn_inference(x_clean, seed=SEED)
     x_adv = dummy_attack(x_clean, attack=cfg.attack, seed=SEED)
     logits_attacked = dummy_awn_inference(x_adv, seed=SEED)
-    x_defended = dummy_topk_defense(x_adv, topk=cfg.topk)
+
+    input_shape = x_adv.shape
+    if cfg.use_real_topk:
+        x_defended, topk_meta = TopKAdapter().apply(x_adv, topk=cfg.topk)
+    else:
+        x_defended = dummy_topk_defense(x_adv, topk=cfg.topk)
+        topk_meta = {
+            "topk_backend": "dummy_topk_defense",
+            "topk_status": "ok",
+            "topk_notes": "--use-real-topk not passed; using placeholder Top-K defense by default.",
+        }
+    if x_defended.shape != input_shape:
+        raise RuntimeError(f"Top-K defense output shape {x_defended.shape} != input shape {input_shape}")
+
     logits_defended = dummy_awn_inference(x_defended, seed=SEED)
 
     pred_clean = np.argmax(logits_clean, axis=1)
@@ -83,6 +97,9 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "pred_clean": int(pred_clean[i]),
             "pred_attacked": int(pred_attacked[i]),
             "pred_defended": int(pred_defended[i]),
+            "topk_backend": topk_meta["topk_backend"],
+            "topk_status": topk_meta["topk_status"],
+            "topk_notes": topk_meta["topk_notes"],
         })
 
     summary_csv_path = output_dir / "summary.csv"
@@ -98,6 +115,9 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         "summary_csv_path": str(summary_csv_path),
         "plot_path": str(plot_path) if plot_created else None,
         "gen_meta": gen_meta,
+        "topk_input_shape": tuple(input_shape),
+        "topk_output_shape": tuple(x_defended.shape),
+        **topk_meta,
     }
 
     print("\n--- Dry-run summary ---")
@@ -105,6 +125,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     print(f"Occupied regions:   {len(regions)} -> {regions}")
     print(f"Number of segments: {result['n_segments']}")
     print(f"AWN input shape:    {x_clean.shape}")
+    print(f"Top-K backend:      {topk_meta['topk_backend']} (status={topk_meta['topk_status']})")
+    print(f"Top-K shape check:  input={result['topk_input_shape']} -> output={result['topk_output_shape']}")
     print(f"summary.csv:        {summary_csv_path}")
     print(f"sensing plot:       {result['plot_path'] or '(skipped, matplotlib not installed)'}")
 

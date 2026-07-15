@@ -24,6 +24,8 @@ class ExperimentConfig:
     use_real_awn: bool = False
     checkpoint: str = "external/adversarial-rf/2016.10a_AWN.pkl"
     device: str = "cpu"
+    attack_eps: float = 0.03
+    use_real_attack: bool = False
 
 
 def build_arg_parser(description: str) -> argparse.ArgumentParser:
@@ -31,7 +33,8 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--snr", type=float, default=10.0, help="Synthetic burst SNR in dB")
     parser.add_argument("--mod", type=str, default="BPSK", help="Modulation label tag (cosmetic only in this phase)")
-    parser.add_argument("--attack", type=str, default="none", help="Attack name placeholder, e.g. fgsm, pgd, none")
+    parser.add_argument("--attack", type=str, default="none", help="Attack name: none, fgsm, pgd, or cw")
+    parser.add_argument("--attack-eps", type=float, default=0.03, help="Attack epsilon (Linf budget for fgsm/pgd)")
     parser.add_argument("--topk", type=int, default=50, help="Top-K FFT bins kept by the defense placeholder")
     parser.add_argument("--threshold-factor", type=float, default=5.0, help="Energy threshold = median power * this factor")
     parser.add_argument("--window-size", type=int, default=128, help="Segment length / energy-detection window; AWN expects 128")
@@ -49,6 +52,10 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument("--checkpoint", type=str, default="external/adversarial-rf/2016.10a_AWN.pkl",
                         help="Path to the AWN checkpoint (.pkl) used when --use-real-awn is set")
     parser.add_argument("--device", type=str, default="cpu", help="torch device for real AWN inference (cpu or cuda)")
+    parser.add_argument("--use-real-attack", action="store_true",
+                        help="Route the attack through AttackAdapter (real torchattacks-based attack if torch, "
+                             "torchattacks, and a real AWN model are all available, else falls back to the "
+                             "numpy dummy with notes in summary.csv)")
     return parser
 
 
@@ -69,4 +76,6 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         use_real_awn=args.use_real_awn,
         checkpoint=args.checkpoint,
         device=args.device,
+        attack_eps=args.attack_eps,
+        use_real_attack=args.use_real_attack,
     )

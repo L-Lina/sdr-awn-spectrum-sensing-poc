@@ -13,7 +13,7 @@ from typing import Dict
 
 import numpy as np
 
-from src.adapters.attack_adapter import dummy_attack
+from src.adapters.attack_adapter import AttackAdapter, dummy_attack
 from src.adapters.awn_adapter import AWNModelAdapter, dummy_awn_inference
 from src.adapters.defense_adapter import dummy_topk_defense
 from src.adapters.topk_adapter import TopKAdapter
@@ -61,6 +61,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     segments = normalize_segments(segments)
     x_clean = to_awn_input(segments, seg_len=cfg.window_size)
 
+    awn_adapter = None
     if cfg.use_real_awn:
         awn_adapter = AWNModelAdapter(checkpoint_path=cfg.checkpoint, device=cfg.device)
 
@@ -77,7 +78,23 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             return logits, meta
 
     logits_clean, awn_meta = run_awn(x_clean)
-    x_adv = dummy_attack(x_clean, attack=cfg.attack, seed=SEED)
+
+    attack_input_shape = x_clean.shape
+    if cfg.use_real_attack:
+        real_model = awn_adapter.model if awn_adapter is not None else None
+        x_adv, attack_meta = AttackAdapter(awn_model=real_model, device=cfg.device).apply(
+            x_clean, attack=cfg.attack, eps=cfg.attack_eps, seed=SEED
+        )
+    else:
+        x_adv = dummy_attack(x_clean, attack=cfg.attack, epsilon=cfg.attack_eps, seed=SEED)
+        attack_meta = {
+            "attack_backend": "dummy_attack",
+            "attack_status": "ok",
+            "attack_notes": "--use-real-attack not passed; using placeholder attack by default.",
+        }
+    if x_adv.shape != attack_input_shape:
+        raise RuntimeError(f"Attack output shape {x_adv.shape} != input shape {attack_input_shape}")
+
     logits_attacked, _ = run_awn(x_adv)
 
     input_shape = x_adv.shape
@@ -106,6 +123,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "snr_db": cfg.snr,
             "mod": cfg.mod,
             "attack": cfg.attack,
+            "attack_eps": cfg.attack_eps,
             "topk": cfg.topk,
             "threshold_factor": cfg.threshold_factor,
             "window_size": cfg.window_size,
@@ -118,6 +136,9 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "awn_backend": awn_meta["awn_backend"],
             "awn_status": awn_meta["awn_status"],
             "awn_notes": awn_meta["awn_notes"],
+            "attack_backend": attack_meta["attack_backend"],
+            "attack_status": attack_meta["attack_status"],
+            "attack_notes": attack_meta["attack_notes"],
         })
 
     summary_csv_path = output_dir / "summary.csv"
@@ -137,8 +158,11 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         "topk_output_shape": tuple(x_defended.shape),
         "awn_input_shape": tuple(x_clean.shape),
         "awn_logits_shape": tuple(logits_clean.shape),
+        "attack_input_shape": tuple(attack_input_shape),
+        "attack_output_shape": tuple(x_adv.shape),
         **topk_meta,
         **awn_meta,
+        **attack_meta,
     }
 
     print("\n--- Dry-run summary ---")
@@ -148,6 +172,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     print(f"AWN input shape:    {x_clean.shape}")
     print(f"AWN backend:        {awn_meta['awn_backend']} (status={awn_meta['awn_status']})")
     print(f"AWN logits shape:   {result['awn_logits_shape']}")
+    print(f"Attack backend:     {attack_meta['attack_backend']} (status={attack_meta['attack_status']})")
+    print(f"Attack shape check: input={result['attack_input_shape']} -> output={result['attack_output_shape']}")
     print(f"Top-K backend:      {topk_meta['topk_backend']} (status={topk_meta['topk_status']})")
     print(f"Top-K shape check:  input={result['topk_input_shape']} -> output={result['topk_output_shape']}")
     print(f"summary.csv:        {summary_csv_path}")

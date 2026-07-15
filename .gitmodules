@@ -1,0 +1,6 @@
+[submodule "external/AWN"]
+	path = external/AWN
+	url = https://github.com/zjwfufu/AWN.git
+[submodule "external/adversarial-rf"]
+	path = external/adversarial-rf
+	url = https://github.com/nigelzzz/adversarial-rf.git

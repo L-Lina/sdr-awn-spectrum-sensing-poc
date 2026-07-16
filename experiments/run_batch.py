@@ -22,7 +22,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import argparse  # noqa: E402
 
-from src.utils.config import ExperimentConfig  # noqa: E402
+from src.utils.config import (  # noqa: E402
+    ExperimentConfig,
+    arg_nonneg_finite_float,
+    arg_nonneg_int,
+    arg_positive_finite_float,
+    arg_positive_int,
+)
 from src.utils.csv_writer import write_summary_csv  # noqa: E402
 from src.utils.pipeline import run_dry_run_experiment  # noqa: E402
 
@@ -37,11 +43,11 @@ def build_batch_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mod-list", type=str, default="BPSK,QPSK", help="Comma-separated modulation tags")
     parser.add_argument("--attack-list", type=str, default="none,fgsm", help="Comma-separated attack names")
     parser.add_argument("--topk-list", type=str, default="10,50", help="Comma-separated Top-K values")
-    parser.add_argument("--threshold-factor", type=float, default=5.0)
-    parser.add_argument("--window-size", type=int, default=128)
-    parser.add_argument("--min-region-len", type=int, default=None)
+    parser.add_argument("--threshold-factor", type=arg_positive_finite_float("threshold_factor"), default=5.0)
+    parser.add_argument("--window-size", type=arg_positive_int("window_size"), default=128)
+    parser.add_argument("--min-region-len", type=arg_nonneg_int("min_region_len"), default=None)
     parser.add_argument("--merge-gap", type=int, default=0)
-    parser.add_argument("--burst-len", type=int, default=600)
+    parser.add_argument("--burst-len", type=arg_positive_int("burst_len"), default=600)
     parser.add_argument("--output-dir", type=str, default="results/batch_run", help="Base directory for per-combo subdirs + batch_summary.csv")
     parser.add_argument("--dry-run", action="store_true", help="Run the placeholder pipeline (required in this phase)")
     parser.add_argument("--use-real-topk", action="store_true",
@@ -54,11 +60,11 @@ def build_batch_arg_parser() -> argparse.ArgumentParser:
                         help="Route the attack through AttackAdapter (real torchattacks-based attack if torch, "
                              "torchattacks, and a real AWN model are all available, else falls back to the "
                              "numpy dummy with notes in summary.csv)")
-    parser.add_argument("--attack-eps", type=float, default=0.03, help="Attack epsilon (Linf budget for fgsm/pgd)")
+    parser.add_argument("--attack-eps", type=arg_nonneg_finite_float("attack_eps"), default=0.03, help="Attack epsilon (Linf budget for fgsm/pgd)")
     parser.add_argument("--checkpoint", type=str, default="external/adversarial-rf/2016.10a_AWN.pkl",
                         help="Path to the AWN checkpoint (.pkl) used when --use-real-awn is set")
     parser.add_argument("--device", type=str, default="cpu", help="torch device for real AWN inference (cpu or cuda)")
-    parser.add_argument("--attack-temperature", type=float, default=1.0,
+    parser.add_argument("--attack-temperature", type=arg_positive_finite_float("attack_temperature"), default=1.0,
                         help="Positive temperature T dividing AWN logits inside the attack's internal loss "
                              "only; clean/attacked/defended inference always use raw logits. T=1.0 reproduces "
                              "prior behavior (must be > 0). Applied uniformly to every combo in this batch.")

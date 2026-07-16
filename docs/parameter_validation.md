@@ -182,7 +182,6 @@ in this repo.
 **已通過 (passed)**
 - `attack=none` bit-identical bypass (IQ, logits, predictions, distances all zero)
 - `attack=fgsm`, `attack=pgd` end-to-end (post all 3 correctness fixes)
-- `--attack-temperature` positivity validation (`<=0` raises a clear error)
 - Cross-process reproducibility of synthetic IQ generation (post `hashlib` fix)
 - AWN model eval-mode restoration after real attacks
 - `--min-region-len` propagation: unset -> `window_size`, explicit `0` ->
@@ -190,30 +189,58 @@ in this repo.
   calling `build_arg_parser`/`args_to_config` (`src/utils/config.py`) and
   `build_batch_arg_parser` + the equivalent resolution expression
   (`experiments/run_batch.py`) directly, at both the raw `argparse.Namespace`
-  layer and the resolved config-value layer. Config-layer only; not
-  re-verified through the full sensing/AWN/attack/Top-K pipeline in this
-  round (out of scope per this fix's instructions).
+  layer and the resolved config-value layer.
+- **`threshold_factor` / `window_size` / `min_region_len` / `burst_len` /
+  `snr_db` / `attack_eps` / `attack_temperature` boundary validation**
+  (added in a dedicated round after this document's initial version). Five
+  reusable validator functions (`require_positive_finite_float`,
+  `require_finite_float`, `require_nonneg_finite_float`,
+  `require_positive_int`, `require_nonneg_int` in `src/utils/config.py`)
+  back both a CLI `type=` layer (identical error text at parse time) and a
+  `validate_experiment_config(cfg)` boundary called at the very top of
+  `src/utils/pipeline.py:run_dry_run_experiment`, so a direct-API caller who
+  builds `ExperimentConfig` by hand (e.g. `experiments/run_batch.py`'s own
+  construction, which never calls `args_to_config`) is protected too, not
+  just the single-run CLI path. `attack_eps` and `attack_temperature`
+  additionally have their own boundary check directly inside
+  `AttackAdapter.apply()` (`src/adapters/attack_adapter.py`), since that
+  class is also called directly in scratch scripts without ever touching
+  `ExperimentConfig`. Verified at all three layers (CLI parse, resolved
+  config, direct-API boundary) for legal values, the boundary legal value,
+  negative, zero, NaN, Inf, and non-numeric strings; see
+  `docs/parameter_validation.csv` for the per-parameter matrix. Fixed a real
+  bug in the process: the pre-existing `attack_temperature <= 0` check
+  silently let NaN and Inf through (see section 8). This round's validation
+  is config/CLI/adapter-boundary level only -- it does **not** re-verify
+  that legal-but-unusual values (e.g. `window_size=1`, `threshold_factor
+  =0.0001`) actually behave sensibly through the full sensing/AWN/attack/
+  Top-K pipeline; `behavior_test` for those stays `not_tested` in the CSV.
 
 **部分通過 (partial)**
-- `--snr`: tested at -10, 0, 10, 18 (real backends); no upper-bound or
-  fractional-value testing
+- `--snr`: tested at -10, 0, 10, 18 (real backends), plus -200 as a boundary
+  legal value and NaN/Inf/non-numeric as rejected values (this round); no
+  intentional upper/lower dB range limit was added (out of scope this round)
 - `--mod`: cosmetic-only behavior confirmed for 4 values; arbitrary/malformed
   strings not tested
 - `--topk`: tested at 10, 20, 30, 40; default `50` never actually run;
-  boundary values (0, negative, > window_size) not tested
-- `--attack-eps`: tested at 0.03 (dummy era), 0.1/0.2/0.3/0.5 (real,
-  post-fix); `eps<=0` has no validation and was only tried once via a
-  scratch script, never via CLI
+  boundary values (0, negative, > window_size, NaN, Inf) intentionally left
+  unvalidated this round -- see the `topk=Inf` uncaught-crash finding in
+  section 8, not yet fixed
 - `--device`: only `cpu` tested (no GPU available on this machine); `cuda`
   path completely unexercised
 - `--use-real-awn`/`--use-real-topk`/`--use-real-attack`: `True` path fully
-  exercised; `False` (dummy) path never actually run in-session
+  exercised; `False` (dummy) path never actually run end-to-end in-session
+  (though `AttackAdapter`'s dummy fallback branch specifically was exercised
+  directly in this round's boundary tests)
+- `--threshold-factor`/`--window-size`/`--burst-len`: boundary validation
+  (0, negative, NaN, Inf, non-numeric) added and verified this round; the
+  *legal* non-default values (e.g. `window_size` other than 128) still have
+  never been run through the actual sensing/AWN pipeline
 
 **未測 (not tested)**
-- `--burst-len`, `--window-size`, `--merge-gap`: only ever run at their
-  respective default values (600, 128, 0); never varied
-- `--threshold-factor`: every real-backend test in-session used `1.5`; the
-  CLI default `5.0` was never actually run
+- `--merge-gap`: only ever run at its default value (`0`); never varied to a
+  nonzero value; boundary behavior intentionally left as-is this round (no
+  validation added, no-op for `<=0` already existed and was left untouched)
 - `--checkpoint`, alternate values (`2016.10b_AWN.pkl`, `2018.01a_AWN.pkl`):
   never tried; see section 8 for why they would likely fail silently
 - matplotlib-missing plotting fallback path
@@ -248,16 +275,29 @@ in this repo.
    `2016.10b_AWN.pkl` or `2018.01a_AWN.pkl` (10 classes / 24 classes,
    different `T`) would very likely fail to load and silently fall back to
    the dummy backend rather than erroring loudly.
-5. ~~`--min-region-len 0` cannot actually be set~~ — **fixed**, see section 8.
-   Negative `--min-region-len` values are still unvalidated (see section 8);
-   that is a separate, not-yet-addressed item.
-6. **No boundary-value testing** exists for `threshold-factor`, `window-size`,
-   `burst-len`, `merge-gap`, `topk`, or `attack-eps` (zero, negative, or
-   extreme values). Only "normal" values have been exercised.
+5. ~~`--min-region-len 0` cannot actually be set~~ — **fixed** (an earlier
+   round). ~~Negative `--min-region-len` values are unvalidated~~ — **fixed**
+   this round (`require_nonneg_int`); `0` confirmed to remain legal.
+6. ~~No boundary-value testing exists for `threshold-factor`, `window-size`,
+   `burst-len`, or `attack-eps`~~ — **fixed this round** for these four plus
+   `snr` and `attack-temperature` (zero/negative/NaN/Inf/non-numeric all now
+   rejected with clear messages at both the CLI and adapter/algorithm
+   boundary layers; see section 8). **`merge-gap` and `topk` remain
+   unvalidated** — explicitly out of scope this round (design decisions
+   deferred, see `docs/parameter_validation.csv`); `topk=Inf` in particular
+   is a confirmed uncaught crash (see section 8), not yet fixed.
 7. **Segmentation has no overlap/hop-size or max-segments control** — if a
    formal experiment design needs either, they must be built first.
 8. **`cuda` device path is completely unverified** — this development
    machine has no GPU (`torch.cuda.is_available()` returns `False`).
+9. **Legal-but-unusual values are validated but not behavior-tested.**
+   E.g. `window_size=1` or `threshold_factor=0.0001` now pass validation,
+   but nobody has run them through the actual sensing/AWN/attack/Top-K
+   pipeline to confirm they behave sensibly (they likely don't, e.g.
+   `window_size` != 128 vs. the AWN checkpoint's expected input length).
+10. **`merge-gap` and `topk<=0`/`topk` FFT-bin-count clamping design
+    decisions remain open**, along with whether `window-size` should ever be
+    forced to exactly 128 — all explicitly deferred per this round's scope.
 
 ---
 
@@ -278,15 +318,74 @@ in this repo.
   at both the `argparse.Namespace` layer and the resolved config value, for
   both `src/utils/config.py` and `experiments/run_batch.py`. The energy
   detector itself (`src/sensing/energy_detection.py:filter_by_min_length`)
-  was not touched — it already accepted `0`/negative `min_len` correctly
-  (see the negative-value note below); the bug was purely in how the CLI
-  value reached it. **Negative `--min-region-len` values remain
-  unvalidated** — `filter_by_min_length`'s `(e - s) >= min_len` comparison
-  makes any negative value behave identically to `0` (a no-op filter, no
-  crash), but neither argparse, `ExperimentConfig`, nor the energy detector
-  block or warn about a negative value; this was intentionally left
-  unaddressed in this fix and is not marked as passed anywhere in this
-  document.
+  was not touched — it already accepted `0`/negative `min_len` correctly;
+  the bug was purely in how the CLI value reached it. ~~Negative
+  `--min-region-len` values remain unvalidated~~ — **also fixed in the
+  boundary-validation round below** (`require_nonneg_int`); negative values
+  are now rejected with a clear error instead of silently behaving as `0`.
+
+- **Boundary validation added for `threshold_factor`, `window_size`,
+  `min_region_len`, `burst_len`, `snr`, `attack_eps`, `attack_temperature`
+  — FIXED (dedicated round).** Prior to this round, none of these seven
+  parameters had any validation beyond argparse's own type coercion
+  (`float`/`int`), and a read-only boundary audit found several concrete
+  failure modes documented here for the record:
+  - `threshold_factor <= 0` silently marked the entire signal "occupied"
+    (mask all-`True`); NaN/Inf silently produced an all-empty mask, with no
+    error until a much later, confusingly-worded `filter_by_min_length`
+    exception.
+  - `window_size = 0` caused an **uncaught `ZeroDivisionError`** inside
+    `segment_regions` (`region_len // seg_len`).
+  - `burst_len <= 0` silently produced a **burst-free, pure-noise signal**
+    with no warning (`burst_start`/`burst_end` collapse to an empty or
+    inverted slice), which would later surface as a confusing "no occupied
+    region" error pointing at the wrong parameter.
+  - `snr` at extreme magnitudes (e.g. `-1e6`, `1e6`) raised an uncaught
+    `ZeroDivisionError` or `OverflowError` inside `generate_synthetic_iq`
+    (`10 ** (snr_db / 10.0)` under/overflowing); `snr=NaN` silently produced
+    a **NaN-contaminated IQ array** that would propagate through the entire
+    pipeline undetected.
+  - `attack_eps`/`attack_temperature` set to NaN or Inf silently corrupted
+    `dummy_attack`'s output or (for temperature) bypassed the existing
+    `<=0` check entirely (see the dedicated bullet below).
+
+  Fix: five reusable validators (`require_positive_finite_float`,
+  `require_finite_float`, `require_nonneg_finite_float`,
+  `require_positive_int`, `require_nonneg_int`) added to
+  `src/utils/config.py`, backing both a CLI `type=` layer (`arg_*` factory
+  functions, reused identically by `experiments/run_batch.py`'s own parser)
+  and a `validate_experiment_config(cfg)` boundary called at the top of
+  `src/utils/pipeline.py:run_dry_run_experiment`. `attack_eps`/
+  `attack_temperature` additionally get a direct check inside
+  `AttackAdapter.apply()` (`src/adapters/attack_adapter.py`) since that
+  class is callable independently of `ExperimentConfig`. No changes were
+  made to the actual sensing/attack/Top-K algorithm logic — only guard
+  clauses added ahead of it. `merge_gap` and `topk` were explicitly **not**
+  touched this round (deferred design decisions).
+
+- **`attack_temperature <= 0` check silently let NaN/Inf through — FIXED.**
+  Found during the same boundary audit: `nan <= 0` and `inf <= 0` are both
+  `False` in Python (NaN comparisons are always `False`; `inf` is `> 0`), so
+  the original bare `if temperature <= 0: raise ...` check (introduced in
+  the "Fix attack domain and saturated-gradient handling" round) silently
+  accepted `NaN`/`Inf` despite the stated intent of "must be positive".
+  Fixed by using `require_positive_finite_float` (checks `math.isfinite()`
+  first) in both `AttackAdapter.apply()` and
+  `TemperatureLogitsWrapper.__init__`. Confirmed rejected at the CLI,
+  config, and direct-`AttackAdapter`-call layers.
+
+- **`topk=Inf` causes an uncaught crash in BOTH the real and dummy Top-K
+  backends — found, NOT fixed this round (out of scope).** `TopKAdapter`'s
+  real-backend call fails with `OverflowError: cannot convert float
+  infinity to integer` (external `fft_topk_denoise`'s `int(topk)`), gets
+  caught by `TopKAdapter.apply()`'s broad `except Exception`, which then
+  calls `dummy_topk_defense(x, topk=inf)` as a fallback — which **raises
+  the same `OverflowError` a second time**, uncaught, escaping
+  `TopKAdapter.apply()` entirely. This is the only case found in the audit
+  where the fallback path itself also fails. `topk` was explicitly out of
+  scope for this round's fix; see `docs/parameter_validation.csv` (`topk`
+  row) and outstanding item 6/10 above.
+
 - **`--checkpoint` has no existence/compatibility check.** A missing or
   incompatible checkpoint path fails inside `AWNModelAdapter.__init__`'s
   broad `except Exception`, silently falling back to the numpy dummy

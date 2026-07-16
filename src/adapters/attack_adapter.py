@@ -57,6 +57,8 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
+from src.utils.config import require_nonneg_finite_float, require_positive_finite_float
+
 _ADVERSARIAL_RF_ROOT = Path(__file__).resolve().parents[2] / "external" / "adversarial-rf"
 _REAL_ATTACK_SOURCE = "external/adversarial-rf/util/adv_attack.py:Model01Wrapper + torchattacks"
 
@@ -99,8 +101,7 @@ if _nn is not None:
 
         def __init__(self, wrapped_model, temperature: float) -> None:
             super().__init__()
-            if temperature <= 0:
-                raise ValueError(f"temperature must be positive, got {temperature}")
+            require_positive_finite_float("attack_temperature", temperature)
             self.wrapped_model = wrapped_model
             self.temperature = temperature
 
@@ -212,8 +213,12 @@ class AttackAdapter:
         model, same clean-prediction label) purely to report gradient
         nonzero-count/maxabs in the returned meta; never affects x_adv.
         """
-        if temperature <= 0:
-            raise ValueError(f"attack_temperature must be positive, got {temperature}")
+        # NaN/Inf both fail a plain "<= 0" check (any comparison with NaN is
+        # False, and Inf > 0 is True), so a bare "if temperature <= 0" lets
+        # both silently through. require_positive_finite_float() checks
+        # math.isfinite() first, closing that gap.
+        require_positive_finite_float("attack_temperature", temperature)
+        require_nonneg_finite_float("attack_eps", eps)
         if x.ndim != 3 or x.shape[1] != 2:
             raise ValueError(f"AttackAdapter expects input [N, 2, T], got {x.shape}")
         attack_name = _validate_attack_name(attack)

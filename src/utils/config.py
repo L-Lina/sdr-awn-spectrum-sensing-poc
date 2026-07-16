@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 from dataclasses import dataclass
 
 
@@ -30,19 +31,144 @@ class ExperimentConfig:
     attack_diagnostics: bool = False
 
 
+# ---------------------------------------------------------------------------
+# Reusable boundary validators. Each raises a plain ValueError with a message
+# of the form "<name> must be ..., got <value>" -- used both by the argparse
+# type= helpers below (CLI-time errors) and by validate_experiment_config()
+# (called from src/utils/pipeline.py as the adapter/algorithm-boundary guard
+# for direct-API callers who construct ExperimentConfig without going through
+# argparse at all, e.g. experiments/run_batch.py's own ExperimentConfig(...)
+# construction). merge_gap and topk are intentionally not covered by any of
+# this yet -- see docs/parameter_validation.md for why.
+# ---------------------------------------------------------------------------
+
+def require_positive_finite_float(name: str, value: float) -> float:
+    if not math.isfinite(value) or value <= 0:
+        raise ValueError(f"{name} must be a positive finite number, got {value}")
+    return value
+
+
+def require_finite_float(name: str, value: float) -> float:
+    if not math.isfinite(value):
+        raise ValueError(f"{name} must be finite, got {value}")
+    return value
+
+
+def require_nonneg_finite_float(name: str, value: float) -> float:
+    if not math.isfinite(value) or value < 0:
+        raise ValueError(f"{name} must be a finite non-negative number, got {value}")
+    return value
+
+
+def require_positive_int(name: str, value: int) -> int:
+    if value <= 0:
+        raise ValueError(f"{name} must be a positive integer, got {value}")
+    return value
+
+
+def require_nonneg_int(name: str, value: int) -> int:
+    if value < 0:
+        raise ValueError(f"{name} must be a non-negative integer, got {value}")
+    return value
+
+
+def validate_experiment_config(cfg: ExperimentConfig) -> None:
+    """Boundary validation for direct-API callers of run_dry_run_experiment(cfg)
+    that bypass argparse entirely. Covers exactly the parameters with a
+    finalized rule as of this round; merge_gap and topk are out of scope."""
+    require_positive_finite_float("threshold_factor", cfg.threshold_factor)
+    require_positive_int("window_size", cfg.window_size)
+    require_nonneg_int("min_region_len", cfg.min_region_len)
+    require_positive_int("burst_len", cfg.burst_len)
+    require_finite_float("snr_db", cfg.snr)
+    require_nonneg_finite_float("attack_eps", cfg.attack_eps)
+    require_positive_finite_float("attack_temperature", cfg.attack_temperature)
+
+
+# ---------------------------------------------------------------------------
+# argparse type= factories built on the same validators above, so a CLI
+# parse-time error and a direct-API ValueError use identical wording. Reused
+# by both build_arg_parser() below and experiments/run_batch.py's own parser.
+# ---------------------------------------------------------------------------
+
+def arg_positive_finite_float(name: str):
+    def _parse(raw: str) -> float:
+        try:
+            value = float(raw)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{name} must be a positive finite number, got {raw!r}")
+        try:
+            return require_positive_finite_float(name, value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(str(exc))
+    return _parse
+
+
+def arg_finite_float(name: str):
+    def _parse(raw: str) -> float:
+        try:
+            value = float(raw)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{name} must be finite, got {raw!r}")
+        try:
+            return require_finite_float(name, value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(str(exc))
+    return _parse
+
+
+def arg_nonneg_finite_float(name: str):
+    def _parse(raw: str) -> float:
+        try:
+            value = float(raw)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{name} must be a finite non-negative number, got {raw!r}")
+        try:
+            return require_nonneg_finite_float(name, value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(str(exc))
+    return _parse
+
+
+def arg_positive_int(name: str):
+    def _parse(raw: str) -> int:
+        try:
+            value = int(raw)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{name} must be a positive integer, got {raw!r}")
+        try:
+            return require_positive_int(name, value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(str(exc))
+    return _parse
+
+
+def arg_nonneg_int(name: str):
+    def _parse(raw: str) -> int:
+        try:
+            value = int(raw)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{name} must be a non-negative integer, got {raw!r}")
+        try:
+            return require_nonneg_int(name, value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(str(exc))
+    return _parse
+
+
 def build_arg_parser(description: str) -> argparse.ArgumentParser:
     """Argparse shared by experiments/run_full_experiment.py and run_batch.py (single-run flags)."""
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--snr", type=float, default=10.0, help="Synthetic burst SNR in dB")
+    parser.add_argument("--snr", type=arg_finite_float("snr_db"), default=10.0, help="Synthetic burst SNR in dB")
     parser.add_argument("--mod", type=str, default="BPSK", help="Modulation label tag (cosmetic only in this phase)")
     parser.add_argument("--attack", type=str, default="none", help="Attack name: none, fgsm, pgd, or cw")
-    parser.add_argument("--attack-eps", type=float, default=0.03, help="Attack epsilon (Linf budget for fgsm/pgd)")
+    parser.add_argument("--attack-eps", type=arg_nonneg_finite_float("attack_eps"), default=0.03, help="Attack epsilon (Linf budget for fgsm/pgd)")
     parser.add_argument("--topk", type=int, default=50, help="Top-K FFT bins kept by the defense placeholder")
-    parser.add_argument("--threshold-factor", type=float, default=5.0, help="Energy threshold = median power * this factor")
-    parser.add_argument("--window-size", type=int, default=128, help="Segment length / energy-detection window; AWN expects 128")
-    parser.add_argument("--min-region-len", type=int, default=None, help="Minimum occupied region length to keep (default: --window-size)")
+    parser.add_argument("--threshold-factor", type=arg_positive_finite_float("threshold_factor"), default=5.0, help="Energy threshold = median power * this factor")
+    parser.add_argument("--window-size", type=arg_positive_int("window_size"), default=128, help="Segment length / energy-detection window; real AWN checkpoint currently expects 128 (not enforced here)")
+    parser.add_argument("--min-region-len", type=arg_nonneg_int("min_region_len"), default=None, help="Minimum occupied region length to keep (default: --window-size); 0 is allowed")
     parser.add_argument("--merge-gap", type=int, default=0, help="Merge occupied regions separated by <= this many samples")
-    parser.add_argument("--burst-len", type=int, default=600, help="Synthetic burst length in samples")
+    parser.add_argument("--burst-len", type=arg_positive_int("burst_len"), default=600, help="Synthetic burst length in samples")
     parser.add_argument("--output-dir", type=str, default="results/run", help="Directory for summary.csv and sensing_plot.png")
     parser.add_argument("--dry-run", action="store_true", help="Run the placeholder pipeline (required in this phase)")
     parser.add_argument("--use-real-topk", action="store_true",
@@ -58,7 +184,7 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
                         help="Route the attack through AttackAdapter (real torchattacks-based attack if torch, "
                              "torchattacks, and a real AWN model are all available, else falls back to the "
                              "numpy dummy with notes in summary.csv)")
-    parser.add_argument("--attack-temperature", type=float, default=1.0,
+    parser.add_argument("--attack-temperature", type=arg_positive_finite_float("attack_temperature"), default=1.0,
                         help="Positive temperature T dividing AWN logits inside the attack's internal loss "
                              "only (attack_logits = logits / T); clean/attacked/defended inference elsewhere "
                              "always use raw logits. T=1.0 reproduces prior behavior (must be > 0).")

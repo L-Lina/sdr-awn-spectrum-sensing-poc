@@ -26,7 +26,7 @@ from src.sensing.energy_detection import (
 from src.sensing.iq_source import generate_synthetic_iq, validate_iq
 from src.sensing.normalize import normalize_segments, to_awn_input
 from src.sensing.segmentation import segment_regions
-from src.utils.config import ExperimentConfig
+from src.utils.config import ExperimentConfig, validate_experiment_config
 from src.utils.csv_writer import write_summary_csv
 from src.utils.plotting import plot_sensing_result
 
@@ -39,6 +39,11 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "Only --dry-run is supported in this phase; real AWN/attack/defense "
             "wiring comes in a later phase (see docs/integration_plan.md)."
         )
+    # Adapter/algorithm boundary: catches direct-API callers who construct
+    # ExperimentConfig by hand (bypassing argparse's type= validation
+    # entirely), e.g. experiments/run_batch.py's own ExperimentConfig(...)
+    # construction, or anyone importing this module directly.
+    validate_experiment_config(cfg)
 
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

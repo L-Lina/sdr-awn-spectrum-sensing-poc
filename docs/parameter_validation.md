@@ -113,7 +113,7 @@ validation) is in `docs/parameter_validation.csv`. Summary by category:
 |---|---|---|---|
 | threshold-factor | yes | yes | yes |
 | window-size | yes | yes | yes |
-| min-region-len | yes | yes | yes (see bug in section 8) |
+| min-region-len | yes | yes | yes (0-value bug fixed, see section 8) |
 | merge-gap | yes | yes | yes |
 | burst-len | yes | yes | yes |
 | stream length (n_samples) | yes | yes | **no** |
@@ -185,6 +185,14 @@ in this repo.
 - `--attack-temperature` positivity validation (`<=0` raises a clear error)
 - Cross-process reproducibility of synthetic IQ generation (post `hashlib` fix)
 - AWN model eval-mode restoration after real attacks
+- `--min-region-len` propagation: unset -> `window_size`, explicit `0` ->
+  `0` (preserved), explicit `64` -> `64`. Verified via a scratch script
+  calling `build_arg_parser`/`args_to_config` (`src/utils/config.py`) and
+  `build_batch_arg_parser` + the equivalent resolution expression
+  (`experiments/run_batch.py`) directly, at both the raw `argparse.Namespace`
+  layer and the resolved config-value layer. Config-layer only; not
+  re-verified through the full sensing/AWN/attack/Top-K pipeline in this
+  round (out of scope per this fix's instructions).
 
 **部分通過 (partial)**
 - `--snr`: tested at -10, 0, 10, 18 (real backends); no upper-bound or
@@ -206,7 +214,6 @@ in this repo.
   respective default values (600, 128, 0); never varied
 - `--threshold-factor`: every real-backend test in-session used `1.5`; the
   CLI default `5.0` was never actually run
-- `--min-region-len`: never explicitly set via CLI in-session
 - `--checkpoint`, alternate values (`2016.10b_AWN.pkl`, `2018.01a_AWN.pkl`):
   never tried; see section 8 for why they would likely fail silently
 - matplotlib-missing plotting fallback path
@@ -241,7 +248,9 @@ in this repo.
    `2016.10b_AWN.pkl` or `2018.01a_AWN.pkl` (10 classes / 24 classes,
    different `T`) would very likely fail to load and silently fall back to
    the dummy backend rather than erroring loudly.
-5. **`--min-region-len 0` cannot actually be set** — see bug in section 8.
+5. ~~`--min-region-len 0` cannot actually be set~~ — **fixed**, see section 8.
+   Negative `--min-region-len` values are still unvalidated (see section 8);
+   that is a separate, not-yet-addressed item.
 6. **No boundary-value testing** exists for `threshold-factor`, `window-size`,
    `burst-len`, `merge-gap`, `topk`, or `attack-eps` (zero, negative, or
    extreme values). Only "normal" values have been exercised.
@@ -254,13 +263,30 @@ in this repo.
 
 ## 8. Correctness issues found during this audit
 
-- **`--min-region-len 0` is silently overridden to `--window-size`.**
-  Both `src/utils/config.py:80` (`args_to_config`) and
-  `experiments/run_batch.py:86` compute
+- **`--min-region-len 0` was silently overridden to `--window-size` — FIXED.**
+  Both `src/utils/config.py` (`args_to_config`) and
+  `experiments/run_batch.py` (`main()`) used to compute
   `min_region_len = args.min_region_len or args.window_size`. Python's `or`
-  treats `0` as falsy, so a user explicitly passing `--min-region-len 0`
-  gets `window_size` instead of `0`. This was newly discovered during this
-  audit; it was never reported or fixed in any prior session.
+  treats `0` as falsy, so a user explicitly passing `--min-region-len 0` got
+  `window_size` instead of `0`. This was discovered during the parameter
+  audit and fixed in a dedicated follow-up: both call sites now use an
+  explicit `args.window_size if args.min_region_len is None else
+  args.min_region_len` check, so `None` (unset) still falls back to
+  `window_size`, but any explicit value — including `0` — is preserved
+  exactly. Verified via a config-layer-only scratch test covering: unset
+  (-> `window_size`), explicit `0` (-> `0`), explicit `64` (-> `64`), checked
+  at both the `argparse.Namespace` layer and the resolved config value, for
+  both `src/utils/config.py` and `experiments/run_batch.py`. The energy
+  detector itself (`src/sensing/energy_detection.py:filter_by_min_length`)
+  was not touched — it already accepted `0`/negative `min_len` correctly
+  (see the negative-value note below); the bug was purely in how the CLI
+  value reached it. **Negative `--min-region-len` values remain
+  unvalidated** — `filter_by_min_length`'s `(e - s) >= min_len` comparison
+  makes any negative value behave identically to `0` (a no-op filter, no
+  crash), but neither argparse, `ExperimentConfig`, nor the energy detector
+  block or warn about a negative value; this was intentionally left
+  unaddressed in this fix and is not marked as passed anywhere in this
+  document.
 - **`--checkpoint` has no existence/compatibility check.** A missing or
   incompatible checkpoint path fails inside `AWNModelAdapter.__init__`'s
   broad `except Exception`, silently falling back to the numpy dummy

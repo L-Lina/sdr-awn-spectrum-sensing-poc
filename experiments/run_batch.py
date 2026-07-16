@@ -83,7 +83,9 @@ def main() -> None:
     mods = _parse_list(args.mod_list, str)
     attacks = _parse_list(args.attack_list, str)
     topks = _parse_list(args.topk_list, int)
-    min_region_len = args.min_region_len or args.window_size
+    min_region_len = (
+        args.window_size if args.min_region_len is None else args.min_region_len
+    )
 
     base_dir = Path(args.output_dir)
     batch_rows = []

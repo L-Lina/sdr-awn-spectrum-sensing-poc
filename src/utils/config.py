@@ -77,7 +77,9 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         topk=args.topk,
         threshold_factor=args.threshold_factor,
         window_size=args.window_size,
-        min_region_len=args.min_region_len or args.window_size,
+        min_region_len=(
+            args.window_size if args.min_region_len is None else args.min_region_len
+        ),
         merge_gap=args.merge_gap,
         burst_len=args.burst_len,
         output_dir=args.output_dir,

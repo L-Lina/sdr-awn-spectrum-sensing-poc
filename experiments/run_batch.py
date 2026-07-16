@@ -58,6 +58,14 @@ def build_batch_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--checkpoint", type=str, default="external/adversarial-rf/2016.10a_AWN.pkl",
                         help="Path to the AWN checkpoint (.pkl) used when --use-real-awn is set")
     parser.add_argument("--device", type=str, default="cpu", help="torch device for real AWN inference (cpu or cuda)")
+    parser.add_argument("--attack-temperature", type=float, default=1.0,
+                        help="Positive temperature T dividing AWN logits inside the attack's internal loss "
+                             "only; clean/attacked/defended inference always use raw logits. T=1.0 reproduces "
+                             "prior behavior (must be > 0). Applied uniformly to every combo in this batch.")
+    parser.add_argument("--attack-diagnostics", action="store_true",
+                        help="Run an extra diagnostic-only autograd.grad pass per real attack call to report "
+                             "gradient nonzero-count/maxabs in summary.csv. Adds runtime cost per segment; "
+                             "leave off for large batches.")
     return parser
 
 
@@ -103,6 +111,8 @@ def main() -> None:
             device=args.device,
             attack_eps=args.attack_eps,
             use_real_attack=args.use_real_attack,
+            attack_temperature=args.attack_temperature,
+            attack_diagnostics=args.attack_diagnostics,
         )
 
         try:
@@ -116,6 +126,7 @@ def main() -> None:
             "mod": mod,
             "attack": attack,
             "topk": topk,
+            "attack_temperature": args.attack_temperature,
             "n_segments": result["n_segments"],
             "output_dir": result["output_dir"],
         })

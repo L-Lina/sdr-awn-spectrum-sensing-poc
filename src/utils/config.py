@@ -26,6 +26,8 @@ class ExperimentConfig:
     device: str = "cpu"
     attack_eps: float = 0.03
     use_real_attack: bool = False
+    attack_temperature: float = 1.0
+    attack_diagnostics: bool = False
 
 
 def build_arg_parser(description: str) -> argparse.ArgumentParser:
@@ -56,6 +58,14 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
                         help="Route the attack through AttackAdapter (real torchattacks-based attack if torch, "
                              "torchattacks, and a real AWN model are all available, else falls back to the "
                              "numpy dummy with notes in summary.csv)")
+    parser.add_argument("--attack-temperature", type=float, default=1.0,
+                        help="Positive temperature T dividing AWN logits inside the attack's internal loss "
+                             "only (attack_logits = logits / T); clean/attacked/defended inference elsewhere "
+                             "always use raw logits. T=1.0 reproduces prior behavior (must be > 0).")
+    parser.add_argument("--attack-diagnostics", action="store_true",
+                        help="Run an extra diagnostic-only autograd.grad pass per real attack call to report "
+                             "gradient nonzero-count/maxabs in summary.csv. Adds runtime cost per segment; "
+                             "leave off for large batches.")
     return parser
 
 
@@ -78,4 +88,6 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         device=args.device,
         attack_eps=args.attack_eps,
         use_real_attack=args.use_real_attack,
+        attack_temperature=args.attack_temperature,
+        attack_diagnostics=args.attack_diagnostics,
     )

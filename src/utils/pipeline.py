@@ -83,7 +83,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     if cfg.use_real_attack:
         real_model = awn_adapter.model if awn_adapter is not None else None
         x_adv, attack_meta = AttackAdapter(awn_model=real_model, device=cfg.device).apply(
-            x_clean, attack=cfg.attack, eps=cfg.attack_eps, seed=SEED
+            x_clean, attack=cfg.attack, eps=cfg.attack_eps, temperature=cfg.attack_temperature,
+            seed=SEED, diagnostics=cfg.attack_diagnostics,
         )
     else:
         x_adv = dummy_attack(x_clean, attack=cfg.attack, epsilon=cfg.attack_eps, seed=SEED)
@@ -116,6 +117,28 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     pred_attacked = np.argmax(logits_attacked, axis=1)
     pred_defended = np.argmax(logits_defended, axis=1)
 
+    changed_by_attack = pred_attacked != pred_clean
+    recovered_by_defense = changed_by_attack & (pred_defended == pred_clean)
+
+    iq_diff_clean_attacked = x_adv - x_clean
+    iq_linf_clean_attacked = np.max(np.abs(iq_diff_clean_attacked), axis=(1, 2))
+    iq_l2_clean_attacked = np.linalg.norm(
+        iq_diff_clean_attacked.reshape(iq_diff_clean_attacked.shape[0], -1), axis=1
+    )
+    logit_maxabs_clean_attacked = np.max(np.abs(logits_attacked - logits_clean), axis=1)
+
+    clean_has_nan = np.isnan(x_clean).any(axis=(1, 2))
+    clean_has_inf = np.isinf(x_clean).any(axis=(1, 2))
+    attacked_has_nan = np.isnan(x_adv).any(axis=(1, 2))
+    attacked_has_inf = np.isinf(x_adv).any(axis=(1, 2))
+
+    # Per-segment arrays from AttackAdapter when the real attack path ran
+    # (None for attack='none' / dummy fallback / --attack-diagnostics off).
+    attack_iq_linf_normalized = attack_meta.get("attack_iq_linf_normalized")
+    attack_gradient_nonzero_count = attack_meta.get("attack_gradient_nonzero_count")
+    attack_gradient_total_count = attack_meta.get("attack_gradient_total_count")
+    attack_gradient_maxabs = attack_meta.get("attack_gradient_maxabs")
+
     rows = []
     for i in range(x_clean.shape[0]):
         rows.append({
@@ -130,6 +153,34 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "pred_clean": int(pred_clean[i]),
             "pred_attacked": int(pred_attacked[i]),
             "pred_defended": int(pred_defended[i]),
+            "changed_by_attack": bool(changed_by_attack[i]),
+            "recovered_by_defense": bool(recovered_by_defense[i]),
+            "iq_linf_clean_attacked": float(iq_linf_clean_attacked[i]),
+            "iq_l2_clean_attacked": float(iq_l2_clean_attacked[i]),
+            # Same value as iq_linf_clean_attacked (both are the per-segment
+            # Linf norm of x_adv - x_clean); kept as its own column name for
+            # compatibility with anything expecting a "maxabs" field.
+            "iq_maxabs_clean_attacked": float(iq_linf_clean_attacked[i]),
+            "logit_maxabs_clean_attacked": float(logit_maxabs_clean_attacked[i]),
+            "attacked_has_nan": bool(attacked_has_nan[i]),
+            "attacked_has_inf": bool(attacked_has_inf[i]),
+            "clean_has_nan": bool(clean_has_nan[i]),
+            "clean_has_inf": bool(clean_has_inf[i]),
+            "attack_training_before": attack_meta.get("attack_training_before"),
+            "attack_training_after": attack_meta.get("attack_training_after"),
+            "attack_temperature": cfg.attack_temperature,
+            "iq_linf_normalized_clean_attacked": (
+                float(attack_iq_linf_normalized[i]) if attack_iq_linf_normalized is not None else None
+            ),
+            "attack_gradient_nonzero_count": (
+                int(attack_gradient_nonzero_count[i]) if attack_gradient_nonzero_count is not None else None
+            ),
+            "attack_gradient_total_count": (
+                int(attack_gradient_total_count[i]) if attack_gradient_total_count is not None else None
+            ),
+            "attack_gradient_maxabs": (
+                float(attack_gradient_maxabs[i]) if attack_gradient_maxabs is not None else None
+            ),
             "topk_backend": topk_meta["topk_backend"],
             "topk_status": topk_meta["topk_status"],
             "topk_notes": topk_meta["topk_notes"],

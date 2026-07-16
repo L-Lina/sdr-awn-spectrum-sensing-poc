@@ -5,6 +5,7 @@ complex64 .cfile reader (for a future real GNU Radio capture hookup).
 
 from __future__ import annotations
 
+import hashlib
 from typing import Optional
 
 import numpy as np
@@ -37,7 +38,12 @@ def generate_synthetic_iq(
     noise = rng.normal(0, noise_std, n_samples) + 1j * rng.normal(0, noise_std, n_samples)
     iq = noise.astype(np.complex64)
 
-    freq_offset = 0.05 + (abs(hash(mod)) % 100) / 1000.0
+    # Python's built-in hash() is salted per-process (PYTHONHASHSEED), which
+    # made freq_offset -- and therefore the whole synthetic IQ stream --
+    # non-reproducible across separate process launches even with the same
+    # seed. hashlib.sha256 is a stable, cross-process-deterministic digest.
+    mod_digest = int.from_bytes(hashlib.sha256(mod.encode("utf-8")).digest()[:8], "big")
+    freq_offset = 0.05 + (mod_digest % 100) / 1000.0
     t = np.arange(burst_len)
     carrier = np.exp(1j * 2 * np.pi * freq_offset * t)
     iq[burst_start:burst_end] += (burst_amp * carrier).astype(np.complex64)

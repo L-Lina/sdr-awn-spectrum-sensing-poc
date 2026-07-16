@@ -26,7 +26,11 @@ from src.sensing.energy_detection import (
 from src.sensing.iq_source import generate_synthetic_iq, validate_iq
 from src.sensing.normalize import normalize_segments, to_awn_input
 from src.sensing.segmentation import segment_regions
-from src.utils.config import ExperimentConfig, validate_experiment_config
+from src.utils.config import (
+    ExperimentConfig,
+    resolve_sensing_window_size,
+    validate_experiment_config,
+)
 from src.utils.csv_writer import write_summary_csv
 from src.utils.plotting import plot_sensing_result
 
@@ -45,6 +49,17 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     # construction, or anyone importing this module directly.
     validate_experiment_config(cfg)
 
+    # sensing_window_size (energy_detect's smoothing window) and window_size
+    # (segment_regions'/to_awn_input's seg_len == AWN input temporal length)
+    # are deliberately decoupled here -- window_size is the legacy name and
+    # keeps controlling segment length / AWN input length unchanged; only the
+    # energy-detection call below uses the resolved sensing window. Resolved
+    # here (not at config-construction time) so this applies uniformly
+    # whether cfg came from argparse or was built directly.
+    effective_sensing_window_size = resolve_sensing_window_size(
+        cfg.window_size, cfg.sensing_window_size
+    )
+
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -57,7 +72,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     )
     iq = validate_iq(iq)
 
-    mask = energy_detect(iq, window=cfg.window_size, threshold_factor=cfg.threshold_factor)
+    mask = energy_detect(iq, window=effective_sensing_window_size, threshold_factor=cfg.threshold_factor)
     raw_regions = mask_to_regions(mask)
     merged_regions = merge_close_regions(raw_regions, merge_gap=cfg.merge_gap)
     regions = filter_by_min_length(merged_regions, min_len=cfg.min_region_len)
@@ -155,6 +170,15 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "topk": cfg.topk,
             "threshold_factor": cfg.threshold_factor,
             "window_size": cfg.window_size,
+            # window_size above is preserved as-is (legacy name/column, kept
+            # for backward-compat with existing analysis scripts). The two
+            # columns below make the now-decoupled semantics explicit:
+            # sensing_window_size is what energy_detect actually used;
+            # segment_length is the segmentation/AWN-input length (always
+            # equal to cfg.window_size in this round -- no crop/pad/resample
+            # implemented).
+            "sensing_window_size": effective_sensing_window_size,
+            "segment_length": cfg.window_size,
             "pred_clean": int(pred_clean[i]),
             "pred_attacked": int(pred_attacked[i]),
             "pred_defended": int(pred_defended[i]),
@@ -205,6 +229,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
 
     result = {
         "n_segments": x_clean.shape[0],
+        "sensing_window_size": effective_sensing_window_size,
+        "segment_length": cfg.window_size,
         "regions": regions,
         "output_dir": str(output_dir),
         "summary_csv_path": str(summary_csv_path),
@@ -223,6 +249,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
 
     print("\n--- Dry-run summary ---")
     print(f"IQ stream length:   {len(iq)} samples")
+    print(f"Sensing window:     {effective_sensing_window_size} (energy_detect smoothing window)")
+    print(f"Segment length:     {cfg.window_size} (segment_regions/to_awn_input seg_len == AWN input length)")
     print(f"Occupied regions:   {len(regions)} -> {regions}")
     print(f"Number of segments: {result['n_segments']}")
     print(f"AWN input shape:    {x_clean.shape}")

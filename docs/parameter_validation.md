@@ -23,13 +23,18 @@ checklist that accompanies this document.
 ```
 generate_synthetic_iq(snr, mod, burst_len, n_samples, seed=0)   [src/sensing/iq_source.py]
   -> validate_iq
-  -> energy_detect(window, threshold_factor)                    [src/sensing/energy_detection.py]
+  -> energy_detect(window=effective_sensing_window_size, threshold_factor)  [src/sensing/energy_detection.py]
+       (effective_sensing_window_size = resolve_sensing_window_size(window_size, sensing_window_size)
+        -- decoupled from segment/AWN-input length as of the sensing/segmentation
+        decoupling round; see section 8)
   -> mask_to_regions -> merge_close_regions(merge_gap)
        -> filter_by_min_length(min_region_len)
   -> segment_regions(seg_len=window_size)                       [src/sensing/segmentation.py]
   -> normalize_segments (unit-average-power, NOT clamped to [-1,1])
   -> to_awn_input()                                             [src/sensing/normalize.py]
-       => x_clean  [N, 2, window_size] float32
+       => x_clean  [N, 2, window_size] float32   (window_size is the LEGACY
+                    name -- segment length == AWN input temporal length T,
+                    unaffected by --sensing-window-size)
   -> AWN inference (real AWNModelAdapter or numpy dummy)         [src/adapters/awn_adapter.py]
        => logits_clean
   -> Attack (real AttackAdapter or numpy dummy_attack)           [src/adapters/attack_adapter.py]
@@ -81,12 +86,19 @@ validation) is in `docs/parameter_validation.csv`. Summary by category:
   `seed` (hardcoded `SEED = 0` in `src/utils/pipeline.py:33`) are **not**
   CLI-exposed at all.
 - **C. Spectrum sensing**: `--threshold-factor`, `--window-size`,
-  `--min-region-len`, `--merge-gap` are CLI-exposed. Overlap/hop-size, max
-  segment count, and sample rate are not implemented anywhere in this repo.
-- **D. Segmentation**: segment length is the same parameter as
-  `--window-size` (no separate flag). No overlap/hop parameter exists in
-  `src/sensing/segmentation.py:segment_regions` (fixed non-overlapping
-  windows only). No max-segments cap exists.
+  `--sensing-window-size`, `--min-region-len`, `--merge-gap` are CLI-exposed.
+  `--window-size` is now a **legacy name**: it controls segment length /
+  AWN input temporal length only. `--sensing-window-size` (new) controls
+  `energy_detect`'s smoothing window independently, defaulting to
+  `--window-size` when unset (prior coupled behavior reproduced exactly).
+  Overlap/hop-size, max segment count, and sample rate are not implemented
+  anywhere in this repo.
+- **D. Segmentation**: segment length is still the same parameter as
+  `--window-size` (no separate `segment_length`/`model_input_length` flag --
+  that three-way split was explicitly deferred, see section 8). No
+  overlap/hop parameter exists in `src/sensing/segmentation.py:segment_regions`
+  (fixed non-overlapping windows only). No max-segments cap exists. No
+  crop/pad/resample exists anywhere.
 - **E. AWN/AMC**: `--use-real-awn`, `--checkpoint`, `--device`.
 - **F. Attack**: `--use-real-attack`, `--attack`/`--attack-list`,
   `--attack-eps`, `--attack-temperature`, `--attack-diagnostics`.
@@ -112,7 +124,8 @@ validation) is in `docs/parameter_validation.csv`. Summary by category:
 | Parameter | Exists | Actually used | CLI-exposed |
 |---|---|---|---|
 | threshold-factor | yes | yes | yes |
-| window-size | yes | yes | yes |
+| window-size | yes | yes (segment length / AWN input T -- **legacy name**, no longer controls energy-detection window, see section 8) | yes |
+| sensing-window-size | yes (new) | yes (energy-detection smoothing window only) | yes |
 | min-region-len | yes | yes | yes (0-value bug fixed, see section 8) |
 | merge-gap | yes | yes | yes |
 | burst-len | yes | yes | yes |
@@ -121,7 +134,7 @@ validation) is in `docs/parameter_validation.csv`. Summary by category:
 | burst amplitude | yes (hardcoded `1.0`) | yes | **no** |
 | noise standard deviation | yes (derived from SNR) | yes | **no** (only indirectly via `--snr`) |
 | seed | yes (hardcoded `0`) | yes | **no** |
-| segment length | = window-size, shared param | yes | yes (via `--window-size`) |
+| segment length | = window-size (still shared with AWN input T; the sensing-window/segment split does NOT split segment length from AWN input length -- those two remain coupled) | yes | yes (via `--window-size`) |
 | overlap / hop size | **not implemented** | — | — |
 | max segments | **not implemented** | — | — |
 | sample rate | **concept does not exist** in this synthetic pipeline | — | — |
@@ -422,6 +435,73 @@ in this repo.
     per-segment min-max mapping. Also added the temperature-scaling
     mechanism to work around the gradient-saturation issue above (FGSM/PGD
     only, verified).
+
+- **Sensing window / segment length / AWN input length were coupled to a
+  single parameter — PARTIALLY DECOUPLED (minimal two-parameter fix).**
+  A dedicated read-only architecture audit found that `cfg.window_size`
+  simultaneously drove three semantically distinct roles at
+  `src/utils/pipeline.py`: `energy_detect(iq, window=cfg.window_size, ...)`
+  (energy-detection smoothing kernel width), `segment_regions(..., seg_len=
+  cfg.window_size)` (occupied-region segmentation length), and
+  `to_awn_input(..., seg_len=cfg.window_size)` (AWN model input temporal
+  length T). This made any `--window-size` sweep intended to explore sensing
+  behavior *also* change what gets fed to the AWN model, confounding two
+  independent experimental variables. Fix implemented this round:
+  1. **Sensing window and AWN segment length are now decoupled.** A new
+     `--sensing-window-size` CLI flag (and matching `ExperimentConfig.
+     sensing_window_size: Optional[int] = None` field) controls *only*
+     `energy_detect`'s smoothing window. `src/utils/config.py:
+     resolve_sensing_window_size(window_size, sensing_window_size)` resolves
+     `None` -> `window_size` (prior coupled behavior, reproduced exactly),
+     called from `src/utils/pipeline.py:run_dry_run_experiment` (not at
+     config-construction time), so both the CLI path and direct
+     `ExperimentConfig(...)` construction resolve identically.
+  2. **`--window-size` is now the legacy name** — it continues to control
+     `segment_regions`'/`to_awn_input`'s `seg_len` (segment length == AWN
+     input temporal length T) exactly as before; nothing about its behavior
+     for existing callers changed. Verified byte-for-bit: with
+     `--sensing-window-size` unset, the resulting energy-detection mask,
+     occupied regions, and `x_clean` tensor are SHA256-identical to the
+     pre-decoupling code path at `window_size=128, seed=0`.
+  3. **For the pinned `2016.10a_AWN.pkl` checkpoint, segment length should
+     still be kept at 128 for any real experiment** — this is a dataset/
+     training convention (`external/adversarial-rf/util/config.py:51`:
+     `self.signal_len = 128` for `2016.10a`/`2016.10b`; `:58`:
+     `self.signal_len = 1024` for `2018.01a`), not something this round
+     changed or validated otherwise.
+  4. **The AWN model architecture structurally accepts other EVEN T values
+     without a shape error** — traced `external/adversarial-rf/models/
+     model.py`/`models/lifting.py` and confirmed empirically by loading the
+     real `2016.10a_AWN.pkl` checkpoint and running `forward()` on all-zero
+     dummy tensors at T=64/128/256/1024 (all succeeded, `[N,11]` output) and
+     T=63 (failed with a `RuntimeError` from the lifting scheme's odd/even
+     split, exactly as the odd-length hypothesis predicted). This is because
+     `nn.AdaptiveAvgPool1d(1)` (`model.py:102`) removes all T-dependence
+     before the `Linear` layers — no weight tensor in the checkpoint's
+     `state_dict` has any T-sized dimension. **This is a structural
+     compatibility finding only — it says nothing about whether predictions
+     at non-128 T are statistically meaningful.** The checkpoint's weights
+     were trained exclusively on 128-sample signals; no accuracy/validity
+     claim exists for any other length, and none was tested (only all-zero
+     dummy tensors were used, deliberately, to avoid producing anything
+     resembling an "experiment result").
+  5. **crop / pad / resample are NOT implemented.** Segment length and AWN
+     input length remain hard-tied to the same `--window-size` value; a
+     third `model_input_length` parameter with a crop/pad/resample bridge
+     (needed to fully decouple segment length from AWN input length) was
+     explicitly out of scope this round and is a separate, larger design
+     decision (see the architecture-options analysis from the audit turn:
+     option C in that discussion).
+  6. **2018.01a model configuration is NOT wired in.** `src/adapters/
+     awn_adapter.py`'s `_AWN_2016_10A_CFG` remains hardcoded to
+     `num_levels=1` (matching only 2016.10a/10b); the 2018.01a checkpoint
+     needs `num_levels=4` (confirmed via `config/2018.01a.yml:10` and by
+     loading `2018.01a_AWN.pkl`'s `state_dict`, which has 4 distinct
+     `levels.level_0..level_3.*` weight groups vs. 2016.10a's single
+     `levels.level_0.*`). Pointing `--checkpoint` at `2018.01a_AWN.pkl`
+     without also changing `num_levels`/`in_channels`/`latent_dim`/
+     `num_classes` in the adapter would still fail `load_state_dict`
+     (missing keys) — unrelated to and unaffected by this round's change.
 
 ---
 

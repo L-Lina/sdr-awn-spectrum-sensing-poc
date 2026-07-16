@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import math
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -21,6 +22,13 @@ class ExperimentConfig:
     output_dir: str
     dry_run: bool
     n_samples: int = 8192
+    # None means "use window_size" (legacy behavior, unchanged for anyone who
+    # never passes --sensing-window-size). Resolved in
+    # src/utils/pipeline.py:run_dry_run_experiment via
+    # resolve_sensing_window_size() below, NOT at config-construction time,
+    # so direct-API callers who build ExperimentConfig by hand (not through
+    # args_to_config/run_batch.py) still get correct behavior.
+    sensing_window_size: Optional[int] = None
     use_real_topk: bool = False
     use_real_awn: bool = False
     checkpoint: str = "external/adversarial-rf/2016.10a_AWN.pkl"
@@ -78,11 +86,26 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
     finalized rule as of this round; merge_gap and topk are out of scope."""
     require_positive_finite_float("threshold_factor", cfg.threshold_factor)
     require_positive_int("window_size", cfg.window_size)
+    if cfg.sensing_window_size is not None:
+        require_positive_int("sensing_window_size", cfg.sensing_window_size)
     require_nonneg_int("min_region_len", cfg.min_region_len)
     require_positive_int("burst_len", cfg.burst_len)
     require_finite_float("snr_db", cfg.snr)
     require_nonneg_finite_float("attack_eps", cfg.attack_eps)
     require_positive_finite_float("attack_temperature", cfg.attack_temperature)
+
+
+def resolve_sensing_window_size(window_size: int, sensing_window_size: Optional[int]) -> int:
+    """--sensing-window-size controls only energy_detect's smoothing window;
+    --window-size (legacy name) continues to control segment_regions'/
+    to_awn_input's seg_len (segment length == AWN input temporal length,
+    UNCHANGED). When --sensing-window-size is unset (None), the effective
+    sensing window falls back to window_size -- this is the single point
+    where that fallback happens, called from
+    src/utils/pipeline.py:run_dry_run_experiment so it applies uniformly
+    regardless of whether the caller went through argparse or built
+    ExperimentConfig directly."""
+    return window_size if sensing_window_size is None else sensing_window_size
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +188,15 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument("--attack-eps", type=arg_nonneg_finite_float("attack_eps"), default=0.03, help="Attack epsilon (Linf budget for fgsm/pgd)")
     parser.add_argument("--topk", type=int, default=50, help="Top-K FFT bins kept by the defense placeholder")
     parser.add_argument("--threshold-factor", type=arg_positive_finite_float("threshold_factor"), default=5.0, help="Energy threshold = median power * this factor")
-    parser.add_argument("--window-size", type=arg_positive_int("window_size"), default=128, help="Segment length / energy-detection window; real AWN checkpoint currently expects 128 (not enforced here)")
+    parser.add_argument("--window-size", type=arg_positive_int("window_size"), default=128,
+                        help="Legacy name -- controls segment length AND AWN input temporal length "
+                             "(segment_regions'/to_awn_input's seg_len). Real AWN checkpoint currently "
+                             "expects 128 (not enforced here). Does NOT control energy-detection smoothing "
+                             "window unless --sensing-window-size is left unset.")
+    parser.add_argument("--sensing-window-size", type=arg_positive_int("sensing_window_size"), default=None,
+                        help="Energy-detection smoothing window (energy_detect's window= argument), "
+                             "independent of segment length / AWN input length. Defaults to --window-size "
+                             "when unset, reproducing prior (coupled) behavior exactly.")
     parser.add_argument("--min-region-len", type=arg_nonneg_int("min_region_len"), default=None, help="Minimum occupied region length to keep (default: --window-size); 0 is allowed")
     parser.add_argument("--merge-gap", type=int, default=0, help="Merge occupied regions separated by <= this many samples")
     parser.add_argument("--burst-len", type=arg_positive_int("burst_len"), default=600, help="Synthetic burst length in samples")
@@ -203,6 +234,7 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         topk=args.topk,
         threshold_factor=args.threshold_factor,
         window_size=args.window_size,
+        sensing_window_size=args.sensing_window_size,
         min_region_len=(
             args.window_size if args.min_region_len is None else args.min_region_len
         ),

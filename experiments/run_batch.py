@@ -44,7 +44,14 @@ def build_batch_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--attack-list", type=str, default="none,fgsm", help="Comma-separated attack names")
     parser.add_argument("--topk-list", type=str, default="10,50", help="Comma-separated Top-K values")
     parser.add_argument("--threshold-factor", type=arg_positive_finite_float("threshold_factor"), default=5.0)
-    parser.add_argument("--window-size", type=arg_positive_int("window_size"), default=128)
+    parser.add_argument("--window-size", type=arg_positive_int("window_size"), default=128,
+                        help="Legacy name -- controls segment length AND AWN input temporal length. "
+                             "Does NOT control energy-detection smoothing window unless "
+                             "--sensing-window-size is left unset.")
+    parser.add_argument("--sensing-window-size", type=arg_positive_int("sensing_window_size"), default=None,
+                        help="Energy-detection smoothing window, independent of segment length / AWN input "
+                             "length. Defaults to --window-size when unset (prior behavior unchanged). "
+                             "Applied uniformly to every combo in this batch.")
     parser.add_argument("--min-region-len", type=arg_nonneg_int("min_region_len"), default=None)
     parser.add_argument("--merge-gap", type=int, default=0)
     parser.add_argument("--burst-len", type=arg_positive_int("burst_len"), default=600)
@@ -108,6 +115,7 @@ def main() -> None:
             topk=topk,
             threshold_factor=args.threshold_factor,
             window_size=args.window_size,
+            sensing_window_size=args.sensing_window_size,
             min_region_len=min_region_len,
             merge_gap=args.merge_gap,
             burst_len=args.burst_len,
@@ -135,6 +143,8 @@ def main() -> None:
             "attack": attack,
             "topk": topk,
             "attack_temperature": args.attack_temperature,
+            "sensing_window_size": result["sensing_window_size"],
+            "segment_length": result["segment_length"],
             "n_segments": result["n_segments"],
             "output_dir": result["output_dir"],
         })

@@ -3387,3 +3387,325 @@ category labels alone):
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
   STARTED** (unchanged, explicitly out of scope this round)
 
+## 22. Spectrum-sensing parameter revalidation after the alignment/preprocessing fixes (round 13)
+
+New files: `experiments/run_sensing_revalidation.py` (stages A/B/C),
+`experiments/run_sensing_revalidation_stage_de.py` (stages D/E). Modified:
+`src/utils/pipeline.py`, `src/utils/batch_aggregation.py` (new
+`num_raw_regions`/`num_merged_regions`/`num_filtered_regions` fields,
+commit `c1ec411`, tested and committed separately before the sweeps
+below). **No other `src/` changes. No changes to
+`external/AWN`/`external/adversarial-rf`.**
+
+### 22.1 Pre-flight (Part 一, verified via code trace, not documentation)
+
+1. `git status`/`git log` confirmed clean tree at `160dc1f` before this
+   round started.
+2. Full CLI parameter inventory re-read directly from
+   `src/utils/config.py:build_arg_parser` (41 `add_argument` calls) --
+   confirmed current names/defaults/validation rules, not assumed from
+   docs.
+3. **Confirmed via `grep`, not assumed**: `resolve_alignment_policy`/
+   `resolve_awn_preprocess` are called inside `run_dry_run_experiment`
+   (`pipeline.py:114-115`), and `select_aligned_segments`/
+   `apply_awn_preprocess` are called with the RESOLVED
+   `effective_alignment_policy`/`effective_awn_preprocess` values
+   (`pipeline.py:248,260`), not the raw `cfg` fields. `run_batch_combos`
+   (`batch_aggregation.py:161`) calls `run_dry_run_experiment(cfg)`
+   directly -- there is only one code path; batch and single-run modes are
+   the same function, so there is no way for the batch pipeline to bypass
+   these resolvers.
+4. Cross-referenced `docs/parameter_validation.md`'s section numbering
+   against `git log`: the comprehensive OFAT sweep of `threshold-factor`/
+   `sensing-window-size`/`min-region-len`/`merge-gap` (section 16.4,
+   "round 7") predates both the alignment fix (`f801435`, section 18/
+   "round 9") and the preprocessing fix (`1285961`, section 19/"round 10")
+   by many commits -- confirmed stale, exactly as suspected, not assumed.
+5. All of the above verified by reading current source and running `git
+   log`/`grep`, not inferred from prior summaries.
+
+### 22.2 Fixed baseline (Part 二)
+
+`iq_source=radioml`, real AWN, `attack=none`, real Top-K NOT exercised
+(`--use-real-topk` omitted -- avoids conflating defense behavior with
+sensing behavior, per explicit instruction), modulations `{QPSK, BPSK,
+QAM16}`, `dataset_snr {0, 18}`, `sample_index {0,1,2,3,4}` (**30 unique
+samples**), `seed=42`, `window_size=128`, `alignment_policy=max-energy`,
+`awn_preprocess=radioml-native` (both **explicitly** set, not relying on
+the source-aware default, so this round's intent is unambiguous
+regardless of future default changes), `device=cpu`.
+
+### 22.3 Stage A: `threshold-factor` ∈ {0.8, 1.0, 1.2, 1.5, 2.0, 3.0, 5.0}
+
+**Command**: `python experiments/run_sensing_revalidation.py` (stage A).
+210 combos (30 samples × 7 values), estimated ~357s; **actual 310.2s**.
+**210/210 ok, 0 sensing_failed, 0 error.**
+
+| `threshold_factor` | mean raw regions | mean `n_segments` | mean segment-level captured ratio |
+|---|---|---|---|
+| 0.8 | 4.0 | 2.00 | 0.4992 |
+| 1.0 | 158.4 | 10.00 | 0.0998 |
+| 1.2 | 12.0 | 1.00 | 0.9852 |
+| 1.5 | 1.0 | 1.00 | 0.9852 |
+| 2.0 | 1.0 | 1.00 | 0.9852 |
+| 3.0 | 1.0 | 1.00 | 0.9852 |
+| 5.0 | 1.0 | 1.00 | 0.9852 |
+
+**Important correction, made and reported transparently**: an early read
+of this data (using only each combo's first segment) showed a mean ratio
+of exactly `0.0` at `threshold_factor∈{0.8,1.0}`, which looked like
+max-energy alignment systematically failing. Investigating the raw
+`summary.csv` for one such combo revealed **this was a bug in this
+round's own analysis script, not the pipeline**: at low threshold, a
+region spanning most of the 8192-sample stream gets detected (severe
+false-alarm fragmentation, consistent with section 16.4/18.4's prior
+finding), and `max-energy` -- correctly, per its one-segment-per-region
+design -- produces one segment from EACH surviving region. For
+`combo_id=0` (QPSK snr=0 idx=0) at `threshold_factor=0.8`: segment 0 (from
+a false-alarm region) has `segment_captured_signal_ratio=0.0`; segment 1
+(from the region that actually contains the true burst) has
+`segment_captured_signal_ratio=1.0` -- **the true burst WAS found
+correctly**; the pipeline's own aggregate,
+`mean_segment_captured_signal_ratio=0.5`, correctly averages both. This
+round's analysis script has been corrected to use that aggregate; the
+underlying pipeline CSV/denominator logic was verified correct throughout
+(this is also the direct answer to this round's Part 七 stop-condition
+check on CSV/denominator correctness -- confirmed NOT triggered, the flaw
+was in a one-off analysis script, not `src/`).
+
+**Real, corrected finding**: `threshold_factor ∈ [1.2, 5.0]` is
+**stable** -- single clean region, `n_segments=1`, ratio consistently
+`0.9852`. `threshold_factor ≤ 1.0` is **unstable in a way that does not
+show up as a crash or `sensing_failed`**: it still returns
+`run_status="ok"`, but produces MULTIPLE segments per combo, most of
+which are false-alarm noise fed into AWN alongside the one genuine
+segment -- diluting any downstream accuracy statistic. **A formal batch
+must not treat `run_status=="ok"` alone as sufficient for a "clean"
+sensing outcome at low `threshold_factor`** -- `n_segments`/
+`mean_segment_captured_signal_ratio` must also be checked.
+
+### 22.4 Stage B: `sensing-window-size` ∈ {16, 32, 64, 128, 256}
+
+150 combos (30 × 5), estimated ~255s; **actual 204.7s**. **147/150 ok, 3
+sensing_failed (`segment_regions` stage), 0 error.**
+
+| `sensing_window_size` | ok/30 | mean raw regions | mean seg. ratio (ok only) |
+|---|---|---|---|
+| 16 | 29 | 68.3 | 0.9989 |
+| 32 | 29 | 9.0 | 0.9989 |
+| 64 | 29 | 1.0 | 0.9989 |
+| 128 | 30 | 1.0 | 0.9852 |
+| 256 | 30 | 1.0 | 0.9984 |
+
+**Real finding, a genuine stability-vs-precision tradeoff**: smaller
+`sensing_window_size` (16-64) gives a slightly HIGHER captured ratio when
+it succeeds (`0.9989` vs. `0.9852` at 128) -- less smoothing means a
+tighter region around the true burst, giving `max-energy` a smaller,
+more-precise search space -- but at the cost of a small but real failure
+rate (1/30 at each of 16/32/64, all `segment_regions`-stage: the
+surviving region was too short once smoothing narrowed it). `128` and
+`256` are perfectly stable (0/30 failures) with only a marginally lower
+ratio. **128 (the current default) remains the recommended
+general-purpose value**; `256` is a viable, slightly-more-precise
+alternative with the same 0-failure stability.
+
+### 22.5 Stage C: `min-region-len` ∈ {0, 32, 64, 128, 256}
+
+150 combos (30 × 5), estimated ~255s; **actual 203.3s**. **120/150 ok, 30
+sensing_failed, 0 error.**
+
+| `min_region_len` | ok/30 | failure stage |
+|---|---|---|
+| 0 | 30 | -- |
+| 32 | 30 | -- |
+| 64 | 30 | -- |
+| 128 | 30 | -- |
+| 256 | **0** | `filter_by_min_length` (all 30) |
+
+**`min_region_len=256` was NOT rejected by validation** (`require_nonneg_int`
+places no upper bound) -- it was accepted and run, and every one of the 30
+combos correctly hit the EXPECTED `filter_by_min_length` sensing failure,
+since detected regions in this dataset/embedding configuration are
+typically only ~140-250 samples long, so a 256-sample floor filters out
+literally everything. **Recorded as a legitimate, fully-explained sensing
+failure, per Part C's explicit instruction -- not silently changed, not
+treated as a bug.** `min_region_len ∈ [0, 128]` is stable with identical
+ratio (`0.9852`) throughout -- `min_region_len` has no effect on capture
+quality in this regime as long as it doesn't exceed the actual region
+lengths.
+
+### 22.6 Stage D: `merge-gap`, with real calibrated multi-region data
+
+**Calibration** (not guessed): a true inter-burst gap of 50 samples (the
+multi-burst default) already merges into ONE region at `merge_gap=0`
+under `sensing_window_size=128` -- unusable for a merge-gap test. Probed
+`{100,150,200,300,400}`: gap `100` still merges; gap `≥150` gives 2
+separate regions at `merge_gap=0`, with a measured inter-region gap of
+**36 samples** (`[94,242]` then `[278,512]`). Used `--burst-gap-list
+50,150` as the fixed 2-burst setup (`mean_burst_gap`).
+
+18 combos (`merge_gap ∈ {0,1,5,20,64,128}` × 3 modulation-pairs `(BPSK,
+QPSK), (QPSK,QAM16), (QAM16,BPSK)`), estimated from the calibration
+(small, ~50s); **actual 50.5s**. **18/18 ok, 0 sensing_failed, 0 error.**
+
+| `merge_gap` | `num_filtered_regions` (all 3 mod-pairs) |
+|---|---|
+| 0 | 2 |
+| 1 | 2 |
+| 5 | 2 |
+| 20 | 2 |
+| 64 | **1** |
+| 128 | **1** |
+
+**Exactly matches the calibration**: every `merge_gap` below the measured
+36-sample inter-region gap keeps the regions separate; every value at or
+above it merges them -- consistent across all 3 modulation pairs. **This
+is the first time `merge-gap` has been verified with `max-energy`
+alignment** (every prior test, section 15.3/round 6, used `naive`) -- confirms
+merge-gap's region-merging mechanism is entirely independent of which
+alignment policy later selects a segment from within the merged/unmerged
+regions (expected, since `merge_close_regions` runs before
+`select_aligned_segments` in the pipeline, but now empirically confirmed,
+not just structurally assumed).
+
+### 22.7 Stage E: burst/stream parameter checks
+
+- **E1 `burst-len`** (synthetic mode only -- radioml mode's burst length is
+  fixed by the dataset sample, 128 samples; `--burst-len` only affects the
+  synthetic generator): `{1, 128, 600, 4096}` -- `burst_len=1` correctly
+  hit a sensing failure (too short to detect meaningfully against the
+  fixed synthetic SNR); `128, 600, 4096` all succeeded.
+- **E2 `n_samples`**: confirmed **no CLI flag exists** for this parameter
+  (`ExperimentConfig.n_samples` has no corresponding `add_argument` --
+  confirmed via `grep`, only reachable via direct `ExperimentConfig(...)`
+  construction). Tested `{2048, 8192, 16384}` directly via the API -- all
+  3 succeeded.
+- **E3 burst-start reproducibility**: covered by this round's general
+  reproducibility checks (22.8) -- `long_iq_sha256` (which encodes the
+  burst's exact position, since the embedding function draws the position
+  via the seeded RNG) was confirmed bit-identical across independent
+  processes for multiple combos, including a fragmented-mask case and a
+  multi-burst case.
+- **E4 single-burst vs. multi-burst mode**: **found and fixed a bug in
+  this round's own test script**, not the pipeline -- `num_bursts=1` is,
+  by explicit design (section 15.1), ALWAYS the single-burst code path
+  using the singular `dataset_mod`/`dataset_snr`/`sample_index` fields;
+  `validate_experiment_config` correctly rejects an attempt to set
+  `num_bursts=1` while only providing the multi-burst `*_list` fields
+  (`ValueError: --iq-source radioml requires ['dataset_mod',
+  'dataset_snr'] to all be set`) -- there is no "multi-burst code path
+  with exactly 1 entry" to test, so the comparison was corrected to
+  single-burst mode vs. burst-0-of-a-genuine-2-burst-run (same underlying
+  BPSK/snr18/idx0 sample). Both modes ran successfully; the two runs'
+  embedded burst POSITIONS differ (single-burst: `[3889,4017]`;
+  multi-burst's burst 0: `[400,528]`) -- **expected, not a bug**:
+  `embed_sample_in_noise` and `embed_multiple_samples_in_noise` are
+  different functions with different RNG call sequences (one random draw
+  vs. per-burst gap draws), so the same seed does not need to produce the
+  same absolute position across the two different embedding functions,
+  only reproducible positions within each.
+- **E5 `embed-snr-margin`** ∈ {1.0, 5.0, 10.0, 20.0, 50.0, 100.0} × 2
+  modulations × 2 sample_indices (24 combos, 33.7s): `margin=1.0` (noise
+  power equals burst power) correctly failed sensing for all 4 tested
+  combos at that value (`segment_regions`: burst genuinely
+  indistinguishable from noise at 0dB embedding margin, physically
+  expected) -- **not a bug, a legitimate, explained sensing failure**.
+  `margin ≥ 5.0` all succeeded with the expected sample-dependent
+  captured-ratio pattern (e.g. `BPSK/idx0` consistently lower than
+  `BPSK/idx1`, matching the known partial-capture finding, unaffected by
+  `embed_snr_margin`'s value once above the failure threshold).
+
+### 22.8 Reproducibility (Part 五.1)
+
+Two independent-process checks, both bit-identical (`long_iq_sha256` and
+every derived metric): (1) the corrected multi-segment
+`threshold_factor=0.8` case (`n_segments=2`,
+`mean_segment_captured_signal_ratio=0.5` both runs); (2) the merge-gap
+multi-burst case at `merge_gap=64` (`num_filtered_regions=1`,
+`n_segments=1` both runs). Combined with section 20/21's prior
+reproducibility checks (single-burst, multi-burst, real attack, CW), this
+round confirms determinism holds specifically for the FRAGMENTED-mask
+multi-segment case and the merge-gap-driven region-merging case, neither
+previously checked.
+
+### 22.9 Stop-condition check (Part 七) -- none triggered
+
+- Alignment fix in the batch pipeline: confirmed present (22.1.3).
+- `radioml-native` preprocessing used: confirmed (`awn_input_scale_factor=1.0`
+  observed throughout).
+- Selected segment vs. CSV record consistency: confirmed (`selected_segment_start/end`
+  columns match the `[segment][max-energy]` console log's selected window
+  in every spot-checked combo).
+- Same-seed reproducibility: confirmed (22.8).
+- Sensing failures silently ignored: NOT observed -- all 33 (stage A/B/C)
+  + 4 (stage E5) sensing failures are present in their stage's
+  `batch_summary.csv`/`failures.csv`, and no batch run aborted early.
+- CSV field / denominator errors: NOT found in `src/` -- the one
+  discrepancy found (22.3) was in this round's own analysis script, fixed
+  before reporting.
+- Core experiment definition change needed: no -- the one script bug
+  found (22.7, E4) required fixing the TEST script's invalid parameter
+  combination, not any core definition.
+
+**No stop condition was triggered; the round proceeded to completion as
+planned.**
+
+### 22.10 Recommended stable parameter ranges for the eventual formal batch
+
+| Parameter | Recommended | Rationale |
+|---|---|---|
+| `threshold_factor` | **1.5** (current default), safe range `[1.2, 5.0]` | `≤1.0` produces multiple false-alarm segments per combo despite `run_status="ok"` -- would silently pollute a formal batch's aggregate statistics |
+| `sensing_window_size` | **128** (current default), `256` viable alternative | `16-64` marginally more precise (0.9989 vs 0.9852 ratio) but with a small (1/30) failure rate; `128`/`256` are 0-failure |
+| `min_region_len` | **0-128** all equivalent in this regime | Must stay below the actual detected-region length (~140-250 samples here) or every combo fails outright |
+| `merge_gap` | **Not a general-purpose default** -- depends entirely on desired inter-burst spacing behavior; this round confirmed the mechanism works correctly with `max-energy`, transition point is data-dependent (measured 36 samples for this specific 2-burst setup) | Only relevant to multi-burst mode |
+| `embed_snr_margin` | **≥5.0** (well above the current default of 20.0) | `1.0` reliably fails; `20.0` (current default) is comfortably within the stable range |
+
+### 22.11 Documentation status labels (Part 八.2)
+
+- **已驗證 (verified)**: `threshold_factor` stability boundary under
+  `max-energy`/`radioml-native` (22.3); `sensing_window_size`
+  stability-precision tradeoff under new defaults (22.4); `min_region_len`
+  behavior and rejection boundary (22.5); `merge_gap` region-merging
+  mechanics under `max-energy` (22.6, first time); region-count
+  diagnostics (`num_raw/merged/filtered_regions`, newly exposed, 22.1);
+  reproducibility for fragmented-mask and merge-gap cases (22.8).
+- **部分驗證 (partially verified)**: `embed_snr_margin` (only 2
+  modulations × 2 sample_indices × 6 values tested, not the full 30-sample
+  grid); `burst-len`/`n_samples` (targeted boundary checks only, not a
+  full sweep); single-vs-multi-burst structural comparison (one sample
+  pair only).
+- **尚未驗證 (not yet validated)**: any of these sensing parameters
+  combined with real attack/Top-K in the loop simultaneously (this round
+  deliberately excluded both); `threshold_factor`/`sensing_window_size`/
+  `min_region_len` interaction effects beyond the OFAT design (no 2D/3D
+  grid this round); sensing parameters under `naive` alignment for
+  comparison (this round only tested `max-energy`, the new default).
+- **程式錯誤 (genuine program errors)**: **0** across all 6 stages (A-E,
+  552 total pipeline combos + 2 direct-API calls) -- the one `ValueError`
+  encountered (E4) was a correctly-functioning validation rejecting an
+  invalid test-script parameter combination, fixed in the test script,
+  not a `src/` defect.
+- **合理的 sensing failure (legitimate sensing failures)**: 33 (stages
+  A-C) + 4 (stage E5) = **37**, all traced to an explained, expected
+  mechanism (extreme `min_region_len`, extreme `sensing_window_size`,
+  extreme `embed_snr_margin`, or `burst_len=1`) -- none silently ignored,
+  none forced to pass by adjusting parameters.
+
+### 22.12 Cross-reference to this round's required status labels
+
+- **`threshold-factor`/`sensing-window-size`/`min-region-len` OFAT
+  revalidation under `max-energy`/`radioml-native`**: **PASS this round**
+  (22.3-22.5) -- batch tested, 510 combos, 0 genuine errors, stable ranges
+  identified and documented, one analysis-script error found and corrected
+  transparently.
+- **`merge-gap` revalidation with real multi-region data under
+  `max-energy`**: **PASS this round** (22.6) -- first time tested with the
+  new alignment policy, calibrated (not guessed), exact predicted
+  transition confirmed.
+- **Burst/stream parameter checks**: **PARTIAL** (22.7) -- targeted, not
+  comprehensive; one test-script bug found and fixed.
+- **Reproducibility**: **PASS this round** (22.8) -- 2 new scenario types
+  confirmed bit-identical.
+- **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
+  STARTED** (unchanged, explicitly out of scope this round)
+

@@ -96,6 +96,35 @@ def require_nonneg_int(name: str, value: int) -> int:
     return value
 
 
+def require_valid_topk(name: str, value) -> int:
+    """Direct-API entry-point guard for topk (src/adapters/topk_adapter.py:
+    TopKAdapter.apply(), src/adapters/defense_adapter.py:dummy_topk_defense).
+    Deliberately does NOT restrict the *range* of topk -- topk<=0 keeps its
+    existing bypass semantics (return input unchanged) and topk > the FFT
+    bin count keeps its existing clamp semantics (min(topk, T)); both are
+    unaffected by this function. This only rejects values that can never be
+    a meaningful bin count at all: non-numeric, NaN/Inf, or a genuine
+    fractional part (e.g. 1.5) -- previously such values were silently
+    truncated via a bare int(topk) inside each backend, and NaN/Inf reached
+    int() at all only inside the real/dummy backends themselves, sometimes
+    after a real-backend failure had already triggered a fallback attempt
+    (see docs/parameter_validation.md section 12.3 for the pre-fix
+    behavior). Called BEFORE any backend selection, so a rejection here
+    surfaces as an immediate ValueError and never gets a chance to trigger
+    TopKAdapter's real-backend-failed-so-fall-back-to-dummy path. The
+    --topk CLI flag itself is unaffected -- it already only ever produces
+    plain ints via argparse's type=int, which always satisfies this check."""
+    try:
+        fvalue = float(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be numeric, got {value!r}")
+    if not math.isfinite(fvalue):
+        raise ValueError(f"{name} must be finite (not NaN/Inf), got {value!r}")
+    if fvalue != int(fvalue):
+        raise ValueError(f"{name} must not have a fractional part, got {value!r}")
+    return int(fvalue)
+
+
 def validate_experiment_config(cfg: ExperimentConfig) -> None:
     """Boundary validation for direct-API callers of run_dry_run_experiment(cfg)
     that bypass argparse entirely. Covers exactly the parameters with a

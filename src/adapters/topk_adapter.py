@@ -31,6 +31,7 @@ from typing import Dict, Tuple
 import numpy as np
 
 from src.adapters.defense_adapter import dummy_topk_defense
+from src.utils.config import require_valid_topk
 
 _ADVERSARIAL_RF_ROOT = Path(__file__).resolve().parents[2] / "external" / "adversarial-rf"
 _REAL_SOURCE = "external/adversarial-rf/util/defense.py:fft_topk_denoise"
@@ -66,6 +67,12 @@ class TopKAdapter:
 
     def apply(self, x: np.ndarray, topk: int) -> Tuple[np.ndarray, Dict[str, str]]:
         """x: [N, 2, T] float32. Returns (y, meta) with y of the same shape."""
+        # Validated BEFORE any backend selection/try-except below, so an
+        # invalid topk (NaN/Inf/non-numeric/fractional) raises immediately
+        # here and never gets a chance to be caught by the real-backend
+        # try/except and silently fall back to dummy_topk_defense. topk<=0
+        # (bypass) and topk > T (clamp) semantics are unaffected.
+        topk = require_valid_topk("topk", topk)
         if x.ndim != 3 or x.shape[1] != 2:
             raise ValueError(f"TopKAdapter expects input [N, 2, T], got {x.shape}")
         input_shape = x.shape

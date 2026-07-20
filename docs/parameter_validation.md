@@ -1182,3 +1182,183 @@ expected — only `--window-size` controls it).
 - **Top-K boundary**: documented, no algorithm changes (section 12.3) — `topk=inf` double-crash and `topk=nan` silent-fallback both confirmed still present, both unreachable via the actual CLI
 - **Spectrum-sensing boundary**: documented, no algorithm changes (section 12.4) — no silent no-ops found across 25 combinations
 - **Modulation waveform implementation**: **NOT IMPLEMENTED** (unchanged — see section 5; `--mod` remains a cosmetic frequency-offset selector, not a real waveform synthesizer)
+
+---
+
+## 13. Top-K direct-API guard, real multi-region merge-gap test, CW fair Top-K sweep, SNR smoke matrix (round 4)
+
+Code changes this round: `src/utils/config.py` (new `require_valid_topk`),
+`src/adapters/defense_adapter.py`, `src/adapters/topk_adapter.py` (**no
+changes to `external/AWN`/`external/adversarial-rf`**, and no changes to
+`generate_synthetic_iq`'s single-burst default or any other pipeline
+default).
+
+### 13.1 Top-K direct-API guard (algorithm semantics preserved, new validation added)
+
+`require_valid_topk(name, value)` (`src/utils/config.py`) is called at the
+very top of both `dummy_topk_defense()` (`src/adapters/defense_adapter.py`)
+and `TopKAdapter.apply()` (`src/adapters/topk_adapter.py`), **before** any
+backend selection — so a rejection raises immediately and can never be
+caught by `TopKAdapter`'s real-backend `except Exception:` block and
+silently trigger a dummy fallback. Rejects only: non-numeric values,
+non-finite values (NaN/Inf), and values with a genuine fractional part
+(e.g. `1.5`). `topk<=0` (bypass) and `topk` above the FFT bin count (clamp)
+keep their exact prior semantics — this function does not restrict *range*,
+only *type*. The `--topk` CLI flag itself is untouched (still plain
+`type=int`, which already only ever produces values this guard accepts).
+
+**Before/after comparison** (same `T=128` test array as section 12.3):
+
+| topk | before (dummy) | before (`TopKAdapter`) | after (both) |
+|---|---|---|---|
+| `-1`, `0` | bypass (~2.4e-7 noise) / bit-exact bypass | unchanged | unchanged |
+| `1`...`1000000` | denoise / clamp, as before | unchanged | unchanged |
+| `1.5` | silently truncated to `1` | silently truncated to `1` | **`ValueError: topk must not have a fractional part, got 1.5`** |
+| `nan` | silent bypass (no crash) | **silent fallback to dummy**, no error surfaced | **`ValueError: topk must be finite (not NaN/Inf), got nan`**, identical in both backends, no fallback |
+| `inf` | uncaught `OverflowError` | real crashes → falls back → dummy **also** crashes, uncaught, escapes `TopKAdapter.apply()` | **`ValueError: topk must be finite (not NaN/Inf), got inf`**, identical in both backends, no fallback, no crash |
+| `'abc'` | (not previously tested) | (not previously tested) | **`ValueError: topk must be numeric, got 'abc'`** |
+
+Also re-verified through the **full pipeline** (`ExperimentConfig(topk=
+{inf,nan,1.5}, ...)` → `run_dry_run_experiment`): all three now raise a
+clean `ValueError` from inside `TopKAdapter.apply()`/`dummy_topk_defense()`
+instead of an uncaught `OverflowError` propagating out of the entire
+pipeline (the pre-fix behavior, confirmed present in section 12.3).
+
+### 13.2 merge-gap actual multi-region merging test (dual-burst, scratch-only)
+
+**Scratch diagnostic only** (`merge_gap_dual_burst_probe.py`) — does **not**
+modify `generate_synthetic_iq` or any pipeline default, which remains
+single-burst. A local two-burst generator (same noise/carrier formula as
+`generate_synthetic_iq`, applied twice) places two 256-sample bursts at
+SNR=30dB with a controllable inter-burst gap, then runs the real
+`energy_detect → mask_to_regions → merge_close_regions → filter_by_min_length
+→ segment_regions` pipeline directly. `sensing_window=1` (no smoothing) was
+required to keep gaps as small as 1 sample meaningfully distinguishable at
+the raw-mask level (any smoothing kernel ≥ the gap size would bridge it
+before `merge_close_regions` ever runs); `threshold_factor=20` was needed to
+suppress noise-driven fragmentation at `window=1` (at `window=1`,
+per-sample power is exponentially distributed for pure noise, so
+`P(false-positive) = 2^(-threshold_factor)` regardless of noise scale — the
+session's usual `threshold_factor=1.5` let ~35% of individual noise samples
+spuriously exceed threshold at `window=1`, versus `<1e-6` at `20`).
+
+**Full 4×4 grid**, gap ∈ {0,1,5,20} × merge_gap ∈ {0,1,5,20}:
+
+| gap＼merge_gap | 0 | 1 | 5 | 20 |
+|---|---|---|---|---|
+| 0 | merged (trivial — bursts touch, 1 raw region already) | merged | merged | merged |
+| 1 | **not merged** (2 regions) | merged | merged | merged |
+| 5 | not merged | **not merged** | merged | merged |
+| 20 | not merged | not merged | not merged | **merged** (boundary case) |
+
+All 16 combinations matched the expectation `merged ⟺ gap <= merge_gap`
+**exactly, zero mismatches** — including the exact boundary
+`gap=20, merge_gap=20` correctly merging (confirms `<=`, not `<`).
+`gap=0` is a degenerate case (the two bursts are already adjacent, so
+`mask_to_regions` sees one continuous raw region regardless of
+`merge_gap` — merging is moot, not actually exercised by that row).
+`n_segments=4` for every one of the 16 combinations (merged or not, the
+total occupied length only ever changes by the tiny gap size, negligible
+against the 128-sample window). No silent no-ops; the full 16-combo run was
+repeated in a second independent process and every field (region
+boundaries, segment count, `x_clean` SHA256) was identical.
+
+### 13.3 CW fair Top-K sweep (single attacked IQ generated once per param set, real backend)
+
+Diagnostic script only (`cw_fair_topk_sweep.py`, scratchpad), same
+methodology as the earlier FGSM/PGD fair sweep (section 11.3): clean IQ and
+CW-attacked IQ each computed **exactly once** per `(c, steps, lr)` set
+(`--seed 42`, `SNR=18`, `QPSK`, `threshold-factor=1.5`,
+`sensing-window-size=128`, `attack-temperature=100`), then the identical
+`x_adv` array run through the real `TopKAdapter` at K=10/20/30/40.
+
+| c/steps/lr | pred_attacked (fixed once) | K=10 recovered | K=20 recovered | K=30 recovered | K=40 recovered | all 4 K's defended-IQ hashes distinct? |
+|---|---|---|---|---|---|---|
+| 10/100/0.1 | `[0,2,0,0,1]` (4 attacked) | **4/4** | **4/4** | **4/4** | **4/4** | yes |
+| 100/200/0.1 | `[0,0,1,0,1]` (3 attacked) | **2/3** | 1/3 | **2/3** | 1/3 | yes |
+
+All combinations: real `attack_backend`/`topk_backend` confirmed (no
+fallback), no NaN/Inf, `attack_training_after=False` AND the real
+`awn.model` submodule's own `.training` independently confirmed `False`
+after the attack call. Reproduced in a second independent process —
+`cw_fair_topk_sweep.csv` byte-identical.
+
+**Observation, not a general claim**: recovery was notably *higher* here
+than in the earlier FGSM/PGD fair sweep (section 11.3, which found only
+1/4 and 1/2 partial recovery) — the `c=10,steps=100,lr=0.1` set recovered
+**all** attacked segments at every K tested. This is a single 5-segment
+sample at one SNR/eps/temperature/CW-parameter combination, not a
+systematic sweep — it does **not** establish "Top-K defends against CW"
+as a general claim, but it is a genuine, fairly-measured data point that a
+future systematic recovery-rate study should account for (CW's recovery
+pattern in this sample looks different from FGSM/PGD's, not uniformly
+worse or better).
+
+### 13.4 SNR smoke sweep matrix (4 SNR × 4 attacks × 2 topk = 32 combinations)
+
+`python3 experiments/run_batch.py --dry-run --snr-list="-10,0,10,18"
+--mod-list QPSK --attack-list "none,fgsm,pgd,cw" --topk-list "10,20"
+--threshold-factor 1.5 --window-size 128 --sensing-window-size 128
+--burst-len 600 --use-real-awn --use-real-attack --use-real-topk
+--attack-eps 0.5 --attack-temperature 100 --cw-c 10 --cw-steps 100
+--cw-lr 0.1 --seed 42 --output-dir results/snr_smoke_sweep` (note
+`--snr-list="-10,..."` needs the `=` form — the leading `-` would otherwise
+be misparsed as an option, a known argparse quirk, not a bug, documented
+since section 2).
+
+**8 combinations failed** (all `SNR=-10`, all 4 attacks × 2 topk): clear,
+non-silent `RuntimeError: No occupied region detected at all...` printed to
+stderr and preserved by `run_batch.py`'s existing per-combo
+`try/except...continue` (no `summary.csv` written for these — confirmed no
+misleading partial output); matches the pre-existing documented behavior
+for `SNR=-10` at `threshold_factor=1.5` (section 9's historical-values
+table). **24 combinations succeeded** (`SNR ∈ {0,10,18}` × 4 attacks × 2
+topk): all real backends confirmed (`awn_backend`/`attack_backend`/
+`topk_backend` columns), `seed=42` recorded on every row, zero NaN/Inf
+across all 24×{4 or 5} segments.
+
+| SNR | attack | topk | n_seg | changed/total | recovered |
+|---|---|---|---|---|---|
+| 0 | none | 10/20 | 4 | 0/4 | 0 |
+| 0 | fgsm | 10/20 | 4 | 1/4 | 0 |
+| 0 | pgd | 10/20 | 4 | 4/4 | 0 |
+| 0 | cw | 10/20 | 4 | 3/4 | 2 |
+| 10 | none | 10/20 | 5 | 0/5 | 0 |
+| 10 | fgsm | 10/20 | 5 | 2/5 | 0 |
+| 10 | pgd | 10/20 | 5 | 5/5 | 1 |
+| 10 | cw | 10/20 | 5 | 5/5 | 4 |
+| 18 | none | 10/20 | 5 | 0/5 | 0 |
+| 18 | fgsm | 10 | 5 | 4/5 | 1 |
+| 18 | fgsm | 20 | 5 | 4/5 | 0 |
+| 18 | pgd | 10/20 | 5 | 2/5 | 1 |
+| 18 | cw | 10/20 | 5 | 4/5 | 4 |
+
+(Rows shown collapsed where `topk=10` and `topk=20` gave identical
+`changed`/`recovered` counts; `SNR=18,fgsm` is the one case in this smoke
+matrix where `topk=10` and `topk=20` diverged.) Reproduced in a full second
+independent `run_batch.py` invocation — `batch_summary.csv` identical
+(excluding the `output_dir` path column) and two representative
+`summary.csv` files spot-checked byte-identical.
+
+**This is a smoke matrix, not a formal experiment** — 32 combinations at
+one seed, one modulation, one threshold-factor, one set of attack
+hyperparameters. It confirms the full real pipeline (sensing → real AWN →
+real attack → real Top-K) runs correctly and reproducibly across an SNR
+range including a legitimate failure mode at very low SNR, and that CW
+(with effective, non-default parameters) shows a qualitatively different —
+generally higher — recovery pattern than FGSM/PGD in this sample. It does
+**not** establish general attack-effectiveness or defense-effectiveness
+trends across SNR.
+
+### 13.5 Cross-reference to this round's required status labels
+
+- **CW CLI**: PASS (implemented and verified section 12.1, reused successfully throughout this round)
+- **CW reproducibility**: PASS (section 12.2, reused successfully throughout this round)
+- **CW parameter sensitivity**: PASS (section 12.2 — different c/steps/lr produce genuinely different `x_attacked`/predictions; reconfirmed section 13.3)
+- **Top-K normal boundary**: PASS (section 12.3 — bypass/clamp semantics confirmed correct and unchanged)
+- **Top-K NaN/Inf direct API**: FIXED this round (section 13.1) — explicit `ValueError`, no silent fallback, no crash; CLI unaffected
+- **merge-gap actual merging**: PASS this round (section 13.2) — real multi-region merge/no-merge boundary confirmed exactly on a purpose-built (scratch-only) dual-burst signal
+- **CW fair Top-K sweep**: DONE this round (section 13.3) — fair, single-attacked-IQ comparison completed; results reported as observations, not claimed as established defense effectiveness
+- **SNR smoke sweep**: DONE this round (section 13.4) — 24/32 combinations succeeded with real backends and full reproducibility; 8 failed combinations (all SNR=-10) preserved with clear errors, not skipped
+- **modulation waveform**: NOT IMPLEMENTED (unchanged, section 5)
+- **formal full batch** (SNR × modulation × attack × eps × topk): **NOT STARTED** — explicitly out of scope this round

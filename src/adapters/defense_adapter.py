@@ -17,14 +17,17 @@ from __future__ import annotations
 
 import numpy as np
 
+from src.utils.config import require_valid_topk
+
 
 def dummy_topk_defense(x: np.ndarray, topk: int) -> np.ndarray:
     """Keep only the top-k FFT magnitude bins per sample/channel, reconstruct via inverse FFT."""
     if x.ndim != 3 or x.shape[1] != 2:
         raise ValueError(f"Expected input of shape [N, 2, T], got {x.shape}")
 
+    topk = require_valid_topk("topk", topk)
     n, c, t = x.shape
-    k = min(int(topk), t) if topk and topk > 0 else t
+    k = min(topk, t) if topk > 0 else t
 
     X = np.fft.fft(x, n=t, axis=2)
     mags = np.abs(X)

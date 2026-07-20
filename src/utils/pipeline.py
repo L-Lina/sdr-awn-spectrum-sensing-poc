@@ -31,7 +31,7 @@ from src.sensing.ground_truth_metrics import (
     derive_batch_aggregate_sensing_fields,
 )
 from src.sensing.iq_source import generate_synthetic_iq, validate_iq
-from src.sensing.normalize import normalize_segments, to_awn_input
+from src.sensing.normalize import apply_awn_preprocess, to_awn_input
 from src.sensing.radioml_source import (
     embed_multiple_samples_in_noise,
     embed_sample_in_noise,
@@ -238,7 +238,15 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             )
             if multi_burst_truths is not None:
                 segment_region_ids = [m["region_idx"] for m in alignment_meta]
-            segments = normalize_segments(segments)
+            # AWN-input-boundary preprocessing (src/sensing/normalize.py:
+            # apply_awn_preprocess, docs/parameter_validation.md section 19)
+            # -- the ONLY place segment amplitude is rescaled before AWN;
+            # alignment (above) and detection (energy_detect, earlier) never
+            # see or depend on this. power_before/after are per-segment
+            # mean(|x|^2) captured on either side, purely for diagnostics.
+            awn_input_power_before = np.mean(np.abs(segments) ** 2, axis=1)  # [N]
+            segments = apply_awn_preprocess(segments, policy=cfg.awn_preprocess)
+            awn_input_power_after = np.mean(np.abs(segments) ** 2, axis=1)  # [N]
             x_clean = to_awn_input(segments, seg_len=cfg.window_size)
         except RuntimeError as exc:
             # Same expected-failure semantics as before this round (retained
@@ -252,6 +260,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             sensing_failure_reason = str(exc)
             segment_region_ids = None  # no segments exist to attribute to a region
             alignment_meta = None
+            awn_input_power_before = awn_input_power_after = None
 
     if segment_region_ids is not None and x_clean is not None:
         assert len(segment_region_ids) == x_clean.shape[0], (
@@ -309,6 +318,14 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "alignment_policy": cfg.alignment_policy,
             "segment_hop": cfg.segment_hop,
             "mean_segment_captured_signal_ratio": None,
+            "awn_preprocess": cfg.awn_preprocess,
+            "mean_awn_input_power_before": None,
+            "mean_awn_input_power_after": None,
+            "mean_awn_input_scale_factor": None,
+            "awn_input_min": None,
+            "awn_input_max": None,
+            "awn_input_has_nan": None,
+            "awn_input_has_inf": None,
             "n_segments": 0,
             "seed": cfg.seed,
             "sensing_window_size": effective_sensing_window_size,
@@ -500,6 +517,22 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "selected_window_power": alignment_meta[i]["selected_window_power"],
             "detected_region_start": alignment_meta[i]["detected_region_start"],
             "detected_region_end": alignment_meta[i]["detected_region_end"],
+            # AWN-input-boundary preprocessing fields (docs/parameter_validation.md
+            # section 19) -- "before"/"after" bracket exactly the
+            # apply_awn_preprocess() call above; awn_input_min/max/has_nan/
+            # has_inf describe the ACTUAL array handed to AWN.infer() (post-
+            # preprocessing, real+imag combined, matching to_awn_input's [2,T] layout).
+            "awn_preprocess": cfg.awn_preprocess,
+            "awn_input_power_before": float(awn_input_power_before[i]),
+            "awn_input_power_after": float(awn_input_power_after[i]),
+            "awn_input_scale_factor": (
+                float(np.sqrt(awn_input_power_after[i] / awn_input_power_before[i]))
+                if awn_input_power_before[i] > 0 else None
+            ),
+            "awn_input_min": float(np.min(x_clean[i])),
+            "awn_input_max": float(np.max(x_clean[i])),
+            "awn_input_has_nan": bool(np.isnan(x_clean[i]).any()),
+            "awn_input_has_inf": bool(np.isinf(x_clean[i]).any()),
             # Segment-level (NOT region-level) capture metrics -- see
             # _segment_ground_truth_fields()'s docstring above; distinct from
             # (and must not be confused with) the region-level
@@ -620,6 +653,14 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     _seg_ratios = [r["segment_captured_signal_ratio"] for r in rows if r["segment_captured_signal_ratio"] is not None]
     mean_segment_captured_signal_ratio = (sum(_seg_ratios) / len(_seg_ratios)) if _seg_ratios else None
 
+    # AWN-input-boundary preprocessing aggregates (docs/parameter_validation.md
+    # section 19) -- mean over segments for the two power fields and the
+    # derived scale factor; global min/max and any() for has_nan/has_inf,
+    # mirroring how a batch-level row summarizes a run's many segments.
+    _power_before = [r["awn_input_power_before"] for r in rows]
+    _power_after = [r["awn_input_power_after"] for r in rows]
+    _scale_factors = [r["awn_input_scale_factor"] for r in rows if r["awn_input_scale_factor"] is not None]
+
     result = {
         "run_status": "ok",
         "sensing_success": True,
@@ -642,6 +683,14 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         # has one (synthetic source, or multi-burst segments whose region
         # ambiguously matched 0/2+ bursts).
         "mean_segment_captured_signal_ratio": mean_segment_captured_signal_ratio,
+        "awn_preprocess": cfg.awn_preprocess,
+        "mean_awn_input_power_before": float(np.mean(_power_before)),
+        "mean_awn_input_power_after": float(np.mean(_power_after)),
+        "mean_awn_input_scale_factor": (sum(_scale_factors) / len(_scale_factors)) if _scale_factors else None,
+        "awn_input_min": float(min(r["awn_input_min"] for r in rows)),
+        "awn_input_max": float(max(r["awn_input_max"] for r in rows)),
+        "awn_input_has_nan": any(r["awn_input_has_nan"] for r in rows),
+        "awn_input_has_inf": any(r["awn_input_has_inf"] for r in rows),
         "n_segments": x_clean.shape[0],
         "seed": cfg.seed,
         "sensing_window_size": effective_sensing_window_size,

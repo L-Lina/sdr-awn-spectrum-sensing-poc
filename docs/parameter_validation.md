@@ -2772,3 +2772,216 @@ instruction.
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
   STARTED** (unchanged, explicitly out of scope this round)
 
+## 19. AWN input-scale fix: `--awn-preprocess {legacy-unit-power,radioml-native}` (round 10)
+
+Modified: `src/sensing/normalize.py` (new `apply_awn_preprocess`,
+`normalize_segments` unchanged), `src/utils/config.py` (new
+`awn_preprocess` field + CLI + validation), `src/utils/pipeline.py` (wired
+at the AWN input boundary only; new summary.csv columns),
+`src/utils/batch_aggregation.py` (new aggregate fields),
+`experiments/run_batch.py` (new CLI flag). **No changes to
+`external/AWN`/`external/adversarial-rf`.** Default value **unchanged**
+this round (`legacy-unit-power`) pending a separate decision, per explicit
+instruction.
+
+### 19.1 Traced evidence: what `external/adversarial-rf` actually feeds AWN
+
+Read directly (not inferred from comments/docs), cross-checked between the
+pinned submodule (`external/adversarial-rf`, `ced705e`) and the real venv
+install used for this session's real-backend testing
+(`/home/xiaomi/adversarial-rf`, `70036bc`) -- `diff` confirmed
+`data_loader.py`'s core loading path, `util/training.py`,
+`util/evaluation.py`, and `models/model.py` are identical between the two
+commits (only a trivial unrelated `snr_min` filter parameter differs in
+`data_loader.py`, no normalization-relevant change).
+
+| Step | File:line | What happens |
+|---|---|---|
+| Pickle read | `data_loader/data_loader.py:38` | `Set = pickle.load(open(file_pointer,'rb'), encoding='bytes')` |
+| dtype cast | `data_loader/data_loader.py:60-61` | `Signals = np.vstack(Signals); Signals = torch.from_numpy(Signals.astype(np.float32))` -- **no scaling, no clipping, no transpose** (already `[N,2,128]`) |
+| Train-time forward | `util/training.py:93-97` | `sig_batch = sig_batch.to(device); ...; logit, regu_sum = self.model(sig_batch)` -- `sig_batch` comes straight from the `DataLoader` wrapping the untouched tensor above |
+| Val-time forward | `util/training.py:139-144` | Identical -- `logit, regu_sum = self.model(sig_batch)` |
+| Eval-time forward | `util/evaluation.py:36-38` | `sample = sample.to(cfg.device); logit, _ = model(sample)` -- `sample` is a `torch.chunk` of the same untouched `sig_test` tensor |
+| Attack-domain round-trip | `util/adv_attack.py:31-84,108-128` | `Model01Wrapper.forward` converts torchattacks' `[0,1]` input back via `x_iq = x01 * b + a` (minmax mode) or `2*x01-1` (unit mode) before calling the real model -- both are **exact, lossless inverses** of their own forward mapping, so at `eps=0` (or when the attack step is skipped) the model receives the **exact original, untouched raw IQ value** regardless of which `--ta_box` convention is used |
+
+**Conclusion**: at every point between the dataset pickle and
+`AWN.forward()` -- training, validation, and evaluation -- **zero
+normalization, scaling, or clipping is ever applied**. The model was
+trained and is evaluated directly on raw RML2016.10a amplitude (~1e-2 to
+1e-4 mean power per section 14.1's own prior measurement). This directly
+confirms section 18.1's diagnosis: this repo's `normalize_segments`
+(~50-120x rescale, measured exactly in 19.4 below) has no counterpart
+anywhere in the actual AWN training/eval pipeline.
+
+### 19.2 `--awn-preprocess` policy design
+
+New `apply_awn_preprocess(segments, policy)` in `src/sensing/normalize.py`
+-- the **only** place this repo rescales a segment before AWN inference.
+Never called from `energy_detection.py` or `segmentation.py`; `pipeline.py`
+calls it exactly once, immediately before `to_awn_input()`, strictly after
+alignment/detection have already selected the segment.
+
+- **`legacy-unit-power`** (default, unchanged): calls the existing
+  `normalize_segments()` -- a per-segment **scalar** rescale (divide by
+  `sqrt(mean(|x|^2))`), so it does NOT alter the relative amplitude
+  structure WITHIN a segment (e.g. a louder half vs. a quieter half stays
+  proportionally the same) -- it only moves the segment's absolute scale
+  far outside AWN's trained distribution. This distinction matters for
+  19.3 below.
+- **`radioml-native`**: literally a no-op (dtype cast only) -- per 19.1's
+  evidence, "no normalization" IS what the real pipeline does, so
+  replicating it requires doing nothing.
+
+### 19.3 Background-noise / `embed_snr_margin` handling (structural, not policy-specific)
+
+Both policies operate on whatever segment `select_aligned_segments`
+already selected -- a mix of RadioML burst and synthetic capture noise
+when the segment only partially overlaps the true burst, or embedding
+noise even at 100% overlap (section 18.2). `radioml-native` cannot corrupt
+the burst/noise relative SNR because it performs no arithmetic on the
+segment at all. `legacy-unit-power`, being a single scalar multiply
+applied uniformly across every sample in the segment, ALSO preserves the
+relative burst-vs-noise proportion exactly -- rescaling everything by the
+same constant does not change which samples are "louder" relative to each
+other. **What `legacy-unit-power` actually breaks is not the relative
+burst/noise structure, but the absolute scale relative to AWN's training
+distribution** -- an important distinction from what might be assumed;
+this round's fix targets the absolute-scale problem specifically, not a
+(non-existent) relative-SNR corruption. `embed_snr_margin`'s effect
+(`noise_power = burst_power / embed_snr_margin`, section 15.1) is set
+during embedding, long before `apply_awn_preprocess` ever runs, and
+`radioml-native` leaves it completely intact (verified in 19.4: identical
+`captured_signal_ratio`/detected regions between the two policies, and
+`awn_input_power_before` under `radioml-native` matches the segment's
+already-embedded power exactly, `scale_factor=1.0`).
+
+### 19.4 Comparison test (7 modulations, snr=18, sample_index=0, seed=42, real AWN, `alignment-policy=max-energy segment-hop=1`)
+
+Paths A/B/C computed directly (A/B as in section 18.2/18.4); **D and E run
+through the real, unmodified `run_dry_run_experiment()`** (not a
+reimplementation), differing only in `--awn-preprocess`.
+
+| Modulation | A direct_raw | B oracle_embedded | C before-preprocess | D legacy-unit-power | E radioml-native |
+|---|---|---|---|---|---|
+| BPSK | PAM4 ✗ | PAM4 ✗ | PAM4 ✗ | QAM64 ✗ (scale×51.8) | PAM4 ✗ (scale×1.0) |
+| QPSK | QPSK ✓ | QPSK ✓ | QPSK ✓ | QAM64 ✗ (scale×118.5) | QPSK ✓ (scale×1.0) |
+| 8PSK | 8PSK ✓ | 8PSK ✓ | 8PSK ✓ | QAM64 ✗ (scale×119.9) | 8PSK ✓ (scale×1.0) |
+| QAM16 | QAM16 ✓ | QAM16 ✓ | QAM16 ✓ | QAM64 ✗ (scale×117.9) | QAM16 ✓ (scale×1.0) |
+| QAM64 | PAM4 ✗ | AM-SSB ✗ | AM-SSB ✗ | QAM64 ✓ (scale×110.2) | AM-SSB ✗ (scale×1.0) |
+| WBFM | AM-DSB ✗ | AM-DSB ✗ | AM-DSB ✗ | WBFM ✓ (scale×122.7) | AM-DSB ✗ (scale×1.0) |
+| AM-DSB | AM-DSB ✓ | AM-DSB ✓ | AM-DSB ✓ | WBFM ✗ (scale×122.7) | AM-DSB ✓ (scale×1.0) |
+
+**Accuracy**: A=4/7, B=4/7, C=4/7, **D(legacy-unit-power)=2/7**,
+**E(radioml-native)=4/7 -- exactly matches the oracle.**
+
+**Prediction agreement with `B` (oracle_embedded_slice)**:
+legacy-unit-power=**0/7**, radioml-native=**7/7** (perfect).
+
+**Input/logit scale comparison**: `A_direct_raw` mean power
+3.1e-5-1.8e-4 (logits in the tens); `D_legacy-unit-power`
+`awn_input_power_after` is **exactly 1.0** for every sample (by
+construction) with a measured scale factor of **110x-123x**;
+`E_radioml-native` `awn_input_power_after` matches
+`awn_input_power_before` exactly (`scale_factor=1.0`) and stays in the
+same 3.7e-5-8.2e-5 order of magnitude as `direct_raw` -- consistent with,
+not orders of magnitude different from, the reference.
+
+**Verification, not just design**: `C`'s (before any preprocessing)
+`input_sha256` was compared against the ACTUAL AWN input array produced by
+the real pipeline under `--awn-preprocess radioml-native` (path E) --
+**7/7 byte-identical**, empirically confirming `radioml-native` really is
+the no-op it's documented as, not merely by code reading.
+
+**No NaN/Inf** across all D/E runs (`awn_input_has_nan`/`has_inf` all
+`False`).
+
+**Sensing/alignment unaffected**: `regions`/`detected_region_start/end`/
+`captured_signal_ratio` were identical between the `legacy-unit-power` and
+`radioml-native` runs for every sample (confirmed via each run's
+`summary.csv`) -- `--awn-preprocess` never touches detection or alignment,
+exactly as required.
+
+### 19.5 Attack-domain tracing (Part 六 -- tracked only, NOT redesigned this round)
+
+`src/adapters/attack_adapter.py:AttackAdapter.apply()` receives `x` =
+`x_clean` (i.e. **already** run through `apply_awn_preprocess`, whichever
+policy was selected) and computes its own per-segment min-max affine
+mapping FROM that same `x`:
+`x_ta, a, b = _iq_to_ta_input_minmax(x_t)` (`attack_adapter.py:309`), where
+`a = x.amin(...)`, `b = x.amax(...) - a`
+(`external/adversarial-rf/util/adv_attack.py:114-115`). `attack_eps` is
+therefore interpreted **relative to `x_clean`'s own min-max range at the
+time `AttackAdapter.apply()` is called** -- not a fixed absolute IQ
+quantity.
+
+**Consequence, reported not fixed**: switching `--awn-preprocess` does
+**not** change what a given `--attack-eps` means in *relative* terms (a
+fraction of the sample's own range, either way) -- but it changes what
+that fraction means in **absolute IQ units** by the same ~50-120x factor
+measured in 19.4, since `legacy-unit-power`'s `x_clean` has a ~50-120x
+larger min-max span than `radioml-native`'s. A `--attack-eps` value tuned
+for one `--awn-preprocess` policy will therefore correspond to a very
+different absolute perturbation magnitude under the other. This is flagged
+for a future round's explicit decision (e.g. whether `attack_eps` should
+be redefined once `radioml-native` is adopted) -- no attack code or
+default was touched this round.
+
+### 19.6 Pass-condition verification
+
+1. **`radioml-native` has adversarial-rf source-code basis**: confirmed,
+   19.1's evidence table (exact file/line, not inferred).
+2. **Does not use label or `true_burst_start` for normalization**:
+   confirmed structurally -- `apply_awn_preprocess(segments, policy)`'s
+   signature never accepts ground truth or labels.
+3. **Does not break max-energy alignment**: confirmed -- `select_aligned_segments`
+   runs entirely before `apply_awn_preprocess` in `pipeline.py`; alignment
+   metadata (`selected_segment_start/end`, `candidate_count`) was identical
+   between the D and E runs in 19.4.
+4. **Does not change sensing mask or detected regions**: confirmed --
+   `regions`/`detected_region_start/end` identical between D and E for
+   every sample (19.4).
+5. **Same-seed cross-process bit-identical**: confirmed
+   (`QAM16/snr18/idx0`, `radioml-native` + `max-energy`, two independent
+   processes) -- identical `long_iq_sha256`, `awn_input_min`,
+   `awn_input_max`.
+6. **`radioml-native`'s power/logit magnitude close to `direct_raw`, not
+   orders of magnitude off**: confirmed -- same 1e-4/1e-5 order of
+   magnitude and tens-scale logits, vs. `legacy-unit-power`'s
+   thousands-scale logits (section 18.1) and exactly-1.0 power.
+7. **`radioml-native` vs. `oracle_embedded_slice` agreement not lower than
+   `legacy-unit-power`'s**: confirmed, 7/7 vs. 0/7 (dramatically higher,
+   not merely not-lower).
+8. **Not judged on 7/7 accuracy**: confirmed -- `direct_raw`'s 4/7 is used
+   as the reference throughout, never treated as a 7/7 target.
+9. **New `summary.csv`/`batch_summary.csv` fields**: confirmed present and
+   correct -- `awn_preprocess`, `awn_input_power_before`,
+   `awn_input_power_after`, `awn_input_scale_factor`, `awn_input_min`,
+   `awn_input_max`, `awn_input_has_nan`, `awn_input_has_inf` (per-segment
+   in `summary.csv`; mean/global-min/global-max/any() aggregates in
+   `batch_summary.csv`, verified via a 2-combo smoke batch).
+
+### 19.7 Cross-reference to this round's required status labels
+
+- **`external/adversarial-rf` preprocessing evidence chain**: **PASS this
+  round** (19.1) -- traced to exact file/line in both the pinned submodule
+  and the real venv install, confirmed identical for every relevant file.
+- **`--awn-preprocess {legacy-unit-power,radioml-native}`**: **PASS this
+  round** (19.2/19.3/19.6) -- implemented at the AWN input boundary only,
+  function tested (regression: default behavior byte-identical to every
+  prior round) and validated via a real 7-modulation comparison (19.4)
+  showing `radioml-native` matches the oracle-path accuracy exactly (4/7)
+  with 7/7 prediction agreement, vs. `legacy-unit-power`'s 2/7 and 0/7.
+  Default value **deliberately left unchanged** this round.
+- **Attack-domain (`attack_eps`) tracing**: **PASS this round, tracking
+  only** (19.5) -- documented that `attack_eps` is relative-scale-invariant
+  but absolute-magnitude-dependent on `--awn-preprocess`; explicitly not
+  redesigned.
+- **Combined real-pipeline accuracy (alignment fix + preprocessing fix,
+  both applied)**: with `--alignment-policy max-energy --awn-preprocess
+  radioml-native`, the real committed pipeline now reproduces the
+  `direct_raw` oracle's accuracy exactly on these 7 samples (4/7) --
+  **both previously-diagnosed degradation sources are now addressed**,
+  though the default CLI values remain unchanged pending explicit adoption.
+- **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
+  STARTED** (unchanged, explicitly out of scope this round)
+

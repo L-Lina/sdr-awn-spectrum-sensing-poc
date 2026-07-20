@@ -125,6 +125,15 @@ class ExperimentConfig:
     # Default 1 (every possible offset) for correctness testing; a batch run
     # over many combos may want a larger hop to reduce candidate-search cost.
     segment_hop: int = 1
+    # AWN-input-boundary preprocessing policy (src/sensing/normalize.py:
+    # apply_awn_preprocess, docs/parameter_validation.md section 19).
+    # "legacy-unit-power" (DEFAULT, UNCHANGED this round pending a separate
+    # decision) -- current normalize_segments() behavior. "radioml-native" --
+    # no rescaling at all, matching traced evidence that
+    # external/adversarial-rf never normalizes between its dataset loader
+    # and AWN.forward(). Applied ONLY at the AWN input boundary in
+    # src/utils/pipeline.py -- never inside segmentation.py/energy_detection.py.
+    awn_preprocess: str = "legacy-unit-power"
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +244,10 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
     if cfg.alignment_policy not in ("naive", "max-energy"):
         raise ValueError(f"alignment_policy must be 'naive' or 'max-energy', got {cfg.alignment_policy!r}")
     require_positive_int("segment_hop", cfg.segment_hop)
+    if cfg.awn_preprocess not in ("legacy-unit-power", "radioml-native"):
+        raise ValueError(
+            f"awn_preprocess must be 'legacy-unit-power' or 'radioml-native', got {cfg.awn_preprocess!r}"
+        )
     require_positive_int("num_bursts", cfg.num_bursts)
     require_nonneg_int("min_burst_gap", cfg.min_burst_gap)
     if cfg.max_burst_gap < cfg.min_burst_gap:
@@ -476,6 +489,13 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument("--segment-hop", type=arg_positive_int("segment_hop"), default=1,
                         help="Sliding-window step (samples) for max-energy's candidate search (and reported, "
                              "informationally, as candidate_count under naive too). Default 1 (every offset).")
+    parser.add_argument("--awn-preprocess", type=str, choices=["legacy-unit-power", "radioml-native"],
+                        default="legacy-unit-power",
+                        help="AWN-input-boundary preprocessing (src/sensing/normalize.py:apply_awn_preprocess). "
+                             "'legacy-unit-power' (default, unchanged this round): current normalize_segments() "
+                             "unit-average-power rescale. 'radioml-native': no rescaling at all, matching traced "
+                             "evidence that external/adversarial-rf never normalizes before AWN.forward(). See "
+                             "docs/parameter_validation.md section 19.")
     return parser
 
 
@@ -539,4 +559,5 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         burst_power_scale_list=_parse_comma_list(args.burst_power_scale_list, float, "burst_power_scale_list"),
         alignment_policy=args.alignment_policy,
         segment_hop=args.segment_hop,
+        awn_preprocess=args.awn_preprocess,
     )

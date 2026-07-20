@@ -65,6 +65,20 @@ _RUN_META_FIELDS = [
     "alignment_policy",
     "segment_hop",
     "mean_segment_captured_signal_ratio",
+    # AWN-input-boundary preprocessing fields (docs/parameter_validation.md
+    # section 19) -- awn_preprocess is a config knob (uniform per run); the
+    # rest are run-level aggregates over that run's segments (mean for the
+    # two power fields and the derived scale factor, global min/max, any()
+    # for has_nan/has_inf) -- per-segment detail lives in that run's own
+    # summary.csv, not here.
+    "awn_preprocess",
+    "mean_awn_input_power_before",
+    "mean_awn_input_power_after",
+    "mean_awn_input_scale_factor",
+    "awn_input_min",
+    "awn_input_max",
+    "awn_input_has_nan",
+    "awn_input_has_inf",
 ]
 
 
@@ -161,6 +175,14 @@ def run_batch_combos(
                 "alignment_policy": cfg.alignment_policy,
                 "segment_hop": cfg.segment_hop,
                 "mean_segment_captured_signal_ratio": None,
+                "awn_preprocess": cfg.awn_preprocess,
+                "mean_awn_input_power_before": None,
+                "mean_awn_input_power_after": None,
+                "mean_awn_input_scale_factor": None,
+                "awn_input_min": None,
+                "awn_input_max": None,
+                "awn_input_has_nan": None,
+                "awn_input_has_inf": None,
             }
             for field in _SENSING_AGG_FIELDS:
                 row[field] = None

@@ -136,6 +136,10 @@ def build_batch_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--segment-hop", type=arg_positive_int("segment_hop"), default=1,
                         help="Sliding-window step for max-energy's candidate search. Applied uniformly to "
                              "every combo in this batch.")
+    parser.add_argument("--awn-preprocess", type=str, choices=["legacy-unit-power", "radioml-native"],
+                        default="legacy-unit-power",
+                        help="AWN-input-boundary preprocessing. See run_full_experiment.py's --awn-preprocess "
+                             "help and docs/parameter_validation.md section 19. Applied uniformly to every combo.")
     return parser
 
 
@@ -209,6 +213,7 @@ def main() -> None:
             burst_power_scale_list=_parse_comma_list(args.burst_power_scale_list, float, "burst_power_scale_list"),
             alignment_policy=args.alignment_policy,
             segment_hop=args.segment_hop,
+            awn_preprocess=args.awn_preprocess,
         )
 
     run_batch_combos(base_dir, combos, build_cfg)

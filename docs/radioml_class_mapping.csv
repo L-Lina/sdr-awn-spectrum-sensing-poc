@@ -1,0 +1,12 @@
+dataset_key_name,awn_class_index,awn_display_name,names_match,source_citations
+QAM16,0,QAM16,yes,"external/adversarial-rf/data_loader/data_loader.py:13; util/config.py:52; plot_iq_reference_style.py:31; plot_comprehensive_attacks.py:33; plot_iq_fgsm_grid.py:25; plot_all_attacks_iq_constellation.py:31; plot_all_attacks_iq.py:31; plot_iq_constellation_attacks.py:36"
+QAM64,1,QAM64,yes,"same 8 files as QAM16 row"
+8PSK,2,8PSK,yes,"same 8 files as QAM16 row"
+WBFM,3,WBFM,yes,"same 8 files as QAM16 row"
+BPSK,4,BPSK,yes,"same 8 files as QAM16 row"
+CPFSK,5,CPFSK,yes,"same 8 files as QAM16 row"
+AM-DSB,6,AM-DSB,yes,"same 8 files as QAM16 row"
+GFSK,7,GFSK,yes,"same 8 files as QAM16 row"
+PAM4,8,PAM4,yes,"same 8 files as QAM16 row"
+QPSK,9,QPSK,yes,"same 8 files as QAM16 row"
+AM-SSB,10,AM-SSB,yes,"same 8 files as QAM16 row"

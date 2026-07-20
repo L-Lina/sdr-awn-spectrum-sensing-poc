@@ -25,10 +25,17 @@ from src.sensing.energy_detection import (
     mask_to_regions,
     merge_close_regions,
 )
-from src.sensing.ground_truth_metrics import compute_sensing_ground_truth_metrics
+from src.sensing.ground_truth_metrics import (
+    compute_multi_burst_sensing_metrics,
+    compute_sensing_ground_truth_metrics,
+)
 from src.sensing.iq_source import generate_synthetic_iq, validate_iq
 from src.sensing.normalize import normalize_segments, to_awn_input
-from src.sensing.radioml_source import embed_sample_in_noise, load_radioml_sample
+from src.sensing.radioml_source import (
+    embed_multiple_samples_in_noise,
+    embed_sample_in_noise,
+    load_radioml_sample,
+)
 from src.sensing.segmentation import segment_regions
 from src.utils.config import (
     ExperimentConfig,
@@ -100,7 +107,42 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     radioml_meta = None
-    if cfg.iq_source == "radioml":
+    multi_burst_truths = None  # list[dict], input to compute_multi_burst_sensing_metrics
+    if cfg.iq_source == "radioml" and cfg.num_bursts > 1:
+        # Multi-burst path -- completely separate from the single-burst
+        # branch below (never entered when num_bursts<=1), so single-burst
+        # behavior is byte-for-byte unaffected by this branch's existence.
+        # dataset_mod_list/dataset_snr_list/sample_index_list presence and
+        # length already checked in validate_experiment_config(); per-entry
+        # mod/snr key existence and sample_index range are checked here, at
+        # load time (each load_radioml_sample call), same as single-burst.
+        samples = []
+        per_burst_labels = []
+        for i in range(cfg.num_bursts):
+            mod_i, snr_i, idx_i = cfg.dataset_mod_list[i], cfg.dataset_snr_list[i], cfg.sample_index_list[i]
+            sample = load_radioml_sample(cfg.dataset_path, mod_i, snr_i, idx_i)
+            samples.append(sample)
+            per_burst_labels.append({
+                "burst_id": i,
+                "dataset_mod": mod_i,
+                "dataset_snr": snr_i,
+                "sample_index": idx_i,
+                "original_sample_sha256": hashlib.sha256(sample.tobytes()).hexdigest(),
+            })
+        iq, per_burst_embed_meta = embed_multiple_samples_in_noise(
+            samples, n_samples=cfg.n_samples, embed_snr_margin=cfg.embed_snr_margin, seed=cfg.seed,
+            min_burst_gap=cfg.min_burst_gap, max_burst_gap=cfg.max_burst_gap, gap_list=cfg.burst_gap_list,
+            power_scale_list=cfg.burst_power_scale_list,
+        )
+        multi_burst_truths = [
+            {**label, **embed} for label, embed in zip(per_burst_labels, per_burst_embed_meta)
+        ]
+        gen_meta = {
+            "source_type": "radioml_multi_burst",
+            "dataset_path": cfg.dataset_path,
+            "num_bursts": cfg.num_bursts,
+        }
+    elif cfg.iq_source == "radioml":
         # dataset_path/dataset_mod/dataset_snr presence already checked in
         # validate_experiment_config(); mod/snr key existence and
         # sample_index range are checked here, at load time, since they
@@ -143,9 +185,28 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             radioml_meta["true_start"], radioml_meta["true_end"], regions,
         )
 
+    multi_burst_result = None
+    segment_region_ids = None
+    if multi_burst_truths is not None:
+        multi_burst_result = compute_multi_burst_sensing_metrics(multi_burst_truths, regions, cfg.n_samples)
+        # Replicates segment_regions()'s own (region, n_windows) iteration
+        # order exactly (same `regions` list, same seg_len=cfg.window_size,
+        # same floor-division window count) WITHOUT modifying
+        # segmentation.py, so each produced segment can be attributed back
+        # to the detected region it came from.
+        segment_region_ids = []
+        for region_idx, (r_start, r_end) in enumerate(regions):
+            n_windows = (r_end - r_start) // cfg.window_size
+            segment_region_ids.extend([region_idx] * n_windows)
+
     segments = segment_regions(iq, regions, seg_len=cfg.window_size)
     segments = normalize_segments(segments)
     x_clean = to_awn_input(segments, seg_len=cfg.window_size)
+
+    if segment_region_ids is not None:
+        assert len(segment_region_ids) == x_clean.shape[0], (
+            f"segment/region attribution count mismatch: {len(segment_region_ids)} vs {x_clean.shape[0]}"
+        )
 
     awn_adapter = None
     if cfg.use_real_awn:
@@ -226,6 +287,10 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     attack_gradient_total_count = attack_meta.get("attack_gradient_total_count")
     attack_gradient_maxabs = attack_meta.get("attack_gradient_maxabs")
 
+    region_lookup = None
+    if multi_burst_result is not None:
+        region_lookup = {pr["region_id"]: pr for pr in multi_burst_result["per_region"]}
+
     rows = []
     for i in range(x_clean.shape[0]):
         rows.append({
@@ -260,6 +325,22 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "extra_captured_noise_ratio": ground_truth["extra_captured_noise_ratio"] if ground_truth else None,
             "missed_sample_count": ground_truth["missed_sample_count"] if ground_truth else None,
             "false_occupied_sample_count": ground_truth["false_occupied_sample_count"] if ground_truth else None,
+            # Multi-burst mode only (num_bursts>1) -- None for single-burst/
+            # synthetic rows. source_region_id is this segment's detected
+            # region (see bursts_summary.csv/regions_summary.csv, written
+            # alongside this file, for the full per-burst/per-region
+            # breakdown and the run's aggregate Pd/Pfa metrics).
+            "num_bursts": cfg.num_bursts if multi_burst_result is not None else None,
+            "source_region_id": segment_region_ids[i] if segment_region_ids is not None else None,
+            "region_matched_burst_ids": (
+                str(region_lookup[segment_region_ids[i]]["matched_burst_ids"]) if region_lookup else None
+            ),
+            "region_false_occupied_sample_count": (
+                region_lookup[segment_region_ids[i]]["false_occupied_sample_count"] if region_lookup else None
+            ),
+            "region_extra_captured_noise_ratio": (
+                region_lookup[segment_region_ids[i]]["extra_captured_noise_ratio"] if region_lookup else None
+            ),
             "attack": cfg.attack,
             "attack_eps": cfg.attack_eps,
             "topk": cfg.topk,
@@ -325,6 +406,32 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     summary_csv_path = output_dir / "summary.csv"
     write_summary_csv(summary_csv_path, rows)
 
+    bursts_summary_csv_path = None
+    regions_summary_csv_path = None
+    if multi_burst_result is not None:
+        # One row per TRUE burst (always -- including missed bursts, which
+        # have zero representation in the per-segment summary.csv above
+        # since a missed burst has no detected region and therefore no
+        # segments) and one row per DETECTED region (always -- including
+        # false-alarm regions with zero matched bursts). The aggregate
+        # Pd/Pfa numbers are in result["multi_burst_aggregate"] (and printed
+        # below); not worth a third one-row CSV file for a handful of
+        # scalars already visible in the console summary and the returned
+        # result dict.
+        bursts_summary_csv_path = output_dir / "bursts_summary.csv"
+        burst_rows = [
+            {k: (str(v) if isinstance(v, list) else v) for k, v in pb.items()}
+            for pb in multi_burst_result["per_burst"]
+        ]
+        write_summary_csv(bursts_summary_csv_path, burst_rows)
+
+        regions_summary_csv_path = output_dir / "regions_summary.csv"
+        region_rows = [
+            {k: (str(v) if isinstance(v, list) else v) for k, v in pr.items()}
+            for pr in multi_burst_result["per_region"]
+        ]
+        write_summary_csv(regions_summary_csv_path, region_rows)
+
     plot_path = output_dir / "sensing_plot.png"
     plot_created = plot_sensing_result(iq, regions, plot_path)
 
@@ -336,10 +443,13 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         "regions": regions,
         "output_dir": str(output_dir),
         "summary_csv_path": str(summary_csv_path),
+        "bursts_summary_csv_path": str(bursts_summary_csv_path) if bursts_summary_csv_path else None,
+        "regions_summary_csv_path": str(regions_summary_csv_path) if regions_summary_csv_path else None,
         "plot_path": str(plot_path) if plot_created else None,
         "gen_meta": gen_meta,
         "long_iq_sha256": long_iq_sha256,
         "ground_truth": ground_truth,
+        "multi_burst_result": multi_burst_result,
         "topk_input_shape": tuple(input_shape),
         "topk_output_shape": tuple(x_defended.shape),
         "awn_input_shape": tuple(x_clean.shape),
@@ -362,6 +472,16 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             print(f"Ground truth:       detection_success={ground_truth['detection_success']} "
                   f"captured_signal_ratio={ground_truth['captured_signal_ratio']:.4f} "
                   f"start_err={ground_truth['start_boundary_error']} end_err={ground_truth['end_boundary_error']}")
+    if multi_burst_result is not None:
+        agg = multi_burst_result["aggregate"]
+        print(f"Multi-burst truth:  {[(b['true_start'], b['true_end']) for b in multi_burst_truths]}")
+        print(f"Pd={agg['detection_probability']} false_alarm_region_rate={agg['false_alarm_region_rate']} "
+              f"sample_FPR={agg['sample_level_false_positive_rate']} sample_FNR={agg['sample_level_false_negative_rate']}")
+        print(f"num_truth_bursts={agg['num_truth_bursts']} num_detected_regions={agg['num_detected_regions']} "
+              f"num_matched_bursts={agg['num_matched_bursts']} num_missed_bursts={agg['num_missed_bursts']} "
+              f"num_false_alarm_regions={agg['num_false_alarm_regions']}")
+        print(f"bursts_summary.csv: {bursts_summary_csv_path}")
+        print(f"regions_summary.csv: {regions_summary_csv_path}")
     print(f"IQ stream length:   {len(iq)} samples")
     print(f"Sensing window:     {effective_sensing_window_size} (energy_detect smoothing window)")
     print(f"Segment length:     {cfg.window_size} (segment_regions/to_awn_input seg_len == AWN input length)")

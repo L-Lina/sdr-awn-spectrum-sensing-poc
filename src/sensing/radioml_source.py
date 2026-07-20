@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import pickle
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -138,3 +138,120 @@ def embed_sample_in_noise(
           f"in {n_samples}-sample stream (burst_power={burst_power:.3e}, "
           f"embed_noise_power={noise_power:.3e}, margin={embed_snr_margin})")
     return iq, meta
+
+
+def embed_multiple_samples_in_noise(
+    samples: List[np.ndarray],
+    n_samples: int,
+    embed_snr_margin: float,
+    seed: int,
+    min_burst_gap: int,
+    max_burst_gap: int,
+    gap_list: Optional[List[int]] = None,
+    power_scale_list: Optional[List[float]] = None,
+) -> Tuple[np.ndarray, List[dict]]:
+    """Embeds MULTIPLE real RadioML [2,128] samples into one longer complex64
+    noise stream, back-to-back with a gap before each burst (including a
+    "leading gap" before the first one).
+
+    By default (gap_list=None), each gap is drawn independently, uniformly
+    from [min_burst_gap, max_burst_gap], seeded by `seed`. Setting
+    min_burst_gap == max_burst_gap makes every gap an EXACT, fully
+    deterministic value this way -- sufficient for test cases that need
+    the same fixed gap everywhere.
+
+    gap_list (optional): an exact, per-burst list of gaps (length ==
+    len(samples)), overriding the random min/max sampling entirely --
+    needed when different gaps are required at different positions in the
+    same run (e.g. docs/parameter_validation.md section 15's Case 3: burst
+    0->1 gap small enough to merge, burst 1->2 gap large enough to stay
+    separate, which a single shared [min,max] range cannot express).
+    min_burst_gap/max_burst_gap are still validated even when gap_list is
+    given (for consistent error messages), but their values are otherwise
+    unused in that case.
+
+    Bursts are placed strictly back-to-back, never overlapping, by
+    construction -- there is no separate overlap check needed as long as
+    every gap (whichever source) is >= 0.
+
+    A single background noise level is used for the WHOLE stream (one real
+    capture has one noise floor) -- its power is set relative to the MEAN
+    power across all the loaded bursts (not each one individually), so
+    mixing bursts of different (mod, snr) does not bias detectability
+    towards whichever burst happens to be louder.
+
+    power_scale_list (optional): per-burst amplitude multiplier (length ==
+    len(samples), each > 0), applied BEFORE the shared noise floor is
+    computed -- so scaling one burst down genuinely makes it a weaker
+    signal relative to the (still shared, single-capture) noise floor,
+    rather than just relabeling it. Real RadioML samples across (mod, snr)
+    combinations have only modest inherent power differences (observed
+    ~1.35x block-mean spread this session -- not enough to reliably produce
+    an "undetected" burst on its own), so this is the deliberate, explicit
+    way to construct a genuinely low-energy burst for a controlled test
+    (docs/parameter_validation.md section 15's Case 4) rather than hunting
+    for a naturally-quiet dataset sample. Defaults to 1.0 (unscaled) for
+    every burst, i.e. no effect, when omitted.
+
+    Returns (iq, per_burst_meta) where per_burst_meta is a list of one dict
+    per input sample, each with burst_id/true_start/true_end/gap_before_burst
+    (caller is expected to merge in dataset_mod/dataset_snr/sample_index/
+    original_sample_sha256 per burst, since this function only sees raw
+    arrays, not their dataset labels).
+    """
+    if not samples:
+        raise ValueError("embed_multiple_samples_in_noise requires at least one sample")
+    if min_burst_gap < 0:
+        raise ValueError(f"min_burst_gap must be >= 0, got {min_burst_gap}")
+    if max_burst_gap < min_burst_gap:
+        raise ValueError(f"max_burst_gap ({max_burst_gap}) must be >= min_burst_gap ({min_burst_gap})")
+    if gap_list is not None:
+        if len(gap_list) != len(samples):
+            raise ValueError(f"gap_list has {len(gap_list)} entries, but there are {len(samples)} samples")
+        if any(g < 0 for g in gap_list):
+            raise ValueError(f"gap_list entries must all be >= 0, got {gap_list}")
+    if power_scale_list is not None:
+        if len(power_scale_list) != len(samples):
+            raise ValueError(f"power_scale_list has {len(power_scale_list)} entries, but there are {len(samples)} samples")
+        if any(s <= 0 for s in power_scale_list):
+            raise ValueError(f"power_scale_list entries must all be > 0, got {power_scale_list}")
+
+    bursts_iq = [radioml_sample_to_iq(s) for s in samples]
+    if power_scale_list is not None:
+        bursts_iq = [b * scale for b, scale in zip(bursts_iq, power_scale_list)]
+    burst_lens = [len(b) for b in bursts_iq]
+    mean_burst_power = float(np.mean([np.mean(np.abs(b) ** 2) for b in bursts_iq]))
+    noise_power = mean_burst_power / embed_snr_margin
+    noise_std = float(np.sqrt(noise_power / 2.0))
+
+    rng = np.random.default_rng(seed)
+    noise = rng.normal(0, noise_std, n_samples) + 1j * rng.normal(0, noise_std, n_samples)
+    iq = noise.astype(np.complex64)
+
+    per_burst_meta = []
+    cursor = 0
+    for i, (burst_iq, burst_len) in enumerate(zip(bursts_iq, burst_lens)):
+        gap = gap_list[i] if gap_list is not None else int(rng.integers(min_burst_gap, max_burst_gap + 1))
+        start = cursor + gap
+        end = start + burst_len
+        if end > n_samples:
+            raise ValueError(
+                f"Not enough room for burst {i}: would need samples up to {end}, "
+                f"but n_samples={n_samples}. Reduce num_bursts/burst_gap or increase n_samples."
+            )
+        iq[start:end] += burst_iq
+        per_burst_meta.append({
+            "burst_id": i,
+            "true_start": start,
+            "true_end": end,
+            "burst_len": burst_len,
+            "gap_before_burst": gap,
+            "burst_power": float(np.mean(np.abs(burst_iq) ** 2)),
+        })
+        cursor = end
+
+    print(f"[radioml] embedded {len(samples)} bursts in {n_samples}-sample stream "
+          f"(mean_burst_power={mean_burst_power:.3e}, embed_noise_power={noise_power:.3e}, "
+          f"margin={embed_snr_margin}, gaps={[m['gap_before_burst'] for m in per_burst_meta]}): "
+          f"{[(m['true_start'], m['true_end']) for m in per_burst_meta]}")
+    return iq, per_burst_meta

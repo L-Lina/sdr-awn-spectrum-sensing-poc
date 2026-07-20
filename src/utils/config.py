@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import math
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass
@@ -75,6 +75,40 @@ class ExperimentConfig:
     # from the RadioML sample's own internal (mod,snr)-label SNR, which is
     # already baked into the loaded sample and not re-derivable from it.
     embed_snr_margin: float = 20.0
+    # Multi-burst RadioML mode (src/sensing/radioml_source.py:
+    # embed_multiple_samples_in_noise, src/sensing/ground_truth_metrics.py:
+    # compute_multi_burst_sensing_metrics). num_bursts<=1 (the default)
+    # takes the EXACT SAME single-burst code path as before (dataset_mod/
+    # dataset_snr/sample_index above), completely unchanged -- this is what
+    # guarantees the pre-existing single-burst behavior is not disturbed.
+    # num_bursts>1 requires dataset_mod_list/dataset_snr_list/
+    # sample_index_list to all be set, each a list of exactly num_bursts
+    # entries (validated in validate_experiment_config); dataset_mod/
+    # dataset_snr/sample_index (singular) are then unused.
+    num_bursts: int = 1
+    dataset_mod_list: Optional[List[str]] = None
+    dataset_snr_list: Optional[List[int]] = None
+    sample_index_list: Optional[List[int]] = None
+    # Gap (in samples) drawn uniformly from [min_burst_gap, max_burst_gap]
+    # before EACH burst (including a "leading gap" before the first one).
+    # Setting min_burst_gap == max_burst_gap makes every gap an exact,
+    # deterministic value -- used by the merge-gap main-pipeline test cases
+    # (docs/parameter_validation.md section 15) to get precise truth-burst
+    # spacing. Only meaningful when num_bursts > 1.
+    min_burst_gap: int = 50
+    max_burst_gap: int = 50
+    # Optional exact, per-burst gap list (length == num_bursts), overriding
+    # min_burst_gap/max_burst_gap's random sampling entirely -- needed when
+    # different gaps are required at different positions in the same run
+    # (see src/sensing/radioml_source.py:embed_multiple_samples_in_noise).
+    burst_gap_list: Optional[List[int]] = None
+    # Optional exact, per-burst amplitude multiplier (length == num_bursts,
+    # each > 0), applied before the shared noise floor is computed --
+    # needed to construct a genuinely low-energy burst on demand (real
+    # RadioML samples have only modest inherent power differences across
+    # mod/snr combos) for controlled detection-boundary test cases (see
+    # src/sensing/radioml_source.py:embed_multiple_samples_in_noise).
+    burst_power_scale_list: Optional[List[float]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +199,10 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
     require_positive_finite_float("cw_lr", cfg.cw_lr)
     if cfg.iq_source not in ("synthetic", "radioml"):
         raise ValueError(f"iq_source must be 'synthetic' or 'radioml', got {cfg.iq_source!r}")
-    if cfg.iq_source == "radioml":
+    if cfg.iq_source == "radioml" and cfg.num_bursts <= 1:
+        # Single-burst radioml mode only -- num_bursts>1 uses
+        # dataset_mod_list/dataset_snr_list/sample_index_list instead
+        # (checked below), and leaves these singular fields unused.
         missing = [n for n, v in (("dataset_path", cfg.dataset_path), ("dataset_mod", cfg.dataset_mod),
                                    ("dataset_snr", cfg.dataset_snr)) if v is None]
         if missing:
@@ -173,7 +210,44 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
                 f"--iq-source radioml requires {missing} to all be set (none may be omitted)"
             )
         require_nonneg_int("sample_index", cfg.sample_index)
+    elif cfg.iq_source == "radioml" and cfg.dataset_path is None:
+        # Multi-burst mode still needs dataset_path (both branches load
+        # from the same dataset file); dataset_mod/dataset_snr/sample_index
+        # (singular) are not required here.
+        raise ValueError("--iq-source radioml requires dataset_path to be set (none may be omitted)")
     require_positive_finite_float("embed_snr_margin", cfg.embed_snr_margin)
+    require_positive_int("num_bursts", cfg.num_bursts)
+    require_nonneg_int("min_burst_gap", cfg.min_burst_gap)
+    if cfg.max_burst_gap < cfg.min_burst_gap:
+        raise ValueError(f"max_burst_gap ({cfg.max_burst_gap}) must be >= min_burst_gap ({cfg.min_burst_gap})")
+    if cfg.num_bursts > 1:
+        if cfg.iq_source != "radioml":
+            raise ValueError("num_bursts > 1 requires --iq-source radioml")
+        missing = [n for n, v in (("dataset_mod_list", cfg.dataset_mod_list),
+                                   ("dataset_snr_list", cfg.dataset_snr_list),
+                                   ("sample_index_list", cfg.sample_index_list)) if v is None]
+        if missing:
+            raise ValueError(f"num_bursts > 1 requires {missing} to all be set (none may be omitted)")
+        for name, lst in (("dataset_mod_list", cfg.dataset_mod_list),
+                           ("dataset_snr_list", cfg.dataset_snr_list),
+                           ("sample_index_list", cfg.sample_index_list)):
+            if len(lst) != cfg.num_bursts:
+                raise ValueError(f"{name} has {len(lst)} entries, but num_bursts={cfg.num_bursts}")
+        for idx in cfg.sample_index_list:
+            require_nonneg_int("sample_index_list entry", idx)
+        if cfg.burst_gap_list is not None:
+            if len(cfg.burst_gap_list) != cfg.num_bursts:
+                raise ValueError(f"burst_gap_list has {len(cfg.burst_gap_list)} entries, but num_bursts={cfg.num_bursts}")
+            for gap in cfg.burst_gap_list:
+                require_nonneg_int("burst_gap_list entry", gap)
+        if cfg.burst_power_scale_list is not None:
+            if len(cfg.burst_power_scale_list) != cfg.num_bursts:
+                raise ValueError(
+                    f"burst_power_scale_list has {len(cfg.burst_power_scale_list)} entries, "
+                    f"but num_bursts={cfg.num_bursts}"
+                )
+            for scale in cfg.burst_power_scale_list:
+                require_positive_finite_float("burst_power_scale_list entry", scale)
 
 
 def resolve_sensing_window_size(window_size: int, sensing_window_size: Optional[int]) -> int:
@@ -340,7 +414,56 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
                         help="RADIOML-ONLY. How much the embedded RadioML burst's own power exceeds the "
                              "surrounding synthetic capture-noise floor (src/sensing/radioml_source.py). "
                              "Distinct from --dataset-snr, which is the sample's own baked-in label SNR.")
+    parser.add_argument("--num-bursts", type=arg_positive_int("num_bursts"), default=1,
+                        help="RADIOML-ONLY. 1 (default): exact same single-burst code path as before, using "
+                             "--dataset-mod/--dataset-snr/--sample-index. >1: multi-burst mode, requires "
+                             "--dataset-mod-list/--dataset-snr-list/--sample-index-list (comma-separated, "
+                             "each with exactly --num-bursts entries) instead.")
+    parser.add_argument("--dataset-mod-list", type=str, default=None,
+                        help="MULTI-BURST-ONLY, REQUIRED when --num-bursts > 1. Comma-separated RadioML "
+                             "modulation labels, one per burst, e.g. QPSK,BPSK,QPSK.")
+    parser.add_argument("--dataset-snr-list", type=str, default=None,
+                        help="MULTI-BURST-ONLY, REQUIRED when --num-bursts > 1. Comma-separated RadioML SNR "
+                             "labels (dB), one per burst, e.g. 18,0,18.")
+    parser.add_argument("--sample-index-list", type=str, default=None,
+                        help="MULTI-BURST-ONLY, REQUIRED when --num-bursts > 1. Comma-separated sample "
+                             "indices, one per burst, e.g. 0,1,2.")
+    parser.add_argument("--min-burst-gap", type=arg_nonneg_int("min_burst_gap"), default=50,
+                        help="MULTI-BURST-ONLY. Minimum gap (samples) drawn before each burst (including a "
+                             "leading gap before the first). Set equal to --max-burst-gap for an exact, "
+                             "deterministic gap (used by the merge-gap main-pipeline test cases).")
+    parser.add_argument("--max-burst-gap", type=arg_nonneg_int("max_burst_gap"), default=50,
+                        help="MULTI-BURST-ONLY. Maximum gap (samples) drawn before each burst. Must be >= "
+                             "--min-burst-gap.")
+    parser.add_argument("--burst-gap-list", type=str, default=None,
+                        help="MULTI-BURST-ONLY. Comma-separated EXACT gap (samples) before each burst "
+                             "(length must equal --num-bursts), overriding --min-burst-gap/--max-burst-gap's "
+                             "random sampling entirely. Needed when different bursts need different gaps in "
+                             "the same run (e.g. one pair close enough to merge, another far enough apart to "
+                             "stay separate).")
+    parser.add_argument("--burst-power-scale-list", type=str, default=None,
+                        help="MULTI-BURST-ONLY. Comma-separated per-burst amplitude multiplier (length must "
+                             "equal --num-bursts, each > 0), applied before the shared noise floor is "
+                             "computed. Used to construct a genuinely low-energy burst on demand for "
+                             "detection-boundary tests -- real RadioML samples alone have only modest "
+                             "power differences across mod/snr.")
     return parser
+
+
+def _parse_comma_list(raw: Optional[str], cast, name: str) -> Optional[List]:
+    """Shared comma-list parser for the multi-burst CLI flags above --
+    distinct from experiments/run_batch.py's own _parse_list, which drives
+    that script's (snr, mod, attack, topk) BATCH grid, a different concept
+    from a single run's list of per-burst specs. Returns None if raw is
+    None (flag omitted); raises argparse.ArgumentTypeError with a specific
+    element's value on a cast failure, not a generic parse error."""
+    if raw is None:
+        return None
+    items = [item.strip() for item in raw.split(",") if item.strip()]
+    try:
+        return [cast(item) for item in items]
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{name}: could not parse {raw!r} ({exc})")
 
 
 def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
@@ -377,4 +500,12 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         dataset_snr=args.dataset_snr,
         sample_index=args.sample_index,
         embed_snr_margin=args.embed_snr_margin,
+        num_bursts=args.num_bursts,
+        dataset_mod_list=_parse_comma_list(args.dataset_mod_list, str, "dataset_mod_list"),
+        dataset_snr_list=_parse_comma_list(args.dataset_snr_list, int, "dataset_snr_list"),
+        sample_index_list=_parse_comma_list(args.sample_index_list, int, "sample_index_list"),
+        min_burst_gap=args.min_burst_gap,
+        max_burst_gap=args.max_burst_gap,
+        burst_gap_list=_parse_comma_list(args.burst_gap_list, int, "burst_gap_list"),
+        burst_power_scale_list=_parse_comma_list(args.burst_power_scale_list, float, "burst_power_scale_list"),
     )

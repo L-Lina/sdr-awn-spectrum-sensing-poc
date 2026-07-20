@@ -24,6 +24,7 @@ import argparse  # noqa: E402
 
 from src.utils.config import (  # noqa: E402
     ExperimentConfig,
+    _parse_comma_list,
     arg_nonneg_finite_float,
     arg_nonneg_int,
     arg_positive_finite_float,
@@ -111,6 +112,25 @@ def build_batch_arg_parser() -> argparse.ArgumentParser:
                         help="RADIOML-ONLY. Applied uniformly to every combo in this batch.")
     parser.add_argument("--embed-snr-margin", type=arg_positive_finite_float("embed_snr_margin"), default=20.0,
                         help="RADIOML-ONLY. Applied uniformly to every combo in this batch.")
+    parser.add_argument("--num-bursts", type=arg_positive_int("num_bursts"), default=1,
+                        help="RADIOML-ONLY. See run_full_experiment.py's --num-bursts help. Applied uniformly "
+                             "to every combo in this batch.")
+    parser.add_argument("--dataset-mod-list", type=str, default=None,
+                        help="MULTI-BURST-ONLY, REQUIRED when --num-bursts > 1. Applied uniformly to every combo.")
+    parser.add_argument("--dataset-snr-list", type=str, default=None,
+                        help="MULTI-BURST-ONLY, REQUIRED when --num-bursts > 1. Applied uniformly to every combo.")
+    parser.add_argument("--sample-index-list", type=str, default=None,
+                        help="MULTI-BURST-ONLY, REQUIRED when --num-bursts > 1. Applied uniformly to every combo.")
+    parser.add_argument("--min-burst-gap", type=arg_nonneg_int("min_burst_gap"), default=50,
+                        help="MULTI-BURST-ONLY. Applied uniformly to every combo in this batch.")
+    parser.add_argument("--max-burst-gap", type=arg_nonneg_int("max_burst_gap"), default=50,
+                        help="MULTI-BURST-ONLY. Applied uniformly to every combo in this batch.")
+    parser.add_argument("--burst-gap-list", type=str, default=None,
+                        help="MULTI-BURST-ONLY. See run_full_experiment.py's --burst-gap-list help. Applied "
+                             "uniformly to every combo in this batch.")
+    parser.add_argument("--burst-power-scale-list", type=str, default=None,
+                        help="MULTI-BURST-ONLY. See run_full_experiment.py's --burst-power-scale-list help. "
+                             "Applied uniformly to every combo in this batch.")
     return parser
 
 
@@ -171,6 +191,14 @@ def main() -> None:
             dataset_snr=args.dataset_snr,
             sample_index=args.sample_index,
             embed_snr_margin=args.embed_snr_margin,
+            num_bursts=args.num_bursts,
+            dataset_mod_list=_parse_comma_list(args.dataset_mod_list, str, "dataset_mod_list"),
+            dataset_snr_list=_parse_comma_list(args.dataset_snr_list, int, "dataset_snr_list"),
+            sample_index_list=_parse_comma_list(args.sample_index_list, int, "sample_index_list"),
+            min_burst_gap=args.min_burst_gap,
+            max_burst_gap=args.max_burst_gap,
+            burst_gap_list=_parse_comma_list(args.burst_gap_list, int, "burst_gap_list"),
+            burst_power_scale_list=_parse_comma_list(args.burst_power_scale_list, float, "burst_power_scale_list"),
         )
 
         try:

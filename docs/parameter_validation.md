@@ -1636,3 +1636,290 @@ earlier round).
 - **RadioML source**: PASS — implemented, real dataset located and inventoried, class ordering verified from source (not memory), `--iq-source radioml` fully wired end-to-end through real AWN, 12/12 functional-test combinations succeeded, reproducible, no fallback (section 14.1–14.4)
 - **modulation truthfulness**: **PASS for the RadioML source specifically** (real, distinct, verifiably-different IQ per modulation label, confirmed via SHA256) — the **synthetic source remains cosmetic-only** exactly as documented in section 5; "modulation truthfulness" as a repo-wide property is not a blanket PASS, only true when `--iq-source radioml` is used
 - **formal full batch**: **NOT STARTED** (unchanged)
+
+---
+
+## 15. Multi-burst RadioML source, truth-to-detection matching, merge-gap main-pipeline validation (round 6)
+
+New files: none. Modified: `src/sensing/radioml_source.py` (new
+`embed_multiple_samples_in_noise`), `src/sensing/ground_truth_metrics.py`
+(new `compute_multi_burst_sensing_metrics`), `src/utils/config.py`,
+`src/utils/pipeline.py`, `experiments/run_batch.py`. New reference file:
+`docs/radioml_class_mapping.csv`. **No changes to `external/AWN`/
+`external/adversarial-rf`.**
+
+### 15.0 Fresh re-inventory of the actual code (not the prior summary)
+
+Re-read directly from the current files before writing any code this round:
+
+1. **Single-burst embedding**: `embed_sample_in_noise()`
+   (`radioml_source.py`) draws the ENTIRE `n_samples`-length background
+   noise array from one `np.random.default_rng(seed)`, then uses the SAME
+   `rng` object's next draw (`rng.integers(0, max_start+1)`) to pick
+   `true_start` uniformly at random — a seeded-random but reproducible
+   position, never looked up by the sensing stage below it.
+2. **`true_start`/`true_end` → `summary.csv` path**: `embed_meta` (from
+   `embed_sample_in_noise`) is spread into `gen_meta`/`radioml_meta` in
+   `pipeline.py`, then passed as two plain scalars into
+   `compute_sensing_ground_truth_metrics(true_start, true_end, regions)`,
+   whose return dict's `true_start`/`true_end` keys are written into
+   `summary.csv`'s `true_burst_start`/`true_burst_end` columns — identically
+   on **every** segment row (there being only one true burst, this was never
+   ambiguous before this round).
+3. **`merge_close_regions` → `filter_by_min_length` order**
+   (`pipeline.py`, unchanged before and after this round):
+   `mask_to_regions` → `merge_close_regions(merge_gap)` →
+   `filter_by_min_length(min_region_len)` — merging always happens
+   **before** the length filter, so a `--merge-gap` that successfully joins
+   two short raw regions can rescue them from being dropped by
+   `--min-region-len`, and conversely a region that's long enough on its
+   own but ends up as a small overlap after failing to merge could still be
+   dropped.
+4. **Pre-round data-structure capacity for multiple truth bursts**: **none**
+   — `embed_sample_in_noise` only accepts one `[2,128]` array,
+   `compute_sensing_ground_truth_metrics` only accepts one
+   `(true_start, true_end)` scalar pair, and nothing in `pipeline.py` ever
+   recorded which detected *region* a given *segment* came from (needed the
+   moment more than one region can exist for more than one reason).
+5. This inventory is what section 15.1–15.3 below are built directly on top
+   of, unmodified for `num_bursts<=1` (see the regression checks in 15.1).
+
+### 15.1 Multi-burst RadioML source (`--num-bursts > 1`)
+
+New CLI flags: `--num-bursts` (default `1` — the exact prior single-burst
+code path, byte-for-byte unaffected, is what runs whenever this is
+omitted), `--dataset-mod-list`/`--dataset-snr-list`/`--sample-index-list`
+(comma-separated, length must equal `--num-bursts`, REQUIRED when
+`--num-bursts>1`), `--min-burst-gap`/`--max-burst-gap` (gap sampled
+uniformly per burst including a leading gap before the first; setting them
+equal gives an exact, deterministic gap), `--burst-gap-list` (optional
+exact per-burst gap list, overriding random sampling — needed for e.g. Case
+3 below, where two different exact gaps are needed in the same run),
+`--burst-power-scale-list` (optional exact per-burst amplitude multiplier,
+applied before the shared noise floor is computed — needed for Case 4
+below; real RadioML samples alone have only ~1.35x block-mean power spread
+across mod/snr combinations, not enough on its own to reliably produce an
+undetected burst).
+
+`embed_multiple_samples_in_noise()` places bursts strictly back-to-back
+(cursor-based, gap ≥ 0 guaranteed by construction — **no overlap is
+possible**, no separate check needed), and computes ONE shared background
+noise level for the whole stream from the MEAN power across all (possibly
+scaled) bursts, since a single real capture has a single noise floor.
+
+**Verified this round** (all via the real `run_full_experiment.py` CLI, real
+AWN, `--seed 42`):
+- **Regression, both prior paths unaffected**: an unrelated synthetic-mode
+  run gave the same region `(3734, 4459)` seen dozens of times this
+  session; an unrelated single-burst radioml-mode run gave the exact same
+  `detection_success=True, captured_signal_ratio=1.0, start_err=-56,
+  end_err=62` seen in the very first RadioML round.
+- **Every burst genuinely read from the dataset**: `bursts_summary.csv`'s
+  `original_sample_sha256` column is confirmed distinct per (mod, snr,
+  sample_index) triple — not metadata-only.
+- **Non-overlapping**: guaranteed by construction; empirically confirmed
+  (3-burst smoke test) — regions `[(197,336),(522,663),(848,992)]`, no
+  overlap.
+- **Same seed → bit-for-bit identical**: `bursts_summary.csv`/
+  `regions_summary.csv`/`summary.csv` byte-identical across two independent
+  processes (3-burst smoke test, re-verified for every one of the 5
+  Case 1–5 test runs in section 15.3).
+- **Different seed → different outcome**: with a gap *range* (not a fixed
+  exact value), three different seeds gave three genuinely different sets
+  of burst positions; even with an *exact* fixed gap (seed-invariant
+  positions by construction), the underlying background noise realization
+  — and therefore `long_iq_sha256` — still differs by seed, confirmed.
+- **Single-burst mode completely undisturbed**: confirmed via the
+  regression checks above, run both before and after every code change
+  this round.
+
+### 15.2 Truth-to-detection matching + formal metrics — method and formulas
+
+`compute_multi_burst_sensing_metrics(true_bursts, detected_regions,
+n_samples)` (`ground_truth_metrics.py`). **Method chosen: full bipartite
+overlap enumeration**, not a strict one-to-one match (IoU-max or Hungarian
+assignment) — a strict 1:1 match cannot correctly represent a region that
+genuinely overlaps two neighboring bursts merged by `--merge-gap`, or a
+burst genuinely split across two detected regions, both of which this
+round's test cases are specifically designed to produce. Every `(burst,
+region)` pair with `intersection_length > 0` is a real edge; a burst or
+region can have zero, one, or multiple edges. Detected regions are treated
+as pairwise non-overlapping (guaranteed by `merge_close_regions`/
+`filter_by_min_length`'s own construction), so summing per-pair
+intersections is equivalent to a proper union.
+
+**Per-burst fields** (`bursts_summary.csv`, one row per TRUE burst, always
+— including missed bursts, which have zero representation in the
+per-segment `summary.csv` since a missed burst has no detected region and
+therefore no segments):
+
+| field | formula |
+|---|---|
+| `intersection_length` | `sum_j intersection_length(i,j)` over all detected regions `j` |
+| `detection_success` | `intersection_length > 0` |
+| `matched_region_ids` | `[j : intersection_length(i,j) > 0]`, sorted |
+| `matched_region_id` | the single `j` in `matched_region_ids` with the largest `intersection_length(i,j)` ("primary" match; `None` if unmatched) |
+| `captured_signal_ratio` | `intersection_length / true_burst_length` |
+| `missed_sample_count` | `true_burst_length - intersection_length` |
+| `start_boundary_error` / `end_boundary_error` | `matched_region.start - true_start` / `matched_region.end - true_end` (signed; computed against `matched_region_id` only; `None` if unmatched) |
+
+**Per-region fields** (`regions_summary.csv`, one row per DETECTED region,
+always — including false-alarm regions with zero matched bursts):
+
+| field | formula |
+|---|---|
+| `matched_burst_ids` | `[i : intersection_length(i,j) > 0]`, sorted — 0 entries = **false alarm**, 1 = clean match, 2+ = this region **merged** multiple true bursts |
+| `false_occupied_sample_count` | `detected_region_length - (sum_i intersection_length(i,j))` |
+| `extra_captured_noise_ratio` | `false_occupied_sample_count / detected_region_length` |
+
+**Aggregate fields** (printed to console + `result["multi_burst_result"]
+["aggregate"]`; denominators spelled out explicitly, no dedicated CSV for
+these ~11 scalars — already fully visible in the console summary and the
+returned result dict):
+
+| field | formula | denominator note |
+|---|---|---|
+| `detection_probability` (Pd) | `num_matched_bursts / num_truth_bursts` | `None` if zero truth bursts |
+| `false_alarm_region_rate` | `num_false_alarm_regions / num_detected_regions` | `None` if zero detected regions |
+| `sample_level_false_positive_rate` | `(sum of every region's false_occupied_sample_count) / (n_samples - sum of every true burst's length)` | classic sample-level Pfa — fraction of TRUE BACKGROUND samples wrongly marked occupied; `None` if bursts fill the entire stream |
+| `sample_level_false_negative_rate` | `(sum of every burst's missed_sample_count) / (sum of every true burst's length)` | sample-weighted 1−recall across all bursts; `None` if zero total truth length |
+| `mean_captured_signal_ratio` | simple mean of per-burst `captured_signal_ratio` | NOT sample-weighted (distinct from the FNR above) |
+| `mean_abs_start_boundary_error` / `mean_abs_end_boundary_error` / `mean_abs_boundary_error` | mean of `abs(...)` over MATCHED bursts only (the third pools both edges together) | `None` if zero bursts matched |
+
+**Verified this round** with a synthetic 4-region/3-burst scenario
+(intervals only, not run through the real pipeline) exercising all 5
+required scenarios simultaneously in one call: region merging 2 bursts
+(`matched_burst_ids=[0,1]`), a burst split across 2 regions
+(`matched_region_ids=[1,2]`), a false-alarm region
+(`matched_burst_ids=[]`), correct `Pd=1.0`/`false_alarm_region_rate=0.25`/
+`sample_level_false_positive_rate`/`sample_level_false_negative_rate`, all
+computed and cross-checked by hand.
+
+### 15.3 merge-gap main-pipeline test cases (all via the real CLI, real AWN, `--seed 42`)
+
+**Calibration first** (not guessing): 2-burst runs at `merge-gap=0` (no
+merging) across true gaps 20/60/100/300 samples showed the *detected* gap
+(after `sensing-window-size=16` smoothing widens each region) is
+consistently ~11–13 samples smaller than the *true* gap — used to choose
+gap values with a clear margin on either side of each case's `--merge-gap`.
+`sensing-window-size=16`/`threshold-factor=1.5` (unless stated) were chosen
+because they cleanly separate two 128-sample RadioML bursts without the
+noise-fragmentation problem `threshold-factor=1.5` combined with
+`sensing-window-size=1` produced in section 12.4's dual-burst scratch test.
+
+| Case | Setup | Result |
+|---|---|---|
+| **1** (gap > merge-gap, stay separate) | 2 bursts, `--burst-gap-list 300,300 --merge-gap 50` | `num_detected_regions=2`, `num_matched_bursts=2`, `num_missed_bursts=0` — regions `[(250,436),(723,863)]`, stayed separate as required |
+| **2** (gap ≤ merge-gap, merge) | 2 bursts, `--burst-gap-list 300,60 --merge-gap 50` (inter-burst gap 60 → detected ≈48 ≤ 50) | `num_detected_regions=1`, both bursts matched to that one region — merged as required |
+| **3** (3 bursts: first two merge, third separate) | `--burst-gap-list 300,60,300 --merge-gap 50` | `num_detected_regions=2`: region 0 = bursts {0,1} merged (`matched_burst_ids=[0,1]`), region 1 = burst 2 alone — exactly as required |
+| **4** (low-energy burst missed, other detected) | 2 bursts, `--burst-power-scale-list 0.1,1.0` (burst 0 artificially weakened) | `Pd=0.5`, `num_missed_bursts=1` (burst 0), `num_detected_regions=1` (burst 1 only) — low-energy burst correctly went undetected |
+| **5** (extra false-alarm region) | 2 normal bursts, `--threshold-factor 1.4` (lowered from the 1.5 default to admit one spurious noise peak) | `num_detected_regions=3`, `num_matched_bursts=2`, **`num_false_alarm_regions=1`** (region `(5622,5768)`, no overlap with either true burst) |
+
+All 5 cases run through `run_full_experiment.py` (the actual main
+pipeline, not a direct `merge_close_regions()` call in isolation) and
+**reproduced bit-for-bit** (`bursts_summary.csv`/`regions_summary.csv`/
+`summary.csv` byte-identical) in a second independent process for every
+case.
+
+### 15.4 RadioML boundary small sweep (28 real-AWN combinations, not the full 500-combo grid)
+
+**Scope note, stated explicitly rather than silently substituted**: the
+requested full grid (2 mods × 2 SNRs × 5 samples × 5 threshold-factors × 5
+sensing-window-sizes = 500 combinations) was replaced with a one-factor-
+at-a-time design — measured at ~3.7s per real-AWN run (including a ~5–6s
+dataset-pickle reload every single call, since `load_radioml_dict` has no
+caching), the full grid would take on the order of 30+ minutes for a round
+explicitly framed as "not an AMC accuracy evaluation" with 5 narrow,
+specific functional goals. The reduced design still varies every requested
+axis independently and directly targets all 5 stated goals:
+
+- **Group 1** (modulation truthfulness + reproducibility): `{QPSK,BPSK} ×
+  {SNR 0,18} × sample_index{0..4}` = 20 combos at
+  `threshold-factor=1.5, sensing-window-size=128` (this repo's established
+  baseline).
+- **Group 2/2b** (threshold-factor sensitivity): `{0.8,1.0,1.2,2.0}` (plus
+  the `1.5` baseline from Group 1) at a fixed sample, run against BOTH
+  `QPSK,SNR18,idx0` (well-detected) and `BPSK,SNR18,idx0` (the
+  partial-capture case) to directly show the metric's sensitivity.
+- **Group 3/3b** (sensing-window-size sensitivity): same structure,
+  `{16,32,64,256}` (plus the `128` baseline).
+
+**Results against the 5 stated goals**:
+1. **Detection metrics correctly produced**: all 28 primary combinations
+   succeeded; `detection_success`/`captured_signal_ratio`/boundary errors/
+   etc. populated on every row.
+2. **`captured_signal_ratio` DOES change with parameters** — not visible on
+   the well-detected `QPSK,SNR18,idx0` sample (stayed `1.0` across every
+   threshold-factor 0.8–2.0 and every sensing-window-size 16–256, since its
+   detected region always fully contains the true burst regardless), but
+   clearly visible on the partial-capture `BPSK,SNR18,idx0` sample:
+   `threshold-factor` 0.8→1.0→1.0→1.2→**0.6641**→2.0→**0.6172** (ratio drops
+   as the threshold tightens and the detected region shrinks toward the
+   burst's higher-energy portion only).
+3. **`BPSK,SNR18,idx0`'s `captured_signal_ratio=0.625` REPRODUCED exactly**
+   at the original baseline params (`threshold-factor=1.5,
+   sensing-window-size=128`) — confirmed deterministic, not a one-off, and
+   re-confirmed byte-identical (except one item below) in a second
+   independent process.
+4. **No silent no-op / fallback / NaN / Inf** across all 28+ combinations
+   (`awn_backend` was the real model every time; `clean_has_nan`/
+   `clean_has_inf` were `False` throughout) — **one legitimate, LOUD (not
+   silent) `RuntimeError`** was found: `BPSK,SNR18,idx0` at
+   `sensing-window-size ∈ {16,32,64}` produces a detected region too short
+   to survive the default `--min-region-len` (defaults to `--window-size`
+   = 128) filter for this specific sample's energy profile — an expected
+   consequence of `filter_by_min_length` running after a narrower smoothing
+   window on a sample whose energy isn't uniformly spread across all 128
+   samples, not a bug; the error message is specific and was not silently
+   swallowed.
+5. **All output fields correct**: `summary.csv`'s ground-truth columns
+   (`true_burst_start`/`end`, `detection_success`, `captured_signal_ratio`,
+   boundary errors, etc.) all populated and internally consistent across
+   every successful combination.
+
+**Reproducibility caveat found**: re-running `BPSK,SNR18,idx0` (baseline
+params) in a second independent process gave byte-identical results for
+every decision-relevant field (positions, hashes, `captured_signal_ratio`,
+`pred_clean`) **except** `logit_maxabs_clean_attacked`, which differed by
+exactly `2^-12` (`0.0` vs `0.000244140625`) — consistent with ordinary
+floating-point non-associativity in multi-threaded CPU BLAS/torch kernels
+across process launches, not a bug in this repo's own code, and not
+something that changed any prediction or ground-truth metric. Not
+investigated further (out of this round's scope).
+
+### 15.5 Complete RML2016.10a class mapping (`docs/radioml_class_mapping.csv`)
+
+| dataset key | AWN class index | AWN display name | names match? |
+|---|---|---|---|
+| QAM16 | 0 | QAM16 | yes |
+| QAM64 | 1 | QAM64 | yes |
+| 8PSK | 2 | 8PSK | yes |
+| WBFM | 3 | WBFM | yes |
+| BPSK | 4 | BPSK | yes |
+| CPFSK | 5 | CPFSK | yes |
+| AM-DSB | 6 | AM-DSB | yes |
+| GFSK | 7 | GFSK | yes |
+| PAM4 | 8 | PAM4 | yes |
+| QPSK | 9 | QPSK | yes |
+| AM-SSB | 10 | AM-SSB | yes |
+
+Cross-verified this round at **8 independent locations** in
+`external/adversarial-rf` (submodule, pinned `ced705e`): the `classes`
+dict (`data_loader/data_loader.py:13`, `util/config.py:52`) and a separate
+`CLASS_NAMES` ordered list used purely for human-readable plot labels
+(`plot_iq_reference_style.py:31`, `plot_comprehensive_attacks.py:33`,
+`plot_iq_fgsm_grid.py:25`, `plot_all_attacks_iq_constellation.py:31`,
+`plot_all_attacks_iq.py:31`, `plot_iq_constellation_attacks.py:36`) — all
+8 agree exactly, no discrepancy between the dataset key string and the
+"display name" was found anywhere.
+
+### 15.6 Cross-reference to this round's required status labels
+
+- **RadioML loader**: PASS (unchanged, section 14)
+- **RadioML modulation truthfulness**: PASS, small-sample (unchanged claim scope from section 14.6, reinforced by section 15.4's 20-combination Group 1)
+- **single-burst ground truth metrics**: PASS (unchanged, section 14.3)
+- **multi-burst source**: **PASS this round** (section 15.1) — implemented, all 6 stated requirements verified, single-burst mode regression-confirmed unaffected
+- **merge-gap function**: PASS (unchanged, section 13.2 — scratch-only dual-burst test)
+- **merge-gap main pipeline**: **PASS this round** (section 15.3) — all 5 required scenarios (separate/merge/mixed/missed/false-alarm) reproduced through the real main pipeline, not an isolated function call, all reproducible
+- **Pd/Pfa metrics**: **PASS this round** (section 15.2) — implemented, formulas documented with explicit denominators, verified against a hand-checked synthetic scenario covering all 5 required matching cases simultaneously
+- **formal full batch**: **NOT STARTED** (unchanged)

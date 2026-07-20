@@ -15,11 +15,12 @@ experiments/
 src/
   sensing/                  IQ generation, energy detection, windowing, normalization
     iq_source.py            synthetic IQ generator + .cfile reader (for later)
-    radioml_source.py        RML2016.10a real-sample loader + noise-stream embedding
-                              (--iq-source radioml; see docs/parameter_validation.md
-                              section 14 for the dataset inventory and class ordering)
-    ground_truth_metrics.py  detection/boundary/capture-ratio metrics against a known
-                              true burst interval (radioml mode only, currently)
+    radioml_source.py        RML2016.10a real-sample loader + single/multi-burst
+                              noise-stream embedding (--iq-source radioml, --num-bursts;
+                              see docs/parameter_validation.md sections 14-15)
+    ground_truth_metrics.py  single- and multi-burst detection/boundary/capture-ratio/
+                              Pd-Pfa metrics against known true burst interval(s)
+                              (radioml mode only, currently)
     energy_detection.py      energy_detect / mask_to_regions / merge_close_regions / filter_by_min_length
     segmentation.py           segment_regions
     normalize.py               normalize_segments / to_awn_input

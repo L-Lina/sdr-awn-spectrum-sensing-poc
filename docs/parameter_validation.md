@@ -1362,3 +1362,277 @@ trends across SNR.
 - **SNR smoke sweep**: DONE this round (section 13.4) — 24/32 combinations succeeded with real backends and full reproducibility; 8 failed combinations (all SNR=-10) preserved with clear errors, not skipped
 - **modulation waveform**: NOT IMPLEMENTED (unchanged, section 5)
 - **formal full batch** (SNR × modulation × attack × eps × topk): **NOT STARTED** — explicitly out of scope this round
+
+---
+
+## 14. RadioML (RML2016.10a) real-sample input, ground-truth sensing metrics (round 5)
+
+New files: `src/sensing/radioml_source.py`, `src/sensing/ground_truth_metrics.py`.
+Modified: `src/utils/config.py`, `src/utils/pipeline.py`, `experiments/
+run_batch.py`, `docs/experiment_design.md` (**no changes to
+`external/AWN`/`external/adversarial-rf`**; the existing synthetic source
+path is untouched and unaffected — verified via regression check, section
+14.4).
+
+### 14.1 RadioML dataset inventory (read-only, before any code was written)
+
+1. **Dataset file presence**: `RML2016.10a_dict.pkl` found at
+   `/home/xiaomi/adversarial-rf/data/RML2016.10a_dict.pkl` (640,919,653
+   bytes). **Not** inside this repo, and **not** inside `external/
+   adversarial-rf` (the pinned submodule) — `external/adversarial-rf/data/`
+   only contains a `.gitignore` (`*` ignored, dataset never committed).
+   `/home/xiaomi/adversarial-rf` is a **separate, standalone checkout of the
+   same upstream GitHub repo** (`nigelzzz/adversarial-rf`, HEAD
+   `70036bc817c595a89e666c13907066edc460763d`) — the same location this
+   session's real-backend venv (`/home/xiaomi/adversarial-rf/.venv`) lives
+   in, but a distinct git checkout from the `external/adversarial-rf`
+   submodule pinned in this repo. Because of this, `--dataset-path` is a
+   required, absolute, external CLI argument, not a hardcoded relative
+   path — verified this session that reusing `external/adversarial-rf/
+   data_loader/data_loader.py:Load_Dataset` directly is not possible
+   without either copying the ~640MB file into the submodule's own `data/`
+   or modifying `Load_Dataset`'s hardcoded `'./data/%s'` relative path
+   (both out of scope — no external repo changes permitted).
+2. **Format/structure**: a plain Python dict, `{(mod: str, snr: int):
+   ndarray[1000, 2, 128] float32}`, loaded with `pickle.load(f,
+   encoding='latin1')` (str keys; `external/adversarial-rf`'s own loader
+   uses `encoding='bytes'`, producing `bytes` keys instead — same
+   underlying data, this repo's own `radioml_source.py` picks `'latin1'`
+   so `--dataset-mod QPSK` can be a plain CLI string with no bytes
+   juggling). **220 keys** = 11 modulations × 20 SNR values
+   (`-20` to `18` dB, step `2`). Each `(mod, snr)` block has exactly
+   **1000 samples**.
+3. **Modulation/SNR label storage**: encoded entirely in the dict **key**
+   (a `(mod, snr)` tuple) — there is no separate per-sample label array;
+   every one of the 1000 samples in a given block shares that block's
+   `(mod, snr)` label implicitly, by position.
+4. **Loader reuse**: `Load_Dataset` (`external/adversarial-rf/data_loader/
+   data_loader.py:6-70`) is **not directly reusable as-is** (hardcoded
+   relative path, as above), but its **essential, correctness-critical
+   logic — the class-ordering convention — was reused/replicated**
+   verbatim into this repo's own `RML2016_10A_CLASSES` constant (see point
+   6 below), rather than re-derived or guessed.
+5. **Per-sample shape**: confirmed **`[2, 128]` float32** for every sample
+   checked this session (`arr[i].shape == (2, 128)`) — matches
+   `external/adversarial-rf/util/config.py:51`'s `signal_len = 128` for
+   `2016.10a`, independently re-confirmed here directly against the actual
+   dataset array shape, not just the config citation.
+6. **AWN checkpoint class ordering — from source code, not memory**,
+   cross-checked at **three independent locations** in `external/
+   adversarial-rf` (submodule, pinned commit `ced705e`), all identical, no
+   conflicts found:
+   - `data_loader/data_loader.py:13-14` — used by `Load_Dataset`, which is
+     called directly from `main.py:205`, **the actual training entry
+     point** (confirmed via `grep`, not assumed).
+   - `util/config.py:52` — an independent duplicate declaration.
+   - Six further `plot_*.py` analysis scripts, all consistent.
+
+   **`RML2016_10A_CLASSES`** (now also in this repo's `src/sensing/
+   radioml_source.py`):
+   ```
+   QAM16:0  QAM64:1  8PSK:2  WBFM:3  BPSK:4
+   CPFSK:5  AM-DSB:6  GFSK:7  PAM4:8  QPSK:9  AM-SSB:10
+   ```
+   This is a training-time convention recorded in code, not something
+   embedded in the checkpoint file itself (raw tensor weights carry no
+   label metadata) — the evidence is that every script in the submodule
+   that interprets this checkpoint's output logits agrees on this exact
+   ordering, with `main.py`'s training call being the authoritative one.
+
+Sample power-scale check (informational, used to calibrate embedding —
+section 14.2): mean per-sample power ranged ~6.8e-5 to ~3.5e-4 across the
+`(mod, snr)` combinations checked, roughly SNR-independent in absolute
+terms (RadioML's own generation process normalizes total power, not just
+the message-to-noise ratio) — this is why `embed_snr_margin` (14.2) scales
+relative to each loaded sample's own measured power rather than using a
+fixed background-noise constant.
+
+### 14.2 RadioML IQ source (`--iq-source radioml`)
+
+New CLI flags (`src/utils/config.py`, mirrored in both `build_arg_parser`
+and `run_batch.py`'s `build_batch_arg_parser`): `--iq-source {synthetic,
+radioml}` (default `synthetic`, reproduces all prior behavior exactly),
+`--dataset-path`, `--dataset-mod`, `--dataset-snr`, `--sample-index`
+(`arg_nonneg_int`), `--embed-snr-margin` (`arg_positive_finite_float`,
+default `20.0`). `ExperimentConfig` gained matching fields
+(`iq_source/dataset_path/dataset_mod/dataset_snr/sample_index/
+embed_snr_margin`). `validate_experiment_config` rejects an invalid
+`iq_source` value and requires `dataset_path`/`dataset_mod`/`dataset_snr`
+to all be set when `iq_source=='radioml'` (existence/key-validity of the
+dataset file itself is checked later, at load time, since that requires
+actually opening the pickle).
+
+**Explicit separation, not metadata-only** (the round's core requirement):
+`--mod`/`--snr` continue to control ONLY the synthetic generator and are
+**completely unused** when `iq_source=='radioml'` — `src/utils/
+pipeline.py`'s `run_dry_run_experiment` branches entirely around
+`generate_synthetic_iq` in that mode. `--dataset-mod`/`--dataset-snr`
+instead select a **real, different array** from the pickle — verified
+empirically (section 14.4): different `--dataset-mod` values produce
+different `original_sample_sha256`, not just a different label string.
+
+**Pipeline** (`src/sensing/radioml_source.py`):
+```
+load_radioml_sample(dataset_path, mod, snr, sample_index)   [2,128] float32
+  raises ValueError (not silent) for unknown mod/snr or out-of-range
+  sample_index, listing the valid options
+  -> radioml_sample_to_iq()                                  [128] complex64
+  -> embed_sample_in_noise(n_samples, embed_snr_margin, seed)
+       background noise power = burst's own measured power / embed_snr_margin
+       (relative, not fixed -- see 14.1's power-scale note)
+       burst placed at a SEEDED-RANDOM position (reproducible, but not
+       looked up by the sensing stage below)
+       => long complex64 IQ [n_samples], true_start/true_end
+  -> validate_iq
+  -> energy_detect -> mask_to_regions -> merge_close_regions
+       -> filter_by_min_length                                [EXACT SAME
+       code path as the synthetic source from here on -- no branching]
+  -> segment_regions -> normalize_segments -> to_awn_input     x_clean [N,2,128]
+  -> compute_sensing_ground_truth_metrics(true_start, true_end, regions)
+       [radioml mode only -- section 14.3]
+  -> AWN / attack / Top-K (unchanged)
+```
+
+**Recorded** (every `summary.csv` row, present but `None` for synthetic-mode
+rows): `source_type`, `dataset_path`, `dataset_mod`, `dataset_snr`,
+`sample_index`, `original_sample_sha256`, `long_iq_sha256`,
+`embed_snr_margin`, `true_burst_start`, `true_burst_end`, plus all of
+section 14.3's ground-truth metric columns. `snr_db`/`mod` columns are
+still present and populated (from `cfg.snr`/`cfg.mod`, the synthetic
+generator's own inputs/defaults) but are explicitly meaningless in radioml
+mode — `dataset_mod`/`dataset_snr` are the authoritative ground truth in
+that mode, never conflated with `snr_db`/`mod`.
+
+### 14.3 Ground-truth sensing metrics — definitions
+
+`src/sensing/ground_truth_metrics.py:compute_sensing_ground_truth_metrics
+(true_start, true_end, detected_regions)`. All intervals are half-open
+`[start, end)`. `T = [true_start, true_end)`; `D` = the **best-matching**
+detected region (largest overlap with `T`; ties broken by smallest gap to
+`T`; `None` if `detected_regions` is empty).
+
+| Metric | Formula |
+|---|---|
+| `intersection_length` | `max(0, min(true_end, D_end) - max(true_start, D_start))` |
+| `true_burst_length` | `true_end - true_start` |
+| `detected_region_length` | `D_end - D_start` |
+| `detection_success` | `intersection_length > 0` for the best match |
+| `captured_signal_ratio` (recall) | `intersection_length / true_burst_length` |
+| `extra_captured_noise_ratio` (1 − precision) | `(detected_region_length - intersection_length) / detected_region_length` |
+| `missed_sample_count` | `true_burst_length - intersection_length` |
+| `false_occupied_sample_count` | `detected_region_length - intersection_length` |
+| `start_boundary_error` (signed) | `D_start - true_start` (positive = detected region starts late / missed the leading edge; negative = started early / extra noise captured ahead) |
+| `end_boundary_error` (signed) | `D_end - true_end` (same convention, trailing edge) |
+
+If no detected region overlaps `T` at all, `captured_signal_ratio=0.0`,
+`missed_sample_count=true_burst_length`, and the boundary-error/
+extra-noise-ratio fields are `None` (nothing to measure them against). If
+`detected_regions` is empty entirely, every field beyond
+`true_start`/`true_end`/`true_burst_length` is `None`/`False`/`0`.
+
+### 14.4 Small real-data functional test (12 combinations: 2 mods × 2 SNR × 3 samples)
+
+`QPSK`/`BPSK` × `dataset-snr∈{0,18}` × `sample-index∈{0,1,2}`, `attack=none`,
+`--use-real-awn`, `--seed 42`, `--threshold-factor 1.5 --window-size 128
+--sensing-window-size 128`. **Regression check first**: an unrelated
+synthetic-mode run at the same fixed params gave the exact same occupied
+region `(3734, 4459)` this session has produced dozens of times before —
+confirms the RadioML integration did not alter the synthetic path.
+
+All 12 RadioML combinations: real `awn_backend` (`AWN`, `status=ok`, no
+fallback), `x_clean.shape == (1, 2, 128)`, `detection_success=True`
+(11/12 with `captured_signal_ratio=1.0`; **`BPSK, snr=18, idx=0` captured
+only 0.625** — a genuine, real per-sample energy variation, not an error;
+still `detection_success=True`). `dataset_mod`/`dataset_snr` (ground truth)
+and `pred_clean` (AWN's own guess) both written to every row — **AWN
+correctness was never used as a pass/fail criterion** for this functional
+test (several `pred_clean` values visibly disagree with the true label,
+e.g. `QPSK` samples predicted as class `1`/`8`, not `9` — left as-is,
+reported not filtered).
+
+| check | result |
+|---|---|
+| Different modulations → different `original_sample_sha256` (same snr/idx) | ✅ confirmed distinct (`QPSK` vs `BPSK` at `snr=0,idx=0`) |
+| Different `sample_index` → different `original_sample_sha256` (same mod/snr) | ✅ confirmed 3 pairwise-distinct hashes (`QPSK,snr=18,idx=0/1/2`) |
+| Same sample + seed, 2 independent processes | ✅ `summary.csv` byte-identical (`QPSK,snr=18,idx=0` re-run) |
+| Real AWN backend, no fallback, all 12 combos | ✅ confirmed |
+| `x_clean` shape `[N,2,128]` | ✅ confirmed, all 12 |
+| Sensing found the embedded region | ✅ `detection_success=True`, all 12 |
+
+### 14.5 merge-gap multi-RadioML-burst main-pipeline integration — DESIGN ONLY, not implemented
+
+Per this round's instructions, a design proposal, deliberately not built —
+extending `embed_sample_in_noise` (single burst) touches the core pipeline
+branch added this round non-trivially (variable burst count, per-burst
+metadata, many-to-many region↔truth attribution), so it doesn't meet the
+"very small, isolated change" bar this session has used to decide
+design-only vs. implement-now (same bar applied to the CW CLI design in an
+earlier round).
+
+1. **Multiple bursts, each independently parameterized**: a new
+   `embed_multiple_samples_in_noise(samples: List[[2,128]], n_samples,
+   embed_snr_margin, seed, min_gap)` — takes a **list** of already-loaded
+   RadioML samples (each independently chosen via its own `mod`/`snr`/
+   `sample_index` by the caller, so yes, each burst can have a different
+   modulation, SNR, and, via seeded-random non-overlapping placement,
+   position), returns the long IQ array plus a **list** of per-burst
+   ground-truth dicts (`burst_id, mod, snr, sample_index, true_start,
+   true_end`). `min_gap` enforces a minimum separation between placed
+   bursts at generation time (independent of, and not to be confused
+   with, `--merge-gap`, which governs *detection-time* merging).
+2. **CLI**: extend the existing comma-list convention (`run_batch.py`'s
+   `--snr-list` etc.) with `--dataset-mod-list`/`--dataset-snr-list`/
+   `--sample-index-list` (equal-length comma lists, one entry per burst,
+   `len()` implicitly determines burst count) as the minimal option; a
+   `--burst-spec-path` (JSON/YAML list of `{mod,snr,sample_index}`
+   objects) is a documented alternative for larger burst counts where
+   comma-lists become unwieldy — not chosen as the primary design to stay
+   consistent with this repo's existing list-flag convention.
+3. **Ground truth storage**: `result["ground_truth_bursts"]` (a list, one
+   dict per input burst, same shape as todays's single-burst metric dict)
+   replaces today's single `result["ground_truth"]`. `summary.csv` is
+   per-*segment*, not per-burst — each segment's row would need a
+   `source_burst_id` (or `None` if its detected region doesn't confidently
+   attribute to one true burst) rather than trying to cram a variable-length
+   burst list into fixed CSV columns; a **separate** `bursts_summary.csv`
+   (one row per true burst, analogous to how `batch_summary.csv` is
+   separate from per-combo `summary.csv`) is the natural place for the
+   per-burst ground-truth metrics themselves.
+4. **Detection probability / false-alarm rate**:
+   - **Region-level**: `Pd = (# true bursts with detection_success=True) /
+     (# true bursts)`; `Pfa_region = (# detected regions with ZERO
+     overlap with any true burst) / (# detected regions)`.
+   - **Sample-level** (the more standard radar/spectrum-sensing
+     definition): `Pfa_sample = (# background/noise samples incorrectly
+     marked occupied) / (# background/noise samples in the stream)` — this
+     needs the union of all detected regions vs. the union of all true
+     burst intervals, computed once per stream (not per burst).
+   - Both should be reported — they measure different things (a single
+     region spanning multiple close bursts inflates region-level Pfa's
+     denominator interpretation; sample-level Pfa is scale-invariant to
+     how many bursts happen to be present).
+5. **One detected region spanning multiple true bursts** (exactly the
+   scenario `--merge-gap` creates when it merges two nearby detections):
+   propose computing a **bipartite overlap table** — for every (detected
+   region, true burst) pair, `intersection_length` as already defined in
+   14.3 — then classifying each detected region as *clean single-burst*
+   (nonzero overlap with exactly one true burst and no other detected
+   region also claims that burst), *merged multi-burst* (nonzero overlap
+   with 2+ true bursts — the direct signature of an over-aggressive
+   `--merge-gap` for this burst spacing), or *false positive* (zero
+   overlap with any true burst); symmetrically classify each true burst as
+   *captured cleanly*, *captured but merged with a neighbor*, or *missed*.
+   This directly answers "how does `--merge-gap` interact with multiple
+   ground-truth bursts" empirically once built, rather than assuming an
+   answer — not implemented this round.
+
+### 14.6 Cross-reference to this round's required status labels
+
+- **Top-K boundary**: PASS (unchanged from round 4, section 13.1)
+- **merge-gap algorithm**: PASS (unchanged from round 4, section 13.2 — dual-burst scratch test)
+- **merge-gap main-pipeline integration**: **NOT TESTED** (design only, section 14.5 — not implemented)
+- **CW fair Top-K**: PASS, small-sample only (unchanged from round 4, section 13.3)
+- **SNR smoke matrix**: PASS with expected sensing failures at SNR=-10 (unchanged from round 4, section 13.4)
+- **RadioML source**: PASS — implemented, real dataset located and inventoried, class ordering verified from source (not memory), `--iq-source radioml` fully wired end-to-end through real AWN, 12/12 functional-test combinations succeeded, reproducible, no fallback (section 14.1–14.4)
+- **modulation truthfulness**: **PASS for the RadioML source specifically** (real, distinct, verifiably-different IQ per modulation label, confirmed via SHA256) — the **synthetic source remains cosmetic-only** exactly as documented in section 5; "modulation truthfulness" as a repo-wide property is not a blanket PASS, only true when `--iq-source radioml` is used
+- **formal full batch**: **NOT STARTED** (unchanged)

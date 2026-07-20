@@ -53,6 +53,28 @@ class ExperimentConfig:
     cw_c: float = 1.0
     cw_steps: int = 20
     cw_lr: float = 0.01
+    # RadioML (RML2016.10a) real-sample IQ source, as an alternative to the
+    # synthetic generator -- see src/sensing/radioml_source.py. "synthetic"
+    # (default) reproduces all prior behavior exactly and ignores every
+    # dataset_*/sample_index/embed_snr_margin field below. "radioml" makes
+    # dataset_path/dataset_mod/dataset_snr all REQUIRED (checked in
+    # src/utils/pipeline.py, since validating dataset_mod/dataset_snr
+    # against the actual pickle's available keys requires opening the
+    # file) and BYPASSES generate_synthetic_iq entirely -- `snr`/`mod`
+    # above are the synthetic generator's own inputs and are simply unused
+    # in this mode, never silently reinterpreted as the RadioML ground
+    # truth (that's what dataset_mod/dataset_snr are for).
+    iq_source: str = "synthetic"
+    dataset_path: Optional[str] = None
+    dataset_mod: Optional[str] = None
+    dataset_snr: Optional[int] = None
+    sample_index: int = 0
+    # How much the embedded RadioML burst's own power exceeds the
+    # surrounding synthetic capture-noise floor (src/sensing/
+    # radioml_source.py:embed_sample_in_noise) -- deliberately distinct
+    # from the RadioML sample's own internal (mod,snr)-label SNR, which is
+    # already baked into the loaded sample and not re-derivable from it.
+    embed_snr_margin: float = 20.0
 
 
 # ---------------------------------------------------------------------------
@@ -141,6 +163,17 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
     require_positive_finite_float("cw_c", cfg.cw_c)
     require_positive_int("cw_steps", cfg.cw_steps)
     require_positive_finite_float("cw_lr", cfg.cw_lr)
+    if cfg.iq_source not in ("synthetic", "radioml"):
+        raise ValueError(f"iq_source must be 'synthetic' or 'radioml', got {cfg.iq_source!r}")
+    if cfg.iq_source == "radioml":
+        missing = [n for n, v in (("dataset_path", cfg.dataset_path), ("dataset_mod", cfg.dataset_mod),
+                                   ("dataset_snr", cfg.dataset_snr)) if v is None]
+        if missing:
+            raise ValueError(
+                f"--iq-source radioml requires {missing} to all be set (none may be omitted)"
+            )
+        require_nonneg_int("sample_index", cfg.sample_index)
+    require_positive_finite_float("embed_snr_margin", cfg.embed_snr_margin)
 
 
 def resolve_sensing_window_size(window_size: int, sensing_window_size: Optional[int]) -> int:
@@ -283,6 +316,30 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument("--cw-lr", type=arg_positive_finite_float("cw_lr"), default=0.01,
                         help="CW-ONLY. torchattacks.CW's Adam learning rate. Ignored entirely by fgsm/pgd. "
                              "NOT the same knob as --attack-eps, which CW does not use at all.")
+    parser.add_argument("--iq-source", type=str, choices=["synthetic", "radioml"], default="synthetic",
+                        help="'synthetic' (default): generate_synthetic_iq, --mod/--snr control it as before. "
+                             "'radioml': load a real RML2016.10a sample (--dataset-path/--dataset-mod/"
+                             "--dataset-snr/--sample-index, all required) and embed it in a synthetic noise "
+                             "stream instead -- --mod/--snr are ignored in this mode, not reinterpreted as "
+                             "the RadioML ground truth.")
+    parser.add_argument("--dataset-path", type=str, default=None,
+                        help="RADIOML-ONLY, REQUIRED when --iq-source radioml. Absolute path to "
+                             "RML2016.10a_dict.pkl (not part of this repo or its submodule).")
+    parser.add_argument("--dataset-mod", type=str, default=None,
+                        help="RADIOML-ONLY, REQUIRED when --iq-source radioml. Real RadioML modulation label "
+                             "to select from the dataset (e.g. QPSK, BPSK) -- distinct from --mod, which only "
+                             "affects the synthetic generator and is unused in radioml mode.")
+    parser.add_argument("--dataset-snr", type=int, default=None,
+                        help="RADIOML-ONLY, REQUIRED when --iq-source radioml. Real RadioML SNR label (dB, "
+                             "one of -20..18 in steps of 2) to select from the dataset -- distinct from --snr, "
+                             "which only affects the synthetic generator and is unused in radioml mode.")
+    parser.add_argument("--sample-index", type=arg_nonneg_int("sample_index"), default=0,
+                        help="RADIOML-ONLY. Index within the selected (dataset-mod, dataset-snr) block of "
+                             "1000 samples.")
+    parser.add_argument("--embed-snr-margin", type=arg_positive_finite_float("embed_snr_margin"), default=20.0,
+                        help="RADIOML-ONLY. How much the embedded RadioML burst's own power exceeds the "
+                             "surrounding synthetic capture-noise floor (src/sensing/radioml_source.py). "
+                             "Distinct from --dataset-snr, which is the sample's own baked-in label SNR.")
     return parser
 
 
@@ -314,4 +371,10 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         cw_c=args.cw_c,
         cw_steps=args.cw_steps,
         cw_lr=args.cw_lr,
+        iq_source=args.iq_source,
+        dataset_path=args.dataset_path,
+        dataset_mod=args.dataset_mod,
+        dataset_snr=args.dataset_snr,
+        sample_index=args.sample_index,
+        embed_snr_margin=args.embed_snr_margin,
     )

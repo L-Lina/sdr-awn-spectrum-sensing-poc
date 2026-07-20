@@ -95,6 +95,22 @@ def build_batch_arg_parser() -> argparse.ArgumentParser:
                         help="CW-ONLY. torchattacks.CW's Adam learning rate. Ignored entirely by fgsm/pgd. "
                              "NOT the same knob as --attack-eps, which CW does not use at all. Applied "
                              "uniformly to every combo in this batch.")
+    parser.add_argument("--iq-source", type=str, choices=["synthetic", "radioml"], default="synthetic",
+                        help="'synthetic' (default) or 'radioml' -- see run_full_experiment.py's --iq-source "
+                             "help. Applied uniformly to every combo in this batch; --snr-list/--mod-list "
+                             "still drive the combo grid but are unused in radioml mode.")
+    parser.add_argument("--dataset-path", type=str, default=None,
+                        help="RADIOML-ONLY, REQUIRED when --iq-source radioml. Applied uniformly to every combo.")
+    parser.add_argument("--dataset-mod", type=str, default=None,
+                        help="RADIOML-ONLY, REQUIRED when --iq-source radioml. Applied uniformly to every combo "
+                             "(NOT swept per --mod-list entry -- this is a single fixed value for the batch).")
+    parser.add_argument("--dataset-snr", type=int, default=None,
+                        help="RADIOML-ONLY, REQUIRED when --iq-source radioml. Applied uniformly to every combo "
+                             "(NOT swept per --snr-list entry -- this is a single fixed value for the batch).")
+    parser.add_argument("--sample-index", type=arg_nonneg_int("sample_index"), default=0,
+                        help="RADIOML-ONLY. Applied uniformly to every combo in this batch.")
+    parser.add_argument("--embed-snr-margin", type=arg_positive_finite_float("embed_snr_margin"), default=20.0,
+                        help="RADIOML-ONLY. Applied uniformly to every combo in this batch.")
     return parser
 
 
@@ -149,6 +165,12 @@ def main() -> None:
             cw_c=args.cw_c,
             cw_steps=args.cw_steps,
             cw_lr=args.cw_lr,
+            iq_source=args.iq_source,
+            dataset_path=args.dataset_path,
+            dataset_mod=args.dataset_mod,
+            dataset_snr=args.dataset_snr,
+            sample_index=args.sample_index,
+            embed_snr_margin=args.embed_snr_margin,
         )
 
         try:

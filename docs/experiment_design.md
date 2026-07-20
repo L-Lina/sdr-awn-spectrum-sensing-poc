@@ -15,6 +15,11 @@ experiments/
 src/
   sensing/                  IQ generation, energy detection, windowing, normalization
     iq_source.py            synthetic IQ generator + .cfile reader (for later)
+    radioml_source.py        RML2016.10a real-sample loader + noise-stream embedding
+                              (--iq-source radioml; see docs/parameter_validation.md
+                              section 14 for the dataset inventory and class ordering)
+    ground_truth_metrics.py  detection/boundary/capture-ratio metrics against a known
+                              true burst interval (radioml mode only, currently)
     energy_detection.py      energy_detect / mask_to_regions / merge_close_regions / filter_by_min_length
     segmentation.py           segment_regions
     normalize.py               normalize_segments / to_awn_input
@@ -60,6 +65,20 @@ of that file.
 `--attack-list` / `--topk-list` (comma-separated) to sweep a grid, writing one
 subdirectory per combination under `--output-dir` plus an aggregated
 `batch_summary.csv`.
+
+This table (and the pipeline diagram below) describe this doc's original
+Phase-1 dummy-only skeleton and have not been comprehensively refreshed since
+-- most placeholders it describes are now wired to real backends (see
+`docs/parameter_validation.md`, which is the actively-maintained, currently
+accurate parameter/status record; this file is kept only for the original
+project-layout overview and is not the source of truth for current
+behavior). One addition directly relevant to project layout: `--iq-source
+{synthetic,radioml}` (default `synthetic`) selects between the synthetic
+generator above and a real RML2016.10a sample embedded in a synthetic noise
+stream (`--dataset-path`/`--dataset-mod`/`--dataset-snr`/`--sample-index`,
+all required in `radioml` mode) -- see `docs/parameter_validation.md`
+section 14 for the full data flow, ground-truth metrics, ground-truth
+metric formulas, and functional-test results.
 
 ## Dry-run pipeline
 

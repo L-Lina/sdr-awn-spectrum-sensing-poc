@@ -8,6 +8,7 @@ experiments/run_batch.py (parameter grid).
 
 from __future__ import annotations
 
+import hashlib
 import random
 from pathlib import Path
 from typing import Dict
@@ -24,8 +25,10 @@ from src.sensing.energy_detection import (
     mask_to_regions,
     merge_close_regions,
 )
+from src.sensing.ground_truth_metrics import compute_sensing_ground_truth_metrics
 from src.sensing.iq_source import generate_synthetic_iq, validate_iq
 from src.sensing.normalize import normalize_segments, to_awn_input
+from src.sensing.radioml_source import embed_sample_in_noise, load_radioml_sample
 from src.sensing.segmentation import segment_regions
 from src.utils.config import (
     ExperimentConfig,
@@ -96,19 +99,49 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    iq, gen_meta = generate_synthetic_iq(
-        n_samples=cfg.n_samples,
-        burst_len=cfg.burst_len,
-        snr_db=cfg.snr,
-        mod=cfg.mod,
-        seed=cfg.seed,
-    )
+    radioml_meta = None
+    if cfg.iq_source == "radioml":
+        # dataset_path/dataset_mod/dataset_snr presence already checked in
+        # validate_experiment_config(); mod/snr key existence and
+        # sample_index range are checked here, at load time, since they
+        # require actually opening the dataset file.
+        original_sample = load_radioml_sample(cfg.dataset_path, cfg.dataset_mod, cfg.dataset_snr, cfg.sample_index)
+        original_sample_sha256 = hashlib.sha256(original_sample.tobytes()).hexdigest()
+        iq, embed_meta = embed_sample_in_noise(
+            original_sample, n_samples=cfg.n_samples, embed_snr_margin=cfg.embed_snr_margin, seed=cfg.seed,
+        )
+        gen_meta = {
+            "source_type": "radioml",
+            "dataset_path": cfg.dataset_path,
+            "dataset_mod": cfg.dataset_mod,
+            "dataset_snr": cfg.dataset_snr,
+            "sample_index": cfg.sample_index,
+            "original_sample_sha256": original_sample_sha256,
+            **embed_meta,
+        }
+        radioml_meta = gen_meta
+    else:
+        iq, gen_meta = generate_synthetic_iq(
+            n_samples=cfg.n_samples,
+            burst_len=cfg.burst_len,
+            snr_db=cfg.snr,
+            mod=cfg.mod,
+            seed=cfg.seed,
+        )
+        gen_meta["source_type"] = "synthetic"
     iq = validate_iq(iq)
+    long_iq_sha256 = hashlib.sha256(iq.tobytes()).hexdigest()
 
     mask = energy_detect(iq, window=effective_sensing_window_size, threshold_factor=cfg.threshold_factor)
     raw_regions = mask_to_regions(mask)
     merged_regions = merge_close_regions(raw_regions, merge_gap=cfg.merge_gap)
     regions = filter_by_min_length(merged_regions, min_len=cfg.min_region_len)
+
+    ground_truth = None
+    if radioml_meta is not None:
+        ground_truth = compute_sensing_ground_truth_metrics(
+            radioml_meta["true_start"], radioml_meta["true_end"], regions,
+        )
 
     segments = segment_regions(iq, regions, seg_len=cfg.window_size)
     segments = normalize_segments(segments)
@@ -198,8 +231,35 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         rows.append({
             "segment_id": i,
             "seed": cfg.seed,
+            # source_type distinguishes real ground truth (radioml) from the
+            # synthetic generator's own inputs below. snr_db/mod are the
+            # SYNTHETIC generator's inputs -- unused (but still populated
+            # with whatever value/default was passed) when source_type ==
+            # 'radioml'; dataset_mod/dataset_snr below are the REAL,
+            # authoritative labels in that mode.
+            "source_type": gen_meta["source_type"],
             "snr_db": cfg.snr,
             "mod": cfg.mod,
+            "dataset_path": radioml_meta["dataset_path"] if radioml_meta else None,
+            "dataset_mod": radioml_meta["dataset_mod"] if radioml_meta else None,
+            "dataset_snr": radioml_meta["dataset_snr"] if radioml_meta else None,
+            "sample_index": radioml_meta["sample_index"] if radioml_meta else None,
+            "original_sample_sha256": radioml_meta["original_sample_sha256"] if radioml_meta else None,
+            "long_iq_sha256": long_iq_sha256,
+            "embed_snr_margin": radioml_meta["embed_snr_margin"] if radioml_meta else None,
+            "true_burst_start": ground_truth["true_start"] if ground_truth else None,
+            "true_burst_end": ground_truth["true_end"] if ground_truth else None,
+            "detected_region_count": ground_truth["detected_region_count"] if ground_truth else None,
+            "best_detected_start": ground_truth["best_detected_start"] if ground_truth else None,
+            "best_detected_end": ground_truth["best_detected_end"] if ground_truth else None,
+            "start_boundary_error": ground_truth["start_boundary_error"] if ground_truth else None,
+            "end_boundary_error": ground_truth["end_boundary_error"] if ground_truth else None,
+            "intersection_length": ground_truth["intersection_length"] if ground_truth else None,
+            "detection_success": ground_truth["detection_success"] if ground_truth else None,
+            "captured_signal_ratio": ground_truth["captured_signal_ratio"] if ground_truth else None,
+            "extra_captured_noise_ratio": ground_truth["extra_captured_noise_ratio"] if ground_truth else None,
+            "missed_sample_count": ground_truth["missed_sample_count"] if ground_truth else None,
+            "false_occupied_sample_count": ground_truth["false_occupied_sample_count"] if ground_truth else None,
             "attack": cfg.attack,
             "attack_eps": cfg.attack_eps,
             "topk": cfg.topk,
@@ -278,6 +338,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         "summary_csv_path": str(summary_csv_path),
         "plot_path": str(plot_path) if plot_created else None,
         "gen_meta": gen_meta,
+        "long_iq_sha256": long_iq_sha256,
+        "ground_truth": ground_truth,
         "topk_input_shape": tuple(input_shape),
         "topk_output_shape": tuple(x_defended.shape),
         "awn_input_shape": tuple(x_clean.shape),
@@ -291,6 +353,15 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
 
     print("\n--- Dry-run summary ---")
     print(f"Seed:               {cfg.seed} (random/numpy/torch[+cuda] seeded at start of this run)")
+    print(f"IQ source:          {gen_meta['source_type']}")
+    if radioml_meta is not None:
+        print(f"RadioML sample:     dataset_mod={radioml_meta['dataset_mod']} dataset_snr={radioml_meta['dataset_snr']} "
+              f"sample_index={radioml_meta['sample_index']}")
+        print(f"True burst:         [{radioml_meta['true_start']}:{radioml_meta['true_end']}]")
+        if ground_truth is not None:
+            print(f"Ground truth:       detection_success={ground_truth['detection_success']} "
+                  f"captured_signal_ratio={ground_truth['captured_signal_ratio']:.4f} "
+                  f"start_err={ground_truth['start_boundary_error']} end_err={ground_truth['end_boundary_error']}")
     print(f"IQ stream length:   {len(iq)} samples")
     print(f"Sensing window:     {effective_sensing_window_size} (energy_detect smoothing window)")
     print(f"Segment length:     {cfg.window_size} (segment_regions/to_awn_input seg_len == AWN input length)")

@@ -110,30 +110,48 @@ class ExperimentConfig:
     # src/sensing/radioml_source.py:embed_multiple_samples_in_noise).
     burst_power_scale_list: Optional[List[float]] = None
     # Segment-alignment policy (src/sensing/segmentation.py:select_aligned_segments,
-    # docs/parameter_validation.md section 18). "naive" (default) reproduces
-    # every prior round's segment_regions() behavior byte-for-byte -- fixed,
-    # non-overlapping seg_len windows starting at each detected region's own
-    # start, which can be 53-61 samples before the true burst start (energy_detect's
-    # smoothing widens the region's leading edge), so a region with 100%
-    # region-level captured_signal_ratio can still yield a segment that's only
-    # ~52-63% true-burst signal. "max-energy" selects, per region, the single
-    # seg_len sliding window (hop=segment_hop) with the highest mean power --
-    # never references true_burst_start/true_burst_end.
-    alignment_policy: str = "naive"
+    # docs/parameter_validation.md section 18/20). None (default) means "use
+    # the source-aware default" -- resolved in src/utils/pipeline.py via
+    # resolve_alignment_policy() below, NOT at config-construction time, same
+    # pattern as sensing_window_size, so this applies uniformly regardless of
+    # whether cfg came from argparse or was built directly. Section 20 sets
+    # that resolution to "max-energy" for iq_source="radioml" (validated in
+    # section 18.4/19.4 to recover oracle-path accuracy) and "naive" for
+    # "synthetic" (unchanged -- section 18's diagnosis concerns real RadioML
+    # samples specifically, no regression risk for synthetic). An explicitly
+    # passed value (CLI --alignment-policy or direct ExperimentConfig(...)
+    # construction) is NEVER overridden by the source-aware default.
+    # "naive" reproduces every prior round's segment_regions() behavior
+    # byte-for-byte -- fixed, non-overlapping seg_len windows starting at
+    # each detected region's own start, which can be 53-61 samples before
+    # the true burst start (energy_detect's smoothing widens the region's
+    # leading edge), so a region with 100% region-level captured_signal_ratio
+    # can still yield a segment that's only ~52-63% true-burst signal.
+    # "max-energy" selects, per region, the single seg_len sliding window
+    # (hop=segment_hop) with the highest mean power -- never references
+    # true_burst_start/true_burst_end.
+    alignment_policy: Optional[str] = None
     # Sliding-window step (samples) used by max-energy's candidate search
     # (and reported, informationally, as candidate_count even under naive).
     # Default 1 (every possible offset) for correctness testing; a batch run
     # over many combos may want a larger hop to reduce candidate-search cost.
     segment_hop: int = 1
     # AWN-input-boundary preprocessing policy (src/sensing/normalize.py:
-    # apply_awn_preprocess, docs/parameter_validation.md section 19).
-    # "legacy-unit-power" (DEFAULT, UNCHANGED this round pending a separate
-    # decision) -- current normalize_segments() behavior. "radioml-native" --
-    # no rescaling at all, matching traced evidence that
-    # external/adversarial-rf never normalizes between its dataset loader
-    # and AWN.forward(). Applied ONLY at the AWN input boundary in
-    # src/utils/pipeline.py -- never inside segmentation.py/energy_detection.py.
-    awn_preprocess: str = "legacy-unit-power"
+    # apply_awn_preprocess, docs/parameter_validation.md section 19/20).
+    # None (default) means "use the source-aware default", resolved in
+    # src/utils/pipeline.py via resolve_awn_preprocess() below -- same
+    # None-means-resolve-downstream pattern as alignment_policy above.
+    # Section 20 sets that resolution to "radioml-native" for
+    # iq_source="radioml" (validated in section 19.4 to recover
+    # oracle-path accuracy) and "legacy-unit-power" for "synthetic"
+    # (unchanged). An explicitly passed value is NEVER overridden.
+    # "legacy-unit-power" -- normalize_segments()'s unit-average-power
+    # rescale. "radioml-native" -- no rescaling at all, matching traced
+    # evidence that external/adversarial-rf never normalizes between its
+    # dataset loader and AWN.forward(). Applied ONLY at the AWN input
+    # boundary in src/utils/pipeline.py -- never inside
+    # segmentation.py/energy_detection.py.
+    awn_preprocess: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -241,10 +259,14 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
         # (singular) are not required here.
         raise ValueError("--iq-source radioml requires dataset_path to be set (none may be omitted)")
     require_positive_finite_float("embed_snr_margin", cfg.embed_snr_margin)
-    if cfg.alignment_policy not in ("naive", "max-energy"):
+    # None is valid here -- it means "resolve the source-aware default",
+    # done downstream in src/utils/pipeline.py (resolve_alignment_policy/
+    # resolve_awn_preprocess below), which always produces a valid choice;
+    # an explicitly-set value is still validated immediately.
+    if cfg.alignment_policy is not None and cfg.alignment_policy not in ("naive", "max-energy"):
         raise ValueError(f"alignment_policy must be 'naive' or 'max-energy', got {cfg.alignment_policy!r}")
     require_positive_int("segment_hop", cfg.segment_hop)
-    if cfg.awn_preprocess not in ("legacy-unit-power", "radioml-native"):
+    if cfg.awn_preprocess is not None and cfg.awn_preprocess not in ("legacy-unit-power", "radioml-native"):
         raise ValueError(
             f"awn_preprocess must be 'legacy-unit-power' or 'radioml-native', got {cfg.awn_preprocess!r}"
         )
@@ -293,6 +315,44 @@ def resolve_sensing_window_size(window_size: int, sensing_window_size: Optional[
     regardless of whether the caller went through argparse or built
     ExperimentConfig directly."""
     return window_size if sensing_window_size is None else sensing_window_size
+
+
+def resolve_alignment_policy(iq_source: str, alignment_policy: Optional[str]) -> str:
+    """
+    Source-aware default (docs/parameter_validation.md section 20). When
+    --alignment-policy is left unset (None), radioml mode resolves to
+    "max-energy" (section 18.4/19.4 validated this recovers oracle-path
+    AMC accuracy on real RadioML samples) and synthetic mode resolves to
+    "naive" (unchanged -- section 18's degradation diagnosis is specific to
+    real embedded RadioML bursts; there's no equivalent finding, or need,
+    for the synthetic generator's own cosmetic bursts). An explicitly
+    passed alignment_policy is returned completely unchanged, regardless of
+    iq_source -- this function only ever fills in a None.
+    """
+    if alignment_policy is not None:
+        return alignment_policy
+    resolved = "max-energy" if iq_source == "radioml" else "naive"
+    print(f"[config] --alignment-policy unset; source-aware default for iq_source={iq_source!r} -> {resolved!r}")
+    return resolved
+
+
+def resolve_awn_preprocess(iq_source: str, awn_preprocess: Optional[str]) -> str:
+    """
+    Source-aware default (docs/parameter_validation.md section 20). When
+    --awn-preprocess is left unset (None), radioml mode resolves to
+    "radioml-native" (section 19.1's traced adversarial-rf evidence +
+    19.4's validated accuracy recovery) and synthetic mode resolves to
+    "legacy-unit-power" (unchanged -- the synthetic generator's amplitude
+    convention was never compared against a real AWN training distribution,
+    so there is no equivalent evidence to justify switching it). An
+    explicitly passed awn_preprocess is returned completely unchanged,
+    regardless of iq_source -- this function only ever fills in a None.
+    """
+    if awn_preprocess is not None:
+        return awn_preprocess
+    resolved = "radioml-native" if iq_source == "radioml" else "legacy-unit-power"
+    print(f"[config] --awn-preprocess unset; source-aware default for iq_source={iq_source!r} -> {resolved!r}")
+    return resolved
 
 
 # ---------------------------------------------------------------------------
@@ -479,23 +539,24 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
                              "computed. Used to construct a genuinely low-energy burst on demand for "
                              "detection-boundary tests -- real RadioML samples alone have only modest "
                              "power differences across mod/snr.")
-    parser.add_argument("--alignment-policy", type=str, choices=["naive", "max-energy"], default="naive",
+    parser.add_argument("--alignment-policy", type=str, choices=["naive", "max-energy"], default=None,
                         help="Segment-alignment policy (src/sensing/segmentation.py:select_aligned_segments). "
-                             "'naive' (default): identical to every prior round's segment_regions() behavior -- "
-                             "fixed non-overlapping windows from each detected region's own start. "
-                             "'max-energy': one highest-mean-power seg_len window per region, chosen by sliding "
-                             "search (never references true burst position). See "
-                             "docs/parameter_validation.md section 18.")
+                             "Default (unset): SOURCE-AWARE -- 'max-energy' for --iq-source radioml, 'naive' for "
+                             "'synthetic' (docs/parameter_validation.md section 20). 'naive': identical to every "
+                             "pre-round-9 behavior -- fixed non-overlapping windows from each detected region's "
+                             "own start. 'max-energy': one highest-mean-power seg_len window per region, chosen "
+                             "by sliding search (never references true burst position). See section 18.")
     parser.add_argument("--segment-hop", type=arg_positive_int("segment_hop"), default=1,
                         help="Sliding-window step (samples) for max-energy's candidate search (and reported, "
                              "informationally, as candidate_count under naive too). Default 1 (every offset).")
     parser.add_argument("--awn-preprocess", type=str, choices=["legacy-unit-power", "radioml-native"],
-                        default="legacy-unit-power",
+                        default=None,
                         help="AWN-input-boundary preprocessing (src/sensing/normalize.py:apply_awn_preprocess). "
-                             "'legacy-unit-power' (default, unchanged this round): current normalize_segments() "
-                             "unit-average-power rescale. 'radioml-native': no rescaling at all, matching traced "
-                             "evidence that external/adversarial-rf never normalizes before AWN.forward(). See "
-                             "docs/parameter_validation.md section 19.")
+                             "Default (unset): SOURCE-AWARE -- 'radioml-native' for --iq-source radioml, "
+                             "'legacy-unit-power' for 'synthetic' (docs/parameter_validation.md section 20). "
+                             "'legacy-unit-power': normalize_segments()'s unit-average-power rescale. "
+                             "'radioml-native': no rescaling at all, matching traced evidence that "
+                             "external/adversarial-rf never normalizes before AWN.forward(). See section 19.")
     return parser
 
 

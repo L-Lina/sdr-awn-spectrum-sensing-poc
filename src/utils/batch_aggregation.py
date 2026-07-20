@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from src.sensing.ground_truth_metrics import compute_multi_burst_sensing_metrics
-from src.utils.config import ExperimentConfig
+from src.utils.config import ExperimentConfig, resolve_alignment_policy, resolve_awn_preprocess
 from src.utils.csv_writer import write_summary_csv
 from src.utils.pipeline import run_dry_run_experiment
 
@@ -57,6 +57,11 @@ _RUN_META_FIELDS = [
     "n_segments",
     "sensing_window_size",
     "segment_length",
+    # Raw source selector (docs/parameter_validation.md section 20) --
+    # distinct from the per-segment source_type in each run's own
+    # summary.csv; this is the value that drove alignment_policy/
+    # awn_preprocess's source-aware resolution when either was left unset.
+    "iq_source",
     # Segment-alignment fields (docs/parameter_validation.md section 18) --
     # config knobs (uniform per run) plus one aggregate (mean over segments
     # with a resolvable true burst; None on sensing failure or when no
@@ -172,10 +177,15 @@ def run_batch_combos(
                 "n_segments": None,
                 "sensing_window_size": None,
                 "segment_length": None,
-                "alignment_policy": cfg.alignment_policy,
+                "iq_source": cfg.iq_source,
+                # Resolved (not the raw, possibly-None cfg field) for
+                # consistency with a successful run's reported value --
+                # cfg itself was already built successfully at this point
+                # (the error happened inside run_dry_run_experiment).
+                "alignment_policy": resolve_alignment_policy(cfg.iq_source, cfg.alignment_policy),
                 "segment_hop": cfg.segment_hop,
                 "mean_segment_captured_signal_ratio": None,
-                "awn_preprocess": cfg.awn_preprocess,
+                "awn_preprocess": resolve_awn_preprocess(cfg.iq_source, cfg.awn_preprocess),
                 "mean_awn_input_power_before": None,
                 "mean_awn_input_power_after": None,
                 "mean_awn_input_scale_factor": None,

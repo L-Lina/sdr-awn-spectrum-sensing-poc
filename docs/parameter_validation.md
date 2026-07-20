@@ -2985,3 +2985,248 @@ default was touched this round.
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
   STARTED** (unchanged, explicitly out of scope this round)
 
+## 20. Source-aware defaults, attack-scale verification, RadioML end-to-end smoke matrix (round 11)
+
+Modified: `src/utils/config.py` (new `resolve_alignment_policy`/
+`resolve_awn_preprocess`, dataclass fields now `Optional[str] = None`),
+`src/utils/pipeline.py` (calls the resolvers; new `iq_source` column),
+`src/utils/batch_aggregation.py` (new `iq_source` field). New file:
+`experiments/run_e2e_smoke_matrix.py`. **No changes to
+`external/AWN`/`external/adversarial-rf`.**
+
+### 20.1 Source-aware defaults
+
+`--alignment-policy`/`--awn-preprocess` CLI defaults changed from a fixed
+string to `None` (both in `build_arg_parser` and `run_batch.py`'s own
+parser); the `ExperimentConfig` dataclass fields changed identically. A
+`None` is resolved **inside `run_dry_run_experiment`** (never at
+config-construction time, same pattern as the pre-existing
+`resolve_sensing_window_size`), via two new functions:
+
+```
+resolve_alignment_policy(iq_source, alignment_policy) -> "max-energy" if iq_source=="radioml" else "naive"
+resolve_awn_preprocess(iq_source, awn_preprocess)     -> "radioml-native" if iq_source=="radioml" else "legacy-unit-power"
+```
+
+An explicitly passed value (CLI flag or direct `ExperimentConfig(...)`
+construction) is **never** overridden — the resolvers only fill in a
+`None`. Every functional use of these two settings in `pipeline.py` (the
+`select_aligned_segments`/`apply_awn_preprocess` calls, every CSV column,
+every result-dict key) was switched from the raw `cfg.alignment_policy`/
+`cfg.awn_preprocess` to the resolved `effective_alignment_policy`/
+`effective_awn_preprocess` local variables — confirmed via `grep`, zero
+remaining functional references to the raw (possibly-`None`) cfg fields.
+`validate_experiment_config` was updated to accept `None` for both (still
+validates an explicitly-set value immediately). Resolution prints a
+one-line `[config] --X unset; source-aware default for iq_source=...`
+message, so the applied default is always visible in the run log, not a
+silent fallback.
+
+**Consequence**: `experiments/run_modulation_snr_matrix.py` and
+`experiments/run_sensing_validation_matrix.py` (prior rounds, never
+explicitly set either field) now automatically pick up `max-energy`/
+`radioml-native` for their radioml-mode combos, with zero code changes to
+those files — verified this is the correct, intended effect, not an
+oversight, by re-confirming via `grep` that neither file passes these
+fields.
+
+**Regression verified**: synthetic mode with no flags still resolves to
+`naive`/`legacy-unit-power` and reproduces the exact known-baseline region
+`(3788, 4415)`; radioml mode with no flags now auto-resolves to
+`max-energy`/`radioml-native` (previously required explicit flags);
+radioml mode with explicit `--alignment-policy naive --awn-preprocess
+legacy-unit-power` correctly overrides the source-aware default (confirmed
+`selected_segment_start=3937`/`scale_factor=51.8` vs. the auto-resolved
+run's `selected_segment_start=3942`/`scale_factor=1.0` for the identical
+sample).
+
+### 20.2 New CSV fields
+
+`summary.csv` (per segment) gained `iq_source` (the raw `cfg.iq_source`
+value that drove the resolution, distinct from the existing `source_type`
+which further splits `"radioml"` into `"radioml"`/`"radioml_multi_burst"`).
+`alignment_policy`, `awn_preprocess`, `selected_segment_start/end`,
+`segment_captured_signal_ratio` (this round's requested
+"segment_level_captured_ratio" -- kept under its existing, already-tested
+name from section 18/19 rather than renamed, to avoid touching working
+code for a cosmetic difference; explicitly cross-referenced here),
+`awn_input_power_before/after` were already present from sections 18-19
+and are unchanged. `batch_summary.csv` gained the same `iq_source` field
+(via `batch_aggregation.py`'s `_RUN_META_FIELDS`); the error-row path was
+updated to resolve `alignment_policy`/`awn_preprocess` (not report the raw
+`None`) even for a combo that raised, for schema consistency with a
+successful row.
+
+### 20.3 Attack-scale verification (traced AND empirically tested)
+
+`AttackAdapter.apply()` receives `x` = `x_clean`, already through
+`apply_awn_preprocess`. It computes its own per-segment min-max mapping
+**from that same `x`** (`external/adversarial-rf/util/adv_attack.py:
+iq_to_ta_input_minmax`, `a = x.amin(...)`, `b = x.amax(...) - a`), applies
+the requested attack in `[0,1]` space, then inverts back via
+`x = a + b * x01_adv` — a construction that is inherently scale-relative,
+so it works correctly at any `awn_preprocess` scale without modification.
+**No incompatibility was found** between the min-max wrapper and the
+`radioml-native` domain (Part 六's conditional "if incompatible, propose a
+minimal fix" did not trigger — verified, not assumed).
+
+- **`eps=0` no-op**: **not bit-identical** (max abs input diff
+  `9.3e-9`, logits diff `9.5e-7`, under `radioml-native`) -- a real,
+  reported finding, not glossed over. Traced to the float32 round-trip
+  through the `[0,1]` min-max conversion and back (`x -> x01 -> x_adv`),
+  present at the SAME relative magnitude (~1e-7, consistent with float32
+  machine epsilon) under `legacy-unit-power` too (`3.4e-7` absolute at
+  that policy's ~50x larger scale) -- confirming this is a pre-existing,
+  scale-independent property of `AttackAdapter`'s round-trip conversion
+  itself, not something this round's `awn_preprocess` change introduced or
+  worsened. **Predictions and top-class logits are unaffected** in every
+  tested case (`pred_clean == pred_attacked` at `eps=0` throughout).
+- **FGSM/PGD perturbation magnitude vs. `--attack-eps`**: measured directly
+  (not assumed) across `eps ∈ {0.01, 0.03, 0.1}`: actual L∞ perturbation
+  in IQ units equals `eps × (sample's own min-max range)` with ratio
+  **exactly 1.0000** in every case, for both FGSM and PGD, under
+  `radioml-native`. No hidden 50-120x (or any other undocumented) rescale
+  exists inside the adapter.
+- **Eval mode restored**: `wrapped_model.training == False` confirmed
+  after every real-attack call (single direct test plus all 72 smoke
+  matrix combos' `attack_training_after` column, section 20.4 -- 0
+  violations across 48 `attack != "none"` rows).
+- **No NaN/Inf**: confirmed across all direct tests and the full 72-combo
+  smoke matrix (0 occurrences of `*_has_nan`/`*_has_inf` = `True`).
+
+**Consequence, reported not fixed (same as section 19.5's tracking)**:
+since `a`/`b` are derived from `x_clean` itself, `--attack-eps`'s meaning
+stays relative-scale-invariant across `awn_preprocess` policies, but its
+absolute IQ-unit magnitude scales with whichever policy is in effect --
+unchanged conclusion from section 19.5, now additionally confirmed by
+direct FGSM/PGD measurement rather than only by code tracing.
+
+### 20.4 RadioML2016.10a end-to-end smoke matrix
+
+`experiments/run_e2e_smoke_matrix.py`: 3 modulations (QPSK, BPSK, QAM16) ×
+2 SNRs (0, 18) × 3 attacks (none, fgsm, pgd) × 4 Top-K values (10, 20, 30,
+40) = **72 combos**, `sample_index=0` fixed (not swept, kept small per
+"smoke matrix" framing), real AWN + real attack + real Top-K, CPU, one
+fixed seed (42), `threshold_factor=1.5 sensing_window_size=128
+min_region_len=0 merge_gap=0 attack_eps=0.05`.
+**`--alignment-policy`/`--awn-preprocess` deliberately left unset**, so
+this run exercises the new source-aware default end-to-end (resolves to
+`max-energy`/`radioml-native` for every combo, confirmed).
+
+**Command**: `python experiments/run_e2e_smoke_matrix.py`
+
+**Result**: estimated ~2 minutes before running (measured ~1.5-2s/combo
+including real PGD, the most expensive attack); **actual: 107.4s**.
+**72/72 ok, 0 sensing_failed, 0 error.**
+
+**Point-by-point verification**:
+
+1. **Occupied region found**: 72/72 combos, 0 with `num_detected_regions
+   == 0`.
+2. **Selected segment shape fixed `[N,2,128]`**: guaranteed structurally
+   (`to_awn_input` asserts `seg_len`); confirmed `n_segments=1` for every
+   combo (single-burst mode).
+3. **`attack=none` direct-vs-sensed difference explained by
+   boundary/captured ratio**: for the 6 underlying (mod, snr) pairs (each
+   shared by 12 of the 72 combos that only differ by attack/topk), direct
+   `AMC` accuracy computed fresh for this exact test (not reused from an
+   earlier round) is **5/6**; sensed-pipeline `pred_clean` accuracy is
+   **5/6 -- identical set of correct/incorrect predictions**, including
+   the same single failure (`BPSK, snr=18 -> PAM4` both ways). That one
+   failure's `segment_captured_signal_ratio=0.586` (the lowest of the 6,
+   vs. `≥0.98` for the other 5) is exactly the pre-existing, honestly
+   region-level-partial-capture case documented since section 14.4 -- not
+   a new pipeline defect.
+4. **`eps=0` full no-op**: N/A directly (this matrix uses `eps=0.05`
+   throughout, per Part C's fixed-parameter spec) -- covered instead by
+   section 20.3's dedicated `eps=0` test.
+5. **FGSM/PGD produce non-zero, `eps`-bounded perturbation**: confirmed --
+   0/24 `attack="none"` rows show nonzero `iq_linf_clean_attacked`; 0/48
+   `attack != "none"` rows show a near-zero perturbation (i.e. no silent
+   attack failures); section 20.3 additionally confirms the exact `eps`
+   scaling.
+6. **Top-K reuses the same attacked IQ across all 4 K values, does not
+   regenerate the attack**: verified directly -- grouped by
+   `(dataset_mod, dataset_snr, attack)` (18 unique groups, 4 `topk`
+   values each), `iq_linf_clean_attacked` was checked for exact equality
+   across all 4 `topk` values within each group. **0/18 groups show any
+   variation** -- the attacked IQ is bit-identical (well beyond float
+   rounding, by construction: `AttackAdapter.apply()` is called once per
+   combo using `x_clean`, entirely before `TopKAdapter.apply(x_adv,
+   topk=...)` is invoked, and never reads `cfg.topk`).
+7. **Clean/attacked/defended prediction and logits normal**: 0 NaN/Inf
+   across all 72×1 segment rows for `clean_has_nan/inf`,
+   `attacked_has_nan/inf`; predictions are integers in `[0,10]` throughout
+   (no out-of-range or malformed values observed).
+8. **All parameters/metrics correctly written**: confirmed via direct
+   inspection of `summary.csv`/`batch_summary.csv` (72 rows each, all new
+   section 18-20 columns present and populated).
+9. **Two independent-process reproducibility**: confirmed
+   (`QAM16/snr18/idx0`, `pgd eps=0.05 topk=20`, two separate `python`
+   invocations) -- identical `pred_clean/attacked/defended`,
+   `iq_linf_clean_attacked`, and `long_iq_sha256`.
+
+**Aggregate sensing stats** (mean over all 72 combos; the underlying
+sensing outcome only genuinely varies across the 6 (mod,snr) pairs, since
+attack/topk don't affect sensing): `detection_probability=1.0`,
+`false_alarm_region_rate=0.0`, `mean_segment_captured_signal_ratio=0.927`,
+`mean_absolute_start_boundary_error=56.5`, `mean_absolute_end_boundary_error=60.5`
+(region-level boundary errors -- consistent with, not contradicting,
+section 18.2's ~53-61-sample finding; `max-energy` alignment corrects the
+AWN-input-segment misalignment this causes, without changing the region
+boundary itself, which is a detection-stage quantity).
+
+**Attack success rate** (`changed_by_attack=True` / total, by attack):
+`none=0/24 (0%)`, `fgsm=20/24 (83.3%)`, `pgd=24/24 (100%)`.
+
+**Defense recovery rate** (`recovered_by_defense=True` /
+`changed_by_attack=True`, by attack×topk -- **honestly reported, not a
+strong result**): `fgsm` at every K (10/20/30/40): **0/5 (0%)**; `pgd`:
+`10→0/6, 20→1/6 (16.7%), 30→0/6, 40→0/6`. Real, measured, not
+manufactured -- but drawn from only 5-6 changed segments per cell (this
+smoke matrix's `sample_index=0`-only, single-segment-per-combo design), so
+this is **not** a statistically meaningful Top-K-effectiveness claim; it
+only confirms the defense pipeline runs end-to-end without error and
+produces genuinely low-vs-high recovery differences depending on
+attack/K, not that Top-K is broken or that any particular K is optimal.
+Whether `topk ∈ {10,20,30,40}` needs recalibration now that `x_clean` is
+at `radioml-native` scale (rather than the `legacy-unit-power` scale these
+values may have been informally tuned against in earlier rounds) is an
+open question this smoke matrix surfaces but does not answer -- flagged
+for the formal batch, not resolved here.
+
+### 20.5 Pass-condition / requirement verification summary
+
+All of Part A (source-aware defaults, CLI/config/batch propagation, new
+CSV fields), Part B (attack-scale tracing and verification, including the
+found-and-reported `eps=0` float32 imprecision and the confirmed-exact
+`eps`-to-IQ-units scaling), and Part C (9-point smoke-matrix checklist)
+requirements were verified directly against real command output, not
+assumed. No incompatibility was found requiring a fix in Part B.6 --
+verified, not skipped.
+
+### 20.6 Cross-reference to this round's required status labels
+
+- **Source-aware `--alignment-policy`/`--awn-preprocess` defaults**:
+  **PASS this round** (20.1) -- implemented, function tested (regression:
+  synthetic/radioml/explicit-override all behave correctly), batch tested
+  (72-combo smoke matrix, 20.4).
+- **New `iq_source` CSV field**: **PASS this round** (20.2).
+- **Attack-scale correctness (`radioml-native`)**: **PASS this round**
+  (20.3) -- traced AND empirically verified (eps-to-IQ-units exact ratio
+  1.0000, eval-mode restoration, no NaN/Inf); one real, non-blocking
+  finding reported (eps=0 float32 round-trip imprecision, pre-existing,
+  scale-independent, prediction-invariant).
+- **RadioML end-to-end smoke matrix**: **PASS this round** (20.4) --
+  batch tested, 72/72 combos completed (0 errors, 0 sensing failures),
+  direct AMC and sensed AMC accuracy now identical (5/6 each) on these 6
+  samples -- the alignment (round 9) and preprocessing (round 10) fixes
+  together demonstrated end-to-end with attack/Top-K in the loop for the
+  first time.
+- **Top-K defense effectiveness at `radioml-native` scale**: **NOT
+  evaluated** (only smoke-tested for correctness of wiring/reuse) --
+  recovery rates reported honestly but explicitly flagged as not
+  statistically meaningful at this sample size.
+- **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
+  STARTED** (unchanged, explicitly out of scope this round)
+

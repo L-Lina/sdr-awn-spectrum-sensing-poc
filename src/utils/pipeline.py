@@ -40,6 +40,8 @@ from src.sensing.radioml_source import (
 from src.sensing.segmentation import select_aligned_segments
 from src.utils.config import (
     ExperimentConfig,
+    resolve_alignment_policy,
+    resolve_awn_preprocess,
     resolve_sensing_window_size,
     validate_experiment_config,
 )
@@ -103,6 +105,14 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     effective_sensing_window_size = resolve_sensing_window_size(
         cfg.window_size, cfg.sensing_window_size
     )
+
+    # Source-aware alignment/preprocessing defaults (docs/parameter_validation.md
+    # section 20) -- same None-means-resolve-downstream pattern as
+    # effective_sensing_window_size above. An explicitly passed
+    # cfg.alignment_policy/cfg.awn_preprocess is never overridden; only a
+    # None gets a source-aware value filled in here.
+    effective_alignment_policy = resolve_alignment_policy(cfg.iq_source, cfg.alignment_policy)
+    effective_awn_preprocess = resolve_awn_preprocess(cfg.iq_source, cfg.awn_preprocess)
 
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -223,18 +233,20 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     if sensing_failure_stage is None:
         try:
             # select_aligned_segments (src/sensing/segmentation.py, docs/
-            # parameter_validation.md section 18) replaces the old direct
-            # segment_regions() call -- cfg.alignment_policy="naive" (default)
-            # produces byte-identical segment data to every prior round via
-            # segment_regions() internally; "max-energy" instead picks, per
-            # region, the single highest-mean-power seg_len window (never
-            # using true burst position). alignment_meta's region_idx field
+            # parameter_validation.md section 18/20) replaces the old direct
+            # segment_regions() call -- "naive" produces byte-identical
+            # segment data to every pre-round-9 round via segment_regions()
+            # internally; "max-energy" instead picks, per region, the single
+            # highest-mean-power seg_len window (never using true burst
+            # position). effective_alignment_policy is the source-aware-
+            # resolved policy (section 20), not the raw possibly-None
+            # cfg.alignment_policy. alignment_meta's region_idx field
             # replaces the old hand-rolled segment_region_ids loop, which
             # assumed segment_regions()'s naive-only (region, n_windows)
             # counting and would have silently mis-attributed segments under
             # max-energy (always 1 segment/region, not n_windows).
             segments, alignment_meta = select_aligned_segments(
-                iq, regions, seg_len=cfg.window_size, policy=cfg.alignment_policy, hop=cfg.segment_hop,
+                iq, regions, seg_len=cfg.window_size, policy=effective_alignment_policy, hop=cfg.segment_hop,
             )
             if multi_burst_truths is not None:
                 segment_region_ids = [m["region_idx"] for m in alignment_meta]
@@ -245,7 +257,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             # see or depend on this. power_before/after are per-segment
             # mean(|x|^2) captured on either side, purely for diagnostics.
             awn_input_power_before = np.mean(np.abs(segments) ** 2, axis=1)  # [N]
-            segments = apply_awn_preprocess(segments, policy=cfg.awn_preprocess)
+            segments = apply_awn_preprocess(segments, policy=effective_awn_preprocess)
             awn_input_power_after = np.mean(np.abs(segments) ** 2, axis=1)  # [N]
             x_clean = to_awn_input(segments, seg_len=cfg.window_size)
         except RuntimeError as exc:
@@ -315,10 +327,11 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "attack_available": False,
             "defense_available": False,
             **sensing_agg,
-            "alignment_policy": cfg.alignment_policy,
+            "iq_source": cfg.iq_source,
+            "alignment_policy": effective_alignment_policy,
             "segment_hop": cfg.segment_hop,
             "mean_segment_captured_signal_ratio": None,
-            "awn_preprocess": cfg.awn_preprocess,
+            "awn_preprocess": effective_awn_preprocess,
             "mean_awn_input_power_before": None,
             "mean_awn_input_power_after": None,
             "mean_awn_input_scale_factor": None,
@@ -477,6 +490,12 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         rows.append({
             "segment_id": i,
             "seed": cfg.seed,
+            # iq_source is the raw cfg/CLI value ("synthetic"/"radioml") that
+            # drove effective_alignment_policy/effective_awn_preprocess's
+            # source-aware resolution (docs/parameter_validation.md section
+            # 20) -- distinct from source_type below, which further splits
+            # "radioml" into "radioml"/"radioml_multi_burst".
+            "iq_source": cfg.iq_source,
             # source_type distinguishes real ground truth (radioml) from the
             # synthetic generator's own inputs below. snr_db/mod are the
             # SYNTHETIC generator's inputs -- unused (but still populated
@@ -522,7 +541,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             # apply_awn_preprocess() call above; awn_input_min/max/has_nan/
             # has_inf describe the ACTUAL array handed to AWN.infer() (post-
             # preprocessing, real+imag combined, matching to_awn_input's [2,T] layout).
-            "awn_preprocess": cfg.awn_preprocess,
+            "awn_preprocess": effective_awn_preprocess,
             "awn_input_power_before": float(awn_input_power_before[i]),
             "awn_input_power_after": float(awn_input_power_after[i]),
             "awn_input_scale_factor": (
@@ -675,7 +694,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         "attack_available": True,
         "defense_available": True,
         **sensing_agg,
-        "alignment_policy": cfg.alignment_policy,
+        "iq_source": cfg.iq_source,
+        "alignment_policy": effective_alignment_policy,
         "segment_hop": cfg.segment_hop,
         # Mean of per-segment (NOT per-region) captured_signal_ratio, over
         # segments with a resolvable true burst (see
@@ -683,7 +703,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         # has one (synthetic source, or multi-burst segments whose region
         # ambiguously matched 0/2+ bursts).
         "mean_segment_captured_signal_ratio": mean_segment_captured_signal_ratio,
-        "awn_preprocess": cfg.awn_preprocess,
+        "awn_preprocess": effective_awn_preprocess,
         "mean_awn_input_power_before": float(np.mean(_power_before)),
         "mean_awn_input_power_after": float(np.mean(_power_after)),
         "mean_awn_input_scale_factor": (sum(_scale_factors) / len(_scale_factors)) if _scale_factors else None,

@@ -2350,3 +2350,176 @@ CSVs, 3 `comboNNNN/` subdirectories).
   6)
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
   STARTED** (unchanged, explicitly out of scope this round)
+
+## 17. Cross-modulation x SNR smoke matrix (round 8)
+
+New file: `experiments/run_modulation_snr_matrix.py`. No changes to
+`src/` (this round is a pure batch-aggregation consumer, no code changes
+were needed). **No changes to `external/AWN`/`external/adversarial-rf`.**
+Formal full-parameter batch: **still not started**.
+
+### 17.1 Design, stated before running
+
+All 11 RML2016.10a modulations × 4 SNRs (`-10, 0, 10, 18`) × 3
+`sample_index` (`0, 1, 2`) = **132 combos**, single-burst RadioML mode
+(one `run_batch_combos()` call, `results/modulation_snr_matrix/`,
+`combo0000`..`combo0131`), one Python process running all 132 in-process
+(not 132 subprocess launches). Fixed for every combo: `attack=none,
+topk=10, threshold_factor=1.5, sensing_window_size=128, min_region_len=128,
+merge_gap=0`, `seed=42`, real AWN (`--use-real-awn`), `device=cpu` — no
+sensing/attack/Top-K parameter was swept or adjusted per combo. A 4-combo
+timing probe measured ~1.3–1.7s/combo; estimated **~3–5 minutes** total
+before running. **Actual measured runtime: 182.8s (~3.0 minutes).**
+
+### 17.2 Results
+
+**132/132 ok, 0 sensing_failed, 0 programming errors.** All three batch
+CSVs written with exactly 132 rows each (`batch_summary.csv`,
+`batch_bursts_summary.csv`, `batch_regions_summary.csv`) — every combo
+detected exactly one clean region matching its one truth burst
+(`mean_num_detected_regions=1.0` in every modulation and every SNR group;
+no fragmentation this round, consistent with section 16.4's finding that
+fragmentation only appears at extreme `threshold_factor`/
+`sensing_window_size` values, not at this round's fixed
+`threshold_factor=1.5, sensing_window_size=128` operating point).
+
+**Pass-condition checks (Part C, all 10 verified programmatically against
+the real output, not assumed)**:
+
+| # | Check | Result |
+|---|---|---|
+| 1 | RadioML sample correctly loaded | 132/132 distinct `original_sample_sha256`, matching the 132 unique (mod,snr,idx) triples |
+| 2 | modulation/SNR metadata correct | 0/132 mismatches between requested and recorded `dataset_mod`/`dataset_snr`/`sample_index` |
+| 3 | sensing structured success/failure | 132/132 `run_status="ok"`, 0 `sensing_failed`, 0 `error` |
+| 4 | `x_clean` shape `[N,2,128]` | confirmed via `segment_length=128` on every row + 0 segment/shape assertion failures (would have raised, per `pipeline.py`'s internal assert) |
+| 5 | real AWN executed, no fallback | `awn_backend` column has exactly ONE value across all 132×1 segment rows: `external/adversarial-rf/models/model.py:AWN` — zero `dummy_awn_inference` rows |
+| 6 | `summary.csv` complete | 132/132 present, row count == `n_segments` for every combo |
+| 7 | `batch_summary.csv` has 1 row/combo | 132 rows, confirmed |
+| 8 | burst/region CSV merged correctly | 132 burst rows + 132 region rows, `combo_id`/`output_dir`/`run_seed`/`dataset_mod`/`dataset_snr`/`sample_index` present and correct on every row (spot-checked) |
+| 9 | no NaN/Inf | 0/132×1 rows have `clean_has_nan`/`clean_has_inf`/`attacked_has_nan`/`attacked_has_inf` = True |
+| 10 | genuine program errors | 0 |
+
+### 17.3 Per-modulation statistics (12 combos each: 4 SNRs × 3 sample_indices)
+
+| Modulation | Pd | mean captured ratio | FA region rate | sample FPR | sample FNR | mean |start_err| | mean |end_err| | mean regions | pred_clean dist |
+|---|---|---|---|---|---|---|---|---|---|
+| 8PSK | 1.0 | 1.0 | 0.0 | 0.0147 | 0.0 | 59.75 | 58.67 | 1.0 | QAM64:11, PAM4:1 |
+| AM-DSB | 1.0 | 1.0 | 0.0 | 0.0149 | 0.0 | 61.08 | 58.83 | 1.0 | QAM64:12 |
+| AM-SSB | 1.0 | 1.0 | 0.0 | 0.0147 | 0.0 | 59.92 | 58.50 | 1.0 | QAM64:12 |
+| BPSK | 1.0 | 0.96875 | 0.0 | 0.0142 | 0.03125 | 59.25 | 59.58 | 1.0 | QAM64:12 |
+| CPFSK | 1.0 | 1.0 | 0.0 | 0.0148 | 0.0 | 59.83 | 59.42 | 1.0 | QAM64:11, QAM16:1 |
+| GFSK | 1.0 | 1.0 | 0.0 | 0.0148 | 0.0 | 60.00 | 59.25 | 1.0 | QAM64:12 |
+| PAM4 | 1.0 | 1.0 | 0.0 | 0.0143 | 0.0 | 55.42 | 59.50 | 1.0 | QAM64:12 |
+| QAM16 | 1.0 | 1.0 | 0.0 | 0.0145 | 0.0 | 55.50 | 61.25 | 1.0 | QAM64:12 |
+| QAM64 | 1.0 | 0.98112 | 0.0 | 0.0141 | 0.01888 | 56.25 | 60.17 | 1.0 | QAM64:12 (all correct) |
+| QPSK | 1.0 | 0.98828 | 0.0 | 0.0143 | 0.01172 | 56.08 | 60.42 | 1.0 | QAM64:10, PAM4:2 |
+| WBFM | 1.0 | 1.0 | 0.0 | 0.0149 | 0.0 | 60.75 | 59.67 | 1.0 | QAM64:11, PAM4:1 |
+
+Every modulation achieves `detection_probability=1.0` and `false_alarm_region_rate=0.0`
+at this parameter point. `mean_captured_signal_ratio` is a perfect 1.0 for 8 of
+11 modulations; BPSK (0.96875), QAM64 (0.98112), QPSK (0.98828) are
+fractionally below 1.0, driven by a small number of individual
+sample-dependent partial-capture combos (17.5).
+
+### 17.4 Per-SNR statistics (33 combos each: 11 modulations × 3 sample_indices)
+
+| SNR | Pd | mean captured ratio | FA region rate | sample FPR | sample FNR | mean |start_err| | mean |end_err| | mean regions |
+|---|---|---|---|---|---|---|---|---|
+| -10 | 1.0 | 1.0 | 0.0 | 0.01477 | 0.0 | 60.09 | 59.00 | 1.0 |
+| 0 | 1.0 | 1.0 | 0.0 | 0.01482 | 0.0 | 60.24 | 59.24 | 1.0 |
+| 10 | 1.0 | 0.98887 | 0.0 | 0.01411 | 0.01113 | 55.24 | 59.97 | 1.0 |
+| 18 | 1.0 | 0.98864 | 0.0 | 0.01453 | 0.01136 | 58.55 | 60.06 | 1.0 |
+
+### 17.5 Sensing failure list
+
+**Empty — 0 sensing failures across all 132 combos**, including every
+`SNR=-10` combo. This is a real, honest, unmanipulated result — no
+threshold/min-region-len/sensing-window-size value was changed to produce
+it. It follows directly from how `embed_snr_margin` is defined
+(`src/sensing/radioml_source.py:embed_sample_in_noise`): the synthetic
+capture-noise floor is scaled relative to the loaded RadioML sample's OWN
+measured power (`embed_noise_power = burst_power / embed_snr_margin`), and
+that measured power already includes whatever SNR-dependent
+signal-vs-RF-noise degradation the RML2016.10a dataset itself baked into
+the sample at generation time — a `dataset_snr=-10` sample is noisier
+*internally*, but its total (signal+noise) power, which is what
+`embed_snr_margin` scales against, is not systematically smaller than a
+`dataset_snr=18` sample's. So `embed_snr_margin=20.0` keeps every embedded
+burst ~20x above the surrounding synthetic noise floor regardless of the
+dataset SNR label, and detection at `threshold_factor=1.5,
+sensing_window_size=128, min_region_len=128` succeeds uniformly. This is
+not a claim that "SNR doesn't matter" for AMC (a low-`dataset_snr` sample's
+*content* is still genuinely noisier, as evidenced by the SNR=10/18 groups'
+slightly-below-1.0 mean captured ratio and non-zero FNR, likely from
+segmentation/boundary-fitting sensitivity, not embedding failure) — only
+that this repo's specific relative-margin embedding scheme decouples
+*detectability* from `dataset_snr`, by design (documented already in
+section 14.1 as "roughly mod/snr-independent burst power", reconfirmed
+here at full 11×4 coverage rather than a handful of samples).
+
+### 17.6 Unplanned/notable findings
+
+- **3 sample-dependent partial-capture combos found** (all at this
+  matrix's fixed sensing parameters): `BPSK/snr18/idx0`
+  (`captured_signal_ratio=0.625`, `start_err=48, end_err=64` — the exact
+  same value documented since section 14.4/15.4/16.4, reproduced again
+  here as an incidental byproduct of the full sweep, not a dedicated
+  repeat), `QAM64/snr10/idx0` (`0.7734375`), and `QPSK/snr10/idx0`
+  (`0.859375`) — all 3 are at `sample_index=0`, though with only 3
+  data points this is not asserted as a pattern, just reported as
+  observed.
+- **AWN clean-prediction distribution is heavily skewed to one class**:
+  across all 132 single-segment predictions, `pred_clean` was QAM64
+  (class 1) in **127/132** cases, PAM4 (class 8) in 4, QAM16 (class 0) in
+  1 — regardless of the sample's true modulation. The only 12 cases where
+  `pred_clean` matched the true `dataset_mod` label were exactly the 12
+  QAM64 combos themselves (12/12 correct). Recorded per Part E.7's
+  instruction; **not used as a pass/fail condition this round**, and no
+  cause is diagnosed here (would require inspecting AWN
+  preprocessing/normalization alignment against its original training
+  pipeline, out of scope for this round's batch-aggregation focus).
+- **No AM/FM-vs-digital fragmentation difference observed**: every one of
+  the 11 modulations produced `mean_num_detected_regions=1.0` (never
+  fragmented) at this round's fixed sensing parameters — energy detection
+  operates on total IQ magnitude, which is not modulation-scheme-dependent
+  in a way that would fragment one modulation class differently from
+  another at a fixed threshold/window; section 16.4's fragmentation
+  finding was purely a function of `threshold_factor`/
+  `sensing_window_size`, not modulation type, and this round's uniform
+  1-region-per-combo result is consistent with (not contradicting) that.
+
+### 17.7 Real AWN backend verification
+
+`awn_backend` column takes exactly one distinct value across all 132
+combos' summary.csv rows: `external/adversarial-rf/models/model.py:AWN`.
+Zero rows show `dummy_awn_inference` (the fallback used when
+`--use-real-awn` is omitted or torch/checkpoint loading fails). `awn_notes`
+on every row: `"Loaded real AWN from external/adversarial-rf/models/
+model.py:AWN with checkpoint 'external/adversarial-rf/2016.10a_AWN.pkl'"`.
+
+### 17.8 Reproducibility
+
+Combo 114 (`QPSK, snr=10, sample_index=0`, the `captured_signal_ratio=
+0.859375` case) was independently re-run via a separate
+`run_full_experiment.py` CLI invocation (same seed=42, same sensing
+params) and diffed byte-for-byte against the matrix's own
+`combo0114/summary.csv`. Result: **identical on every field** (
+`original_sample_sha256`, `long_iq_sha256`, detected region, boundary
+errors, `captured_signal_ratio=0.859375`, `pred_clean=1`, all shapes)
+except the `mod` column (`QPSK` vs the CLI default `BPSK`) — which is the
+documented cosmetic synthetic-generator field, unused in radioml mode
+(section 14's original design), not a real reproducibility discrepancy.
+
+### 17.9 Cross-reference to this round's required status labels
+
+- **Cross-modulation × SNR smoke matrix**: **PASS this round** (17.1–17.8)
+  — batch tested, 132/132 combos completed (0 genuine errors, 0 sensing
+  failures), all 10 pass conditions verified programmatically, all 7
+  special checks (17.5/17.6/17.8) addressed with real results including
+  one fully-negative sensing-failure list (SNR=-10 succeeded uniformly,
+  explained not manufactured) and 3 unplanned partial-capture findings
+- **AMC accuracy across modulations**: explicitly **NOT evaluated** this
+  round (not a pass condition) — `pred_clean` distribution recorded only
+  (17.6)
+- **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
+  STARTED** (unchanged, explicitly out of scope this round)

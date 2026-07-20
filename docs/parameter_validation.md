@@ -6,9 +6,13 @@ CLI parsers, `ExperimentConfig`, adapters, `docs/experiment_design.md`,
 has no separate historical parameter-value record of its own), and
 `external/adversarial-rf`'s own scripts (read-only, submodule untouched).
 
-This document records the state as of commit `0aa95ea`
-(`Fix attack domain and saturated-gradient handling`); `git status` is clean
-at that commit. Every claim below is either a direct file:line citation or an
+This document was created recording the state as of commit `0aa95ea` and has
+been incrementally updated in each subsequent round without being rewritten
+from scratch; it currently also reflects the boundary-validation round
+(`924dcdc`), the sensing-window decoupling round (`ba6248e`), and a Phase 1
+real-pipeline validation round (section 10, real AWN + real attack + real
+Top-K, no dummy fallback; not yet its own commit as of this paragraph's
+writing). Every claim below is either a direct file:line citation or an
 explicit record of a command actually executed in a working session against
 this repo; nothing here is inferred from external-repo conventions or assumed
 by naming similarity.
@@ -150,7 +154,7 @@ validation) is in `docs/parameter_validation.csv`. Summary by category:
 | `none` | yes | yes (no-op bypass) | yes | yes (bit-identical verified repeatedly) | fully validated |
 | `fgsm` | yes | yes (`torchattacks.FGSM`) | yes | yes (train/eval fix, min-max fix, temperature scaling all verified; eps-sweep found first prediction-changing eps = 0.5) | fully validated |
 | `pgd` | yes | yes (`torchattacks.PGD`, `alpha=eps/4, steps=10` hardcoded) | yes | yes (same as fgsm; first prediction-changing eps = 0.3) | fully validated |
-| `cw` | yes | yes (`torchattacks.CW(c=1.0, steps=20, lr=0.01)` hardcoded) | yes (ran once without error) | **no** — only tested once, before the train/eval-mode fix, before the min-max correctness fix, and before temperature scaling existed; that old result is invalid under the current code and has not been re-run | **needs re-verification** |
+| `cw` | yes | yes (`torchattacks.CW(c=1.0, steps=20, lr=0.01)` hardcoded) | yes, re-verified post-fix (see section 10) | **execution path: yes. attack effectiveness: NO — not an effective attack at repo default hyperparameters.** Re-run under the current code (train/eval fix + min-max fix + temperature scaling, T=100): real backend confirmed throughout, 0/5 predictions changed, IQ perturbation ≈1.8e-7 (float32 noise floor). Root cause: `best_adv_images` in torchattacks' own CW implementation starts as a clone of the clean input and is only overwritten on a step that is BOTH misclassified AND lower-L2 than the previous best; with `c=1.0, steps=20, lr=0.01` against this checkpoint's huge logit margins (~600-900), CW never finds such a step within budget. A small hyperparameter sweep found effectiveness returns at `c=10, steps=100, lr=0.1` (3/5 changed, IQ Linf up to 2.2) — so the mechanism works, the repo's **default CW hyperparameters are simply too weak for this checkpoint**, not a wrapper/backend incompatibility | **execution path: fully validated. Effectiveness: NOT VALIDATED at current default hyperparameters — do not cite CW as a working attack without also citing the c/steps/lr used.** |
 | Anything else `external/adversarial-rf` supports (bim, apgd, deepfool, autoattack, mifgsm, ... ~30 total per that repo's own `util/adv_eval.py`) | **no** | **no** | **no** | **no** | **not supported by this pipeline at all** — `src/adapters/attack_adapter.py:_SUPPORTED_ATTACKS = {"none","fgsm","pgd","cw"}` is the complete, exhaustive list this repo wires up. External-repo capability is not equivalent to this repo's capability. |
 
 New pipeline currently supports exactly four attack names: **none, fgsm, pgd,
@@ -194,7 +198,20 @@ in this repo.
 
 **已通過 (passed)**
 - `attack=none` bit-identical bypass (IQ, logits, predictions, distances all zero)
-- `attack=fgsm`, `attack=pgd` end-to-end (post all 3 correctness fixes)
+- `attack=fgsm`, `attack=pgd` end-to-end (post all 3 correctness fixes); re-confirmed
+  again under simultaneous real AWN + real attack + real Top-K (no dummy fallback
+  anywhere) in the Phase 1 real-pipeline validation round -- see section 10
+- `attack=cw` **execution path only** (real backend, no crash, no fallback) --
+  re-verified post-fix in the Phase 1 round; **effectiveness at the repo's
+  default hyperparameters is NOT passed** (0/5 predictions changed at
+  `c=1.0,steps=20,lr=0.01`) -- see section 10.2 for the full diagnosis
+- `--attack-eps` exact enforcement re-confirmed under real backend: normalized-domain
+  IQ Linf equals the requested eps exactly, for fgsm and pgd, at every value tested
+  (section 10.4); confirmed `attack-eps` is completely ignored by `cw` (no `eps`
+  attribute exists on the constructed `torchattacks.CW` object)
+- `--topk` re-confirmed under real backend at K=10/20/30/40 against `none`/`fgsm`/`pgd`;
+  directly proved different K values reach the real `fft_topk_denoise` function itself
+  (pairwise-distinct outputs for identical input), not just CSV metadata (section 10.3)
 - Cross-process reproducibility of synthetic IQ generation (post `hashlib` fix)
 - AWN model eval-mode restoration after real attacks
 - `--min-region-len` propagation: unset -> `window_size`, explicit `0` ->
@@ -235,10 +252,14 @@ in this repo.
   intentional upper/lower dB range limit was added (out of scope this round)
 - `--mod`: cosmetic-only behavior confirmed for 4 values; arbitrary/malformed
   strings not tested
-- `--topk`: tested at 10, 20, 30, 40; default `50` never actually run;
-  boundary values (0, negative, > window_size, NaN, Inf) intentionally left
-  unvalidated this round -- see the `topk=Inf` uncaught-crash finding in
-  section 8, not yet fixed
+- `--topk`: tested at 10, 20, 30, 40, real backend, K confirmed to reach the
+  real `fft_topk_denoise` function itself (section 10.3); default `50` never
+  actually run; boundary values (0, negative, > window_size, NaN, Inf)
+  intentionally left unvalidated this round -- see the `topk=Inf`
+  uncaught-crash finding in section 8, not yet fixed. **Defense-recovery
+  effectiveness against fgsm/pgd remains NOT ESTABLISHED** -- only a small,
+  non-systematic number of recoveries observed across the Phase 1 round
+  (section 10.3), not proof Top-K reliably defends
 - `--device`: only `cpu` tested (no GPU available on this machine); `cuda`
   path completely unexercised
 - `--use-real-awn`/`--use-real-topk`/`--use-real-attack`: `True` path fully
@@ -265,16 +286,33 @@ in this repo.
 - New-pipeline `--input`/`--cfile` real-capture flag (exists only in the old
   standalone script)
 - GNU Radio ZMQ streaming, USRP/UHD hardware path (README-only, no code)
-- Global torch determinism / seed CLI (not needed per in-session empirical
-  verification, but also simply not present)
+- Global torch determinism / seed CLI (simply not present; **REVISED this
+  round** -- previously believed "not needed", now known to matter for PGD
+  specifically due to `random_start=True`, see section 10.3)
 
 ---
 
 ## 7. Outstanding items before a formal experiment
 
-1. **CW must be re-verified** under the current code (train/eval fix +
-   min-max fix + temperature scaling). The one existing CW result predates
-   all three fixes and should not be cited as evidence CW works correctly.
+1. ~~CW must be re-verified under the current code~~ — **done (Phase 1
+   round, section 10.2)**: real backend confirmed, no crash, but **not an
+   effective attack at the repo's default hyperparameters**
+   (`c=1.0,steps=20,lr=0.01` → 0/5 changed). A small sweep found
+   effectiveness returns at `c=10,steps=100,lr=0.1` (3/5 changed) —
+   parameters too weak, not a wrapper/backend problem. Whether to change the
+   shipped defaults is still an open decision.
+1b. **PGD results are not reproducible run-to-run** (new finding, section
+   10.3): `torchattacks.PGD`'s `random_start=True` default is never
+   overridden, and no `torch.manual_seed()` exists anywhere in this repo —
+   `SEED=0` only fixes the numpy RNG for synthetic-IQ generation. Any PGD
+   result (including the `eps=0.3` "first change" point cited in section 4)
+   should be treated as one observed sample, not a guaranteed reproducible
+   outcome, until this is addressed.
+1c. **Top-K's actual defensive value against fgsm/pgd remains NOT
+   ESTABLISHED** (section 10.3): only a small, non-systematic number of
+   recoveries were observed across the Phase 1 round; no dedicated
+   recovery-rate sweep (across SNR/eps/K) has been run. Do not cite
+   "Top-K defends against fgsm/pgd" as a validated claim yet.
 2. **Modulation has no real implementation.** Any formal experiment that
    claims a per-modulation accuracy/robustness comparison cannot be
    supported by the current pipeline without first building actual waveform
@@ -539,3 +577,214 @@ this project's "final" experimental value.
 Any value not explicitly listed above and not present in
 `docs/parameter_validation.csv` should be treated as **not_finalized** — do
 not assume a value exists just because it appears reasonable.
+
+---
+
+## 10. Phase 1 real-pipeline validation round (real AWN + real attack + real Top-K, no dummy fallback)
+
+This section records a dedicated validation round that ran the full pipeline
+with **all three real backends simultaneously** (`--use-real-awn
+--use-real-attack --use-real-topk`), confirmed via direct adapter precheck
+before any test and via `awn_backend`/`attack_backend`/`topk_backend` CSV
+columns on every single run — any run where any of the three fell back to a
+dummy would be disqualified from a "real-path PASS" claim, and none did.
+Fixed conditions unless noted otherwise: `--snr 18 --mod QPSK
+--threshold-factor 1.5 --window-size 128 --burst-len 600 --device cpu
+--checkpoint external/adversarial-rf/2016.10a_AWN.pkl`, `SEED=0` (hardcoded,
+same synthetic IQ / same 5 segments / `pred_clean=[1,1,1,1,1]` throughout).
+Environment: `/home/xiaomi/adversarial-rf/.venv` — torch `2.10.0+cu128` (CPU
+only), torchattacks `3.5.1`. No repo file was modified to make any of this
+pass; `external/AWN` / `external/adversarial-rf` were not touched.
+
+### 10.1 Four-attack real-backend smoke test (none / fgsm / pgd / cw)
+
+`--attack-eps 0.5 --attack-temperature 100 --topk 10` (temperature/eps chosen
+deliberately higher than repo defaults so the smoke test could actually
+observe a perturbation/prediction-change effect instead of reproducing the
+already-documented T=1 gradient-saturation no-op).
+
+| attack | execution path | awn/attack/topk backend | attack effectiveness | defense recovery |
+|---|---|---|---|---|
+| none | **PASS** (real, no-op bypass) | real/real(bypass)/real | n/a (no attack) | n/a |
+| fgsm | **PASS** (real throughout) | real/real/real | **PASS** — 4/5 predictions changed, IQ Linf 1.12–1.62 | **NOT ESTABLISHED** — 0/4 successfully-attacked segments recovered |
+| pgd | **PASS** (real throughout) | real/real/real | **PASS** — 3/5 predictions changed, IQ Linf 1.12–1.62 | **NOT ESTABLISHED** — 0/3 successfully-attacked segments recovered |
+| cw | **PASS** (real throughout, no crash, no fallback) | real/real/real | **NOT YET VALIDATED / effectively a no-op at current defaults** — 0/5 predictions changed, IQ Linf ≈1.8e-7 (float32 noise floor); do not cite as a working attack — see 10.2 | n/a (nothing to recover) |
+
+All 4 runs: no NaN/Inf anywhere; `attack_training_before=True` /
+`attack_training_after=False` for fgsm/pgd/cw (expected — `Model01Wrapper` is
+freshly constructed per process with `training=True` by default; the
+`finally: self.wrapped_model.eval()` fix from `58e14e7` correctly restores
+eval mode before any downstream inference uses the model, confirmed by
+address — see 10.2 for why this fix matters numerically for this specific
+checkpoint).
+
+### 10.2 CW diagnosis (dedicated round)
+
+- **Actual `c`/`steps`/`lr` used, confirmed on the live `torchattacks.CW`
+  object (`atk.c`/`atk.steps`/`atk.lr`), not just what the repo's code
+  intends to pass**: `c=1.0, steps=20, lr=0.01` — exactly matches
+  `src/adapters/attack_adapter.py:_build_torchattacks`'s hardcoded values,
+  no silent override by torchattacks' own constructor defaults
+  (`torchattacks.CW.__init__` signature: `c=1, kappa=0, steps=50, lr=0.01`;
+  this repo overrides `steps` from the library default 50 down to 20).
+- **`--attack-eps` is completely ignored by CW**: confirmed both by reading
+  `_build_torchattacks` (the `cw` branch never references its `eps`
+  parameter) and empirically (`hasattr(atk, "eps")` is `False` on the
+  constructed CW object — the attribute doesn't even exist, unlike FGSM/PGD
+  where `eps` is a real attribute the attack enforces).
+- **Root-cause finding (not a repo bug — a diagnostic pitfall)**: an initial
+  hand-rolled diagnostic script (bypassing `AttackAdapter.apply()` to sweep
+  `c`/`steps`/`lr` directly) produced wildly inconsistent, non-reproducible
+  results (predictions "changing" even for near-zero IQ perturbation) until
+  it was found that the script was missing the exact `finally:
+  self.wrapped_model.eval()` step that `AttackAdapter.apply()` already has
+  (`58e14e7`). torchattacks' own `Attack.__call__` always puts a freshly
+  constructed wrapper module back into **train mode** after the attack call
+  if it started in train mode (`_recover_model_mode`), and `AWN` has real
+  `BatchNorm2d`/`BatchNorm1d`/`Dropout(0.5)` layers
+  (`external/adversarial-rf/models/model.py:73,79,96`), so a leaked
+  train-mode leaves every subsequent forward pass corrupted by
+  batch-statistics/dropout noise on a 5-sample batch. **This is independent
+  confirmation that the existing `58e14e7` fix is load-bearing for this
+  checkpoint (not just a hygiene fix)** — without it, CW-adjacent diagnostic
+  code silently produces meaningless results. The shipped `AttackAdapter.
+  apply()` already has this fix in its `finally` block and was not modified.
+- **Small `c`/`steps`/`lr` sweep** (real backend, same 5 segments,
+  `temperature=100`, `pred_clean=[1,1,1,1,1]` throughout):
+
+  | c | steps | lr | changed | IQ Linf (max) | IQ L2 (max) |
+  |---|---|---|---|---|---|
+  | 1.0 (default) | 20 (default) | 0.01 (default) | 0/5 | 1.8e-7 | 1.1e-6 |
+  | 10.0 | 20 | 0.01 | 0/5 | 1.8e-7 | 1.1e-6 |
+  | 100.0 | 20 | 0.01 | 0/5 | 1.8e-7 | 1.1e-6 |
+  | 1.0 | 100 | 0.01 | 0/5 | 1.8e-7 | 1.1e-6 |
+  | 1.0 | 20 | 0.1 | 0/5 | 1.8e-7 | 1.1e-6 |
+  | 10.0 | 100 | 0.1 | **3/5** | **2.21** | **9.91** |
+
+- **Conclusion: parameters too weak, not a wrapper/backend compatibility
+  problem.** Scaling `c`, `steps`, and `lr` together (not any single one
+  alone — each individually held the other two at default produced no
+  change) restores CW's ability to find adversarial examples. The repo's
+  current defaults (`c=1.0, steps=20, lr=0.01`) are not adequate for this
+  checkpoint's logit-margin scale and should not be cited as "CW doesn't work
+  against this model" — only "CW doesn't work at these specific untuned
+  defaults." Whether to change the shipped defaults is an open design
+  decision, not made in this round (out of scope; would need its own
+  before/after correctness check).
+
+### 10.3 Top-K real-backend validation (K = 10/20/30/40 × none/fgsm/pgd)
+
+Same synthetic IQ/SNR/mod/seed throughout; `--attack-eps 0.5
+--attack-temperature 100`. 12 runs, all real-backend, no fallback, no
+NaN/Inf.
+
+- `none`: `pred_clean == pred_attacked == pred_defended == [1,1,1,1,1]` for
+  all 4 K values — bit-identical no-op confirmed again under the topk sweep.
+- `fgsm` (deterministic, single-step — no randomness): `pred_attacked =
+  [1,8,8,8,8]` identical across **all 4 K values** (correctly confirms Top-K
+  is applied strictly after the attack and never influences
+  `pred_attacked`); `pred_defended` differs by K — K=20 recovered segment 2
+  (`8→1`), K=10/30/40 recovered nothing. **1 recovery out of 16
+  successfully-attacked (K,segment) pairs across the sweep.**
+- `pgd`: `pred_attacked` **varies across K-value runs** despite identical
+  `eps`/`temperature`/input — traced to `torchattacks.PGD`'s
+  `random_start=True` default (confirmed via `inspect.signature`), which
+  this repo's `_build_torchattacks` never overrides, and no
+  `torch.manual_seed()` exists anywhere in this repo. **PGD results are
+  therefore not reproducible run-to-run even with identical CLI arguments
+  and the same fixed `SEED=0`** — `SEED=0` only fixes the synthetic-IQ RNG
+  (`numpy`), not torch's own RNG used by PGD's random start. This is a new,
+  concrete instance of the previously-documented "no global torch
+  determinism" gap (section 6/7) — previously that gap was believed
+  "empirically shown unnecessary" for eval-mode AWN forward passes; this
+  round shows it **does** matter for PGD specifically. Across the K-sweep,
+  Top-K recovered 2 out of roughly 18 successfully-attacked (K,segment)
+  pairs (K=20 seg0, K=40 seg4) — sporadic, not a systematic pattern.
+- **Confirmed K reaches the real `fft_topk_denoise` function itself, not
+  just CSV metadata**: called `TopKAdapter.apply()` directly with identical
+  input and K∈{10,20,30,40}; `topk_backend`/`topk_status` were
+  `fft_topk_denoise`/`ok` for all four, and the four output arrays are
+  **pairwise non-identical** (`np.array_equal` False for all 6 pairs; output
+  mean-abs magnitude increases monotonically with K: 0.418 → 0.533 → 0.616 →
+  0.657, consistent with keeping more FFT energy as K grows).
+- **Overall defense-recovery conclusion: NOT ESTABLISHED.** Across the
+  4-attack smoke test (10.1) and the 12-run K-sweep (10.3), Top-K recovered
+  a small, inconsistent minority of successfully-attacked segments (3 out of
+  roughly 34 total attacked-segment instances observed this round). This is
+  not evidence Top-K "doesn't work" (no systematic sweep across
+  SNR/eps/attack-strength has been run), but it is clear evidence that
+  **"Top-K=10 defends against FGSM/PGD" is not a validated claim** at this
+  point — recoveries observed so far look incidental rather than
+  systematic.
+
+### 10.4 eps sweep for FGSM/PGD (real backend, same input)
+
+Historical eps values actually used in this repo before this round (grepped
+from `docs/parameter_validation.md`/`.csv`, not recalled from memory):
+`--attack-eps` default `0.03` (`src/utils/config.py`); previously tested
+real values `0.1, 0.2, 0.3, 0.5` (`results/eps_sweep_first_change/`,
+finding: first prediction-changing eps was `0.5` for fgsm, `0.3` for pgd).
+This round reused exactly this set (`0.03, 0.1, 0.2, 0.3, 0.5` — no new eps
+values invented) plus the repo default, same synthetic IQ/SNR/mod/seed,
+`--attack-temperature 100`, `--topk 10`.
+
+| attack | eps | changed | normalized IQ Linf (all segments) | original IQ Linf (range) | NaN/Inf |
+|---|---|---|---|---|---|
+| fgsm | 0.03 | 0/5 | 0.03 | 0.068–0.097 | none |
+| fgsm | 0.1 | 0/5 | 0.1 | 0.225–0.324 | none |
+| fgsm | 0.2 | 0/5 | 0.2 | 0.450–0.647 | none |
+| fgsm | 0.3 | 0/5 | 0.3 | 0.675–0.971 | none |
+| fgsm | 0.5 | **4/5** | 0.5 | 1.125–1.618 | none |
+| pgd | 0.03 | 0/5 | 0.03 | 0.068–0.097 | none |
+| pgd | 0.1 | 0/5 | 0.1 | 0.225–0.324 | none |
+| pgd | 0.2 | 0/5 | 0.2 | 0.450–0.647 | none |
+| pgd | 0.3 | **2/5** | 0.3 | 0.675–0.971 | none |
+| pgd | 0.5 | **5/5** | 0.5 | 1.125–1.618 | none |
+
+- **eps is correctly and exactly propagated**: `iq_linf_normalized_clean_
+  attacked` (the perturbation measured in the `[0,1]` domain torchattacks
+  actually enforces its Linf budget in) equals the requested `eps` exactly,
+  for every single segment, at every eps value tested — confirming the
+  attack budget is enforced precisely, not approximately.
+  `iq_linf_clean_attacked` (raw IQ-domain Linf) is correctly larger and
+  varies per segment (depends on each segment's own min-max range used to
+  denormalize back from `[0,1]`), as expected from the per-segment min-max
+  domain mapping (`0aa95ea`).
+  - Note this round's `--attack-eps 0.03` (fgsm) row is a **direct
+    contradiction check** against the CW section 10.2 finding that CW
+    ignores eps entirely — FGSM/PGD by contrast visibly and exactly obey it.
+  - First-change eps reproduced exactly as previously documented: fgsm
+    first changes at `0.5` (not `0.3`), pgd first changes at `0.3` — matches
+    `docs/parameter_validation.md` section 4's prior citation, both under
+    the real backend, real checkpoint, same synthetic IQ.
+  - PGD's non-determinism (10.3) means this specific `pgd, eps=0.3` "2/5
+    changed" result is **one observed outcome, not necessarily reproducible
+    on a re-run** — see 10.3 for the root cause (`random_start=True`, no
+    `torch.manual_seed`).
+
+### 10.5 Still not completed after this round
+
+1. CW's shipped default hyperparameters remain unchanged and remain
+   ineffective against this checkpoint; whether to change them is an open
+   design decision, not made here.
+2. PGD's run-to-run non-determinism (`random_start=True`, no
+   `torch.manual_seed` anywhere in this repo) is newly documented but not
+   fixed — any PGD result should be treated as one sample, not a
+   reproducible ground truth, until this is addressed.
+3. Top-K's actual defensive value against FGSM/PGD remains **not
+   established** — only a small, non-systematic set of recoveries has been
+   observed; no sweep across SNR/eps/K designed specifically to
+   characterize recovery rate has been run.
+4. This round used `--attack-temperature 100` (not the `T=1.0` default)
+   throughout, deliberately, to get past the already-documented
+   gradient-saturation no-op — real-backend behavior at the CLI's actual
+   default `T=1.0` for fgsm/pgd/cw has still not been separately
+   re-confirmed in this round (expected, per the saturation finding, to
+   reproduce the T=1 zero-gradient no-op — but not empirically re-checked
+   here).
+5. No SNR/modulation variation was run this round (fixed at SNR=18, QPSK
+   throughout, per this round's explicit scope) — attack/defense
+   effectiveness at other SNRs remains unknown.
+6. `merge-gap`, `topk<=0`/`topk=Inf` boundary behavior, `--checkpoint`
+   existence validation, and `--device cuda` remain exactly as documented in
+   section 7 — untouched by this round.

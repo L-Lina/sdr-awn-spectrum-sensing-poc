@@ -130,6 +130,12 @@ def build_batch_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--burst-power-scale-list", type=str, default=None,
                         help="MULTI-BURST-ONLY. See run_full_experiment.py's --burst-power-scale-list help. "
                              "Applied uniformly to every combo in this batch.")
+    parser.add_argument("--alignment-policy", type=str, choices=["naive", "max-energy"], default="naive",
+                        help="Segment-alignment policy. See run_full_experiment.py's --alignment-policy help "
+                             "and docs/parameter_validation.md section 18. Applied uniformly to every combo.")
+    parser.add_argument("--segment-hop", type=arg_positive_int("segment_hop"), default=1,
+                        help="Sliding-window step for max-energy's candidate search. Applied uniformly to "
+                             "every combo in this batch.")
     return parser
 
 
@@ -201,6 +207,8 @@ def main() -> None:
             max_burst_gap=args.max_burst_gap,
             burst_gap_list=_parse_comma_list(args.burst_gap_list, int, "burst_gap_list"),
             burst_power_scale_list=_parse_comma_list(args.burst_power_scale_list, float, "burst_power_scale_list"),
+            alignment_policy=args.alignment_policy,
+            segment_hop=args.segment_hop,
         )
 
     run_batch_combos(base_dir, combos, build_cfg)

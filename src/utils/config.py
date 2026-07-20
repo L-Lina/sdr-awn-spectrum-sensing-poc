@@ -109,6 +109,22 @@ class ExperimentConfig:
     # mod/snr combos) for controlled detection-boundary test cases (see
     # src/sensing/radioml_source.py:embed_multiple_samples_in_noise).
     burst_power_scale_list: Optional[List[float]] = None
+    # Segment-alignment policy (src/sensing/segmentation.py:select_aligned_segments,
+    # docs/parameter_validation.md section 18). "naive" (default) reproduces
+    # every prior round's segment_regions() behavior byte-for-byte -- fixed,
+    # non-overlapping seg_len windows starting at each detected region's own
+    # start, which can be 53-61 samples before the true burst start (energy_detect's
+    # smoothing widens the region's leading edge), so a region with 100%
+    # region-level captured_signal_ratio can still yield a segment that's only
+    # ~52-63% true-burst signal. "max-energy" selects, per region, the single
+    # seg_len sliding window (hop=segment_hop) with the highest mean power --
+    # never references true_burst_start/true_burst_end.
+    alignment_policy: str = "naive"
+    # Sliding-window step (samples) used by max-energy's candidate search
+    # (and reported, informationally, as candidate_count even under naive).
+    # Default 1 (every possible offset) for correctness testing; a batch run
+    # over many combos may want a larger hop to reduce candidate-search cost.
+    segment_hop: int = 1
 
 
 # ---------------------------------------------------------------------------
@@ -216,6 +232,9 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
         # (singular) are not required here.
         raise ValueError("--iq-source radioml requires dataset_path to be set (none may be omitted)")
     require_positive_finite_float("embed_snr_margin", cfg.embed_snr_margin)
+    if cfg.alignment_policy not in ("naive", "max-energy"):
+        raise ValueError(f"alignment_policy must be 'naive' or 'max-energy', got {cfg.alignment_policy!r}")
+    require_positive_int("segment_hop", cfg.segment_hop)
     require_positive_int("num_bursts", cfg.num_bursts)
     require_nonneg_int("min_burst_gap", cfg.min_burst_gap)
     if cfg.max_burst_gap < cfg.min_burst_gap:
@@ -447,6 +466,16 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
                              "computed. Used to construct a genuinely low-energy burst on demand for "
                              "detection-boundary tests -- real RadioML samples alone have only modest "
                              "power differences across mod/snr.")
+    parser.add_argument("--alignment-policy", type=str, choices=["naive", "max-energy"], default="naive",
+                        help="Segment-alignment policy (src/sensing/segmentation.py:select_aligned_segments). "
+                             "'naive' (default): identical to every prior round's segment_regions() behavior -- "
+                             "fixed non-overlapping windows from each detected region's own start. "
+                             "'max-energy': one highest-mean-power seg_len window per region, chosen by sliding "
+                             "search (never references true burst position). See "
+                             "docs/parameter_validation.md section 18.")
+    parser.add_argument("--segment-hop", type=arg_positive_int("segment_hop"), default=1,
+                        help="Sliding-window step (samples) for max-energy's candidate search (and reported, "
+                             "informationally, as candidate_count under naive too). Default 1 (every offset).")
     return parser
 
 
@@ -508,4 +537,6 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         max_burst_gap=args.max_burst_gap,
         burst_gap_list=_parse_comma_list(args.burst_gap_list, int, "burst_gap_list"),
         burst_power_scale_list=_parse_comma_list(args.burst_power_scale_list, float, "burst_power_scale_list"),
+        alignment_policy=args.alignment_policy,
+        segment_hop=args.segment_hop,
     )

@@ -57,6 +57,14 @@ _RUN_META_FIELDS = [
     "n_segments",
     "sensing_window_size",
     "segment_length",
+    # Segment-alignment fields (docs/parameter_validation.md section 18) --
+    # config knobs (uniform per run) plus one aggregate (mean over segments
+    # with a resolvable true burst; None on sensing failure or when no
+    # segment has one). Per-segment detail lives in each run's summary.csv,
+    # not here.
+    "alignment_policy",
+    "segment_hop",
+    "mean_segment_captured_signal_ratio",
 ]
 
 
@@ -150,6 +158,9 @@ def run_batch_combos(
                 "n_segments": None,
                 "sensing_window_size": None,
                 "segment_length": None,
+                "alignment_policy": cfg.alignment_policy,
+                "segment_hop": cfg.segment_hop,
+                "mean_segment_captured_signal_ratio": None,
             }
             for field in _SENSING_AGG_FIELDS:
                 row[field] = None

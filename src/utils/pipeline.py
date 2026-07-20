@@ -37,7 +37,7 @@ from src.sensing.radioml_source import (
     embed_sample_in_noise,
     load_radioml_sample,
 )
-from src.sensing.segmentation import segment_regions
+from src.sensing.segmentation import select_aligned_segments
 from src.utils.config import (
     ExperimentConfig,
     resolve_sensing_window_size,
@@ -214,29 +214,44 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         )
 
     multi_burst_result = None
-    segment_region_ids = None
     if multi_burst_truths is not None:
         multi_burst_result = compute_multi_burst_sensing_metrics(multi_burst_truths, regions, cfg.n_samples)
-        # Replicates segment_regions()'s own (region, n_windows) iteration
-        # order exactly (same `regions` list, same seg_len=cfg.window_size,
-        # same floor-division window count) WITHOUT modifying
-        # segmentation.py, so each produced segment can be attributed back
-        # to the detected region it came from.
-        segment_region_ids = []
-        for region_idx, (r_start, r_end) in enumerate(regions):
-            n_windows = (r_end - r_start) // cfg.window_size
-            segment_region_ids.extend([region_idx] * n_windows)
 
     x_clean = None
+    alignment_meta = None
+    segment_region_ids = None
     if sensing_failure_stage is None:
         try:
-            segments = segment_regions(iq, regions, seg_len=cfg.window_size)
+            # select_aligned_segments (src/sensing/segmentation.py, docs/
+            # parameter_validation.md section 18) replaces the old direct
+            # segment_regions() call -- cfg.alignment_policy="naive" (default)
+            # produces byte-identical segment data to every prior round via
+            # segment_regions() internally; "max-energy" instead picks, per
+            # region, the single highest-mean-power seg_len window (never
+            # using true burst position). alignment_meta's region_idx field
+            # replaces the old hand-rolled segment_region_ids loop, which
+            # assumed segment_regions()'s naive-only (region, n_windows)
+            # counting and would have silently mis-attributed segments under
+            # max-energy (always 1 segment/region, not n_windows).
+            segments, alignment_meta = select_aligned_segments(
+                iq, regions, seg_len=cfg.window_size, policy=cfg.alignment_policy, hop=cfg.segment_hop,
+            )
+            if multi_burst_truths is not None:
+                segment_region_ids = [m["region_idx"] for m in alignment_meta]
             segments = normalize_segments(segments)
             x_clean = to_awn_input(segments, seg_len=cfg.window_size)
         except RuntimeError as exc:
+            # Same expected-failure semantics as before this round (retained
+            # under the historical "segment_regions" stage name for
+            # continuity with docs/parameter_validation.md section 16's
+            # documented failure_stage values and any existing consumer
+            # checking that exact string) -- now covers select_aligned_segments
+            # too, since it raises the identical RuntimeError in the same
+            # zero-valid-window case.
             sensing_failure_stage = "segment_regions"
             sensing_failure_reason = str(exc)
             segment_region_ids = None  # no segments exist to attribute to a region
+            alignment_meta = None
 
     if segment_region_ids is not None and x_clean is not None:
         assert len(segment_region_ids) == x_clean.shape[0], (
@@ -291,6 +306,9 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "attack_available": False,
             "defense_available": False,
             **sensing_agg,
+            "alignment_policy": cfg.alignment_policy,
+            "segment_hop": cfg.segment_hop,
+            "mean_segment_captured_signal_ratio": None,
             "n_segments": 0,
             "seed": cfg.seed,
             "sensing_window_size": effective_sensing_window_size,
@@ -387,8 +405,55 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     attack_gradient_maxabs = attack_meta.get("attack_gradient_maxabs")
 
     region_lookup = None
+    burst_truth_lookup = None
     if multi_burst_result is not None:
         region_lookup = {pr["region_id"]: pr for pr in multi_burst_result["per_region"]}
+        burst_truth_lookup = {b["burst_id"]: b for b in multi_burst_truths}
+
+    def _segment_ground_truth_fields(seg_start: int, seg_end: int, i: int) -> dict:
+        """
+        Segment-level (NOT region-level) capture metrics -- distinct from the
+        existing region-level `captured_signal_ratio` column above, which can
+        read 1.0 even when the specific 128-sample AWN input window only
+        partially overlaps the true burst (docs/parameter_validation.md
+        section 18). true_start/true_end resolution: single-burst radioml
+        mode uses `ground_truth` directly (one truth burst for the whole
+        run); multi-burst mode looks up this segment's region's SINGLE
+        matched burst (via region_lookup/burst_truth_lookup) -- ambiguous
+        (0 or 2+ matched bursts) or synthetic-source (ground_truth and
+        multi_burst_result both None) cases return all-None, not a guess.
+        """
+        true_start = true_end = None
+        if ground_truth is not None:
+            true_start, true_end = ground_truth["true_start"], ground_truth["true_end"]
+        elif region_lookup is not None and segment_region_ids is not None:
+            matched = region_lookup[segment_region_ids[i]]["matched_burst_ids"]
+            if len(matched) == 1:
+                b = burst_truth_lookup[matched[0]]
+                true_start, true_end = b["true_start"], b["true_end"]
+
+        if true_start is None:
+            return {
+                "segment_start_offset_from_true": None,
+                "segment_intersection_length": None,
+                "segment_captured_signal_ratio": None,
+                "segment_noise_before_count": None,
+                "segment_noise_after_count": None,
+            }
+
+        true_len = true_end - true_start
+        inter_start = max(seg_start, true_start)
+        inter_end = min(seg_end, true_end)
+        intersection_length = max(0, inter_end - inter_start)
+        noise_before = max(0, min(seg_end, true_start) - seg_start)
+        noise_after = max(0, seg_end - max(seg_start, true_end))
+        return {
+            "segment_start_offset_from_true": seg_start - true_start,
+            "segment_intersection_length": intersection_length,
+            "segment_captured_signal_ratio": (intersection_length / true_len) if true_len > 0 else None,
+            "segment_noise_before_count": noise_before,
+            "segment_noise_after_count": noise_after,
+        }
 
     rows = []
     for i in range(x_clean.shape[0]):
@@ -424,6 +489,24 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "extra_captured_noise_ratio": ground_truth["extra_captured_noise_ratio"] if ground_truth else None,
             "missed_sample_count": ground_truth["missed_sample_count"] if ground_truth else None,
             "false_occupied_sample_count": ground_truth["false_occupied_sample_count"] if ground_truth else None,
+            # Segment-alignment fields (docs/parameter_validation.md section
+            # 18) -- always populated (independent of ground truth), one per
+            # actually-selected AWN input segment.
+            "alignment_policy": alignment_meta[i]["alignment_policy"],
+            "segment_hop": alignment_meta[i]["segment_hop"],
+            "candidate_count": alignment_meta[i]["candidate_count"],
+            "selected_segment_start": alignment_meta[i]["selected_segment_start"],
+            "selected_segment_end": alignment_meta[i]["selected_segment_end"],
+            "selected_window_power": alignment_meta[i]["selected_window_power"],
+            "detected_region_start": alignment_meta[i]["detected_region_start"],
+            "detected_region_end": alignment_meta[i]["detected_region_end"],
+            # Segment-level (NOT region-level) capture metrics -- see
+            # _segment_ground_truth_fields()'s docstring above; distinct from
+            # (and must not be confused with) the region-level
+            # "captured_signal_ratio" column above.
+            **_segment_ground_truth_fields(
+                alignment_meta[i]["selected_segment_start"], alignment_meta[i]["selected_segment_end"], i
+            ),
             # Multi-burst mode only (num_bursts>1) -- None for single-burst/
             # synthetic rows. source_region_id is this segment's detected
             # region (see bursts_summary.csv/regions_summary.csv, written
@@ -534,6 +617,9 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     plot_path = output_dir / "sensing_plot.png"
     plot_created = plot_sensing_result(iq, regions, plot_path)
 
+    _seg_ratios = [r["segment_captured_signal_ratio"] for r in rows if r["segment_captured_signal_ratio"] is not None]
+    mean_segment_captured_signal_ratio = (sum(_seg_ratios) / len(_seg_ratios)) if _seg_ratios else None
+
     result = {
         "run_status": "ok",
         "sensing_success": True,
@@ -548,6 +634,14 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         "attack_available": True,
         "defense_available": True,
         **sensing_agg,
+        "alignment_policy": cfg.alignment_policy,
+        "segment_hop": cfg.segment_hop,
+        # Mean of per-segment (NOT per-region) captured_signal_ratio, over
+        # segments with a resolvable true burst (see
+        # _segment_ground_truth_fields's docstring) -- None if no segment
+        # has one (synthetic source, or multi-burst segments whose region
+        # ambiguously matched 0/2+ bursts).
+        "mean_segment_captured_signal_ratio": mean_segment_captured_signal_ratio,
         "n_segments": x_clean.shape[0],
         "seed": cfg.seed,
         "sensing_window_size": effective_sensing_window_size,

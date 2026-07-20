@@ -2351,6 +2351,7 @@ CSVs, 3 `comboNNNN/` subdirectories).
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
   STARTED** (unchanged, explicitly out of scope this round)
 
+
 ## 17. Cross-modulation x SNR smoke matrix (round 8)
 
 New file: `experiments/run_modulation_snr_matrix.py`. No changes to
@@ -2523,3 +2524,251 @@ documented cosmetic synthetic-generator field, unused in radioml mode
   (17.6)
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
   STARTED** (unchanged, explicitly out of scope this round)
+
+## 18. AWN input-scale + segment-alignment root-cause diagnosis and fix (round 9)
+
+Modified: `src/sensing/segmentation.py` (new `select_aligned_segments`,
+`segment_regions` unchanged), `src/utils/config.py` (new
+`alignment_policy`/`segment_hop` fields + CLI + validation),
+`src/utils/pipeline.py` (wired to the new function; new summary.csv
+columns), `src/utils/batch_aggregation.py` (new aggregate fields),
+`experiments/run_batch.py` (new CLI flags). **No changes to
+`external/AWN`/`external/adversarial-rf`.**
+
+### 18.1 Normalization-scale mismatch (diagnosis only, NOT fixed this round)
+
+Triggered by re-reading `external/adversarial-rf`'s own `CLAUDE.md`
+(`data_loader.py:Load_Dataset` feeds raw, un-normalized RML samples --
+amplitude ~±0.02 -- directly to the model at training time) against this
+repo's `normalize_segments` (per-segment **unit-average-power**
+normalization, ~50-100x rescale), applied unconditionally before every AWN
+call in every prior round. `docs/integration_plan.md` section 5 flagged
+this exact risk from the very first planning pass ("Needs a real run to
+check classification accuracy... before trusting any prediction") but it
+was never empirically checked until this round.
+
+**Empirical confirmation** (7 real samples, BPSK/QPSK/8PSK/QAM16/QAM64/
+WBFM/AM-DSB, snr=18, sample_index=0, real AWN): feeding the SAME clean,
+unembedded sample raw (no normalization) vs. through `normalize_segments`
+gives:
+
+| Path | Accuracy | Logit magnitude | Confidence |
+|---|---|---|---|
+| raw (no normalize) | 4/7 correct | tens (e.g. [-40,12]) | not saturated |
+| `normalize_segments` applied | 2/7 correct | **thousands** (e.g. [-9269,887]) | pinned at ~1.0000 (softmax saturation) |
+
+This is almost certainly what explains section 17.6's "AWN predicted
+QAM64 in 127/132 combos" finding from the prior round's smoke matrix --
+not a spectrum-sensing degradation effect, but this pre-existing scale
+mismatch, present in every real-AWN + radioml-mode run across this entire
+session (including commit `82df790`). **This round does NOT fix
+normalization** -- it is a separate, already-diagnosed issue explicitly
+deferred by the user pending a decision; every result below (18.2-18.5)
+deliberately holds normalization treatment CONSTANT (either always-off, to
+isolate alignment, or noted explicitly when the full committed pipeline's
+default behavior -- which still applies `normalize_segments` unconditionally
+after segment selection, regardless of `--alignment-policy` -- is discussed).
+
+### 18.2 Segment-alignment root-cause diagnosis (before any code change)
+
+With normalization held OFF for a clean isolation, a 4-hypothesis decision
+tree was run against the same 7 samples, embedded into a synthetic noise
+stream (`embed_snr_margin=20`) and run through real sensing
+(`threshold_factor=1.5, sensing_window_size=128, min_region_len=128`):
+
+| Path | Definition | vs. baseline (A) |
+|---|---|---|
+| A `direct_raw` | Original [2,128] sample, no embedding, no normalization | reference: 4/7 correct |
+| B `oracle_embedded_slice` | `iq[true_start:true_end]` sliced directly from the embedded stream, no sensing, no normalization | **6/7 match A** (only QAM64 differs, and both A's and B's QAM64 predictions were already low-confidence/borderline, ~0.16-0.17 out of 11 classes -- not a confident flip) |
+| C `detected_oracle_aligned` | Sensing IS run (region must be detected), but the segment is still sliced at `true_start`, not the detected region's start | **7/7 match B exactly** (predictions, confidence, logits all identical) |
+| D `detected_region_naive_segment` | The PRE-EXISTING behavior: `segment_regions()` cuts its first window starting at the DETECTED REGION's own start | **5/7 mismatch vs. C** |
+| E `detected_region_best_overlap_segment` | Diagnostic-only oracle: exhaustive sliding search within the detected region for the window with maximum overlap with the true burst | **6/7 match A** (same single QAM64 exception as B/C) |
+
+**Conclusion, in order**: (1) embedding does not alter waveform/scale in
+any way that matters (A≈B) -- ruled out; (2) running sensing itself does
+not further modify the underlying IQ values (B≡C exactly) -- ruled out;
+(3) **the primary degradation source is segmentation-grid alignment**
+(C≠D in 5/7 cases) -- confirmed; (4) an alignment-aware crop recovers
+accuracy to the oracle level (E≈A) -- confirms the fix direction.
+
+**Why D breaks, quantified**: for 6/7 samples the detected region's
+leading edge starts **53-61 samples before** the true burst
+(`start_boundary_error ≈ -53` to `-61`, from `sensing_window_size=128`
+smoothing widening the region outward) even though the region covers the
+burst 100% at the REGION level. `segment_regions()`'s first fixed-grid
+window, starting exactly at the region's start, therefore straddles the
+boundary and only overlaps the true burst by **52-63%**
+(segment-level ratio, NOT the existing region-level `captured_signal_ratio`,
+which correctly reported 1.0 for these same cases -- the two metrics
+measure genuinely different things, hence 18.3's new, separately-named
+segment-level fields).
+
+**`embed_snr_margin` scale-factor check** (part of hypothesis 1): confirmed
+by code trace (not measurement) that `embed_sample_in_noise` adds the
+burst unscaled (`iq[start:end] += burst_iq`, no multiplier) -- scale factor
+is exactly 1.0. `embed_snr_margin` only sets the noise floor; the relative
+L2 difference between the embedded slice and the original burst was 0.216
+for all 7 samples, matching the design target `1/√20 ≈ 0.224` almost
+exactly.
+
+### 18.3 `select_aligned_segments` implementation
+
+New function in `src/sensing/segmentation.py`, alongside (not replacing)
+the original `segment_regions()`. Two policies, selected via new
+`--alignment-policy {naive,max-energy}` (default `naive`) and
+`--segment-hop N` (default 1, positive int) CLI/config flags:
+
+- **`naive`** (default, zero behavior change): calls `segment_regions()`
+  directly for the segment data -- byte-identical to every prior round.
+  Can produce multiple non-overlapping segments per region if the region
+  is long enough.
+- **`max-energy`**: exactly ONE selected segment PER detected region --
+  the `seg_len`-sample window (among all `hop`-spaced sliding candidates
+  within the region) with the highest mean power
+  (`mean(|x|^2)`). Deliberately a MINIMAL scope (one window per region, not
+  a general multi-window replacement for naive's long-region case), per
+  this round's explicit "minimal verifiable" requirement. **Structurally**
+  cannot depend on `true_burst_start`/`true_burst_end` -- the function
+  signature never receives ground truth at all, only `iq`/`regions`/
+  `seg_len`/`policy`/`hop`.
+
+Both policies return `(segments, selection_meta)`, where `selection_meta`
+is one dict per segment with `alignment_policy`, `segment_hop`,
+`candidate_count`, `selected_segment_start/end`, `selected_window_power`,
+`detected_region_start/end`, `region_idx` -- the last of which replaces a
+fragile hand-rolled `segment_region_ids` computation in `pipeline.py` that
+previously assumed `segment_regions()`'s own (region, n_windows) counting
+and would have silently mis-attributed segments under `max-energy` (always
+1 segment/region, not `n_windows`).
+
+**New `summary.csv` columns** (every segment row, regardless of ground
+truth): `alignment_policy`, `segment_hop`, `candidate_count`,
+`selected_segment_start`, `selected_segment_end`, `selected_window_power`,
+`detected_region_start`, `detected_region_end`. **Ground-truth-mode-only**
+(ambiguous multi-burst matches -- 0 or 2+ matched bursts for a segment's
+region -- return all-None, not a guess): `segment_start_offset_from_true`,
+`segment_intersection_length`, `segment_captured_signal_ratio`,
+`segment_noise_before_count`, `segment_noise_after_count`. The pre-existing
+REGION-level `captured_signal_ratio` column is unchanged and unrenamed, per
+the explicit requirement not to confuse the two.
+
+**New `batch_summary.csv` fields** (via `batch_aggregation.py`):
+`alignment_policy`, `segment_hop` (config knobs, uniform per run) and
+`mean_segment_captured_signal_ratio` (mean of per-segment ratios over
+segments with a resolvable true burst; `None` on sensing failure, on a
+genuine error, or when no segment resolves one).
+
+**Note on the still-open normalization issue**: `pipeline.py` still calls
+`normalize_segments()` unconditionally after `select_aligned_segments`,
+for BOTH policies -- `--alignment-policy` only changes WHICH samples are
+selected, not whether they get rescaled afterward. This means a real
+end-to-end run through the committed pipeline (e.g. `run_batch.py`) still
+carries the 18.1 scale-mismatch confound on top of whichever alignment
+policy is chosen; 18.4's comparison below deliberately bypasses
+`normalize_segments` for all 5 paths to isolate the alignment effect
+specifically, and separately confirms (18.4, footnote) what the confounded,
+as-committed default actually produces.
+
+### 18.4 Comparison test (7 modulations, snr=18, sample_index=0, seed=42, real AWN, normalization OFF for all 5 paths to isolate alignment)
+
+Paths A/B/E computed via direct adapter calls (as in 18.2); **C and D now
+call the real, just-implemented `select_aligned_segments()`** (not a
+reimplementation) with `policy="naive"`/`"max-energy"` respectively.
+
+| Modulation | A direct_raw | B oracle_embedded | C naive | D max-energy | E best-overlap oracle |
+|---|---|---|---|---|---|
+| BPSK | PAM4 ✗ | PAM4 ✗ | PAM4 ✗ (ratio 0.625) | PAM4 ✗ (ratio 0.586) | PAM4 ✗ (ratio 0.625) |
+| QPSK | QPSK ✓ | QPSK ✓ | QPSK ✓ (ratio 0.563) | QPSK ✓ (ratio 0.992) | QPSK ✓ (ratio 1.0) |
+| 8PSK | 8PSK ✓ | 8PSK ✓ | 8PSK ✓ (ratio 0.563) | 8PSK ✓ (ratio 1.0) | 8PSK ✓ (ratio 1.0) |
+| QAM16 | QAM16 ✓ | QAM16 ✓ | 8PSK ✗ (ratio 0.578) | QAM16 ✓ (ratio 0.984) | QAM16 ✓ (ratio 1.0) |
+| QAM64 | PAM4 ✗ | AM-SSB ✗ | 8PSK ✗ (ratio 0.586) | AM-SSB ✗ (ratio 1.0) | AM-SSB ✗ (ratio 1.0) |
+| WBFM | AM-DSB ✗ | AM-DSB ✗ | BPSK ✗ (ratio 0.523) | AM-DSB ✗ (ratio 1.0) | AM-DSB ✗ (ratio 1.0) |
+| AM-DSB | AM-DSB ✓ | AM-DSB ✓ | BPSK ✗ (ratio 0.523) | AM-DSB ✓ (ratio 1.0) | AM-DSB ✓ (ratio 1.0) |
+
+**Accuracy**: A=4/7, B=4/7, **C(naive)=2/7**, **D(max-energy)=4/7**,
+E(oracle)=4/7. **max-energy exactly matches the oracle-path accuracy.**
+
+**Prediction agreement with `B` (oracle_embedded_slice)**: naive=3/7,
+**max-energy=7/7** (perfect).
+
+**Mean segment-level captured_signal_ratio**: naive=0.5658,
+**max-energy=0.9375**.
+
+**Note on max-energy's failure mode, checked explicitly per this round's
+requirement** ("請特別檢查max-energy是否可能只選到局部高能量噪聲或burst的
+局部峰值"): for BPSK specifically, max-energy's segment ratio (0.586) is
+marginally LOWER than naive's (0.625) for this one sample -- the region
+itself only 63% covers the true burst at the region level (a genuine
+partial-detection case, independent of alignment), and within a region
+that already excludes part of the burst, "highest mean power" is not
+always exactly "maximum true-burst overlap" since real modulated signal
+power is not perfectly uniform sample-to-sample. This is a real,
+un-smoothed-over instability, reported as found -- not treated as a reason
+to add a more complex selection heuristic this round, per the explicit
+instruction to only report if found unstable, not engineer around it.
+Every other one of the 7 samples showed max-energy meeting or exceeding
+naive's ratio.
+
+**Footnote -- what the actual committed default pipeline produces** (i.e.
+WITH `normalize_segments`, confounding scale and alignment together,
+matching what a real `run_batch.py`/`run_modulation_snr_matrix.py` run
+would see today): naive=1/7, max-energy=2/7 correct in a supplementary run
+against the same 7 samples. Both are far below the isolated-alignment
+numbers above, confirming 18.1's scale mismatch remains the dominant
+confound in any real end-to-end run using this repo's current default
+normalization -- fixing alignment alone (this round) is necessary but,
+until normalization is also addressed, not sufficient to restore accuracy
+in a real run through the committed pipeline.
+
+### 18.5 Pass-condition verification
+
+1. **max-energy does not use `true_burst_start`**: confirmed structurally
+   -- `select_aligned_segments()`'s signature never accepts ground truth.
+2. **Same-seed cross-process bit-identical**: confirmed (`QAM16/snr18/idx0`,
+   max-energy, two independent `python` processes) -- identical
+   `long_iq_sha256` and `mean_segment_captured_signal_ratio=0.984375`.
+3. **Selected segment length fixed at 128**: guaranteed by construction
+   (`to_awn_input` asserts `seg_len`; every candidate window is a fixed
+   128-sample slice).
+4. **No NaN/Inf**: confirmed across all 35 (7 mods × 5 paths) inference
+   confidence/logit values in the 18.4 comparison.
+5. **max-energy's mean `segment_captured_signal_ratio` > naive's**:
+   confirmed, 0.9375 > 0.5658.
+6. **max-energy's prediction agreement with `oracle_embedded_slice` not
+   lower than naive's**: confirmed, 7/7 vs. 3/7 (far higher, not merely
+   not-lower).
+7. **best-overlap oracle used only as a diagnostic ceiling**: confirmed --
+   no `--alignment-policy` choice implements it; it exists only in the
+   diagnostic comparison script, never in `src/`.
+8. **`summary.csv`/`batch_summary.csv` schema correct**: confirmed --
+   per-segment columns present and correct in every tested `summary.csv`;
+   `batch_summary.csv` correctly carries `alignment_policy`/`segment_hop`/
+   `mean_segment_captured_signal_ratio` via a 2-combo smoke batch.
+
+`direct_raw`'s 4/7 is the reference (this checkpoint's actual behavior on
+these 7 samples), NOT treated as a 7/7 pass target, per the explicit
+instruction.
+
+### 18.6 Cross-reference to this round's required status labels
+
+- **Normalization-scale mismatch**: **diagnosed, NOT fixed** this round --
+  root cause confirmed (thousands-magnitude saturated logits vs. tens for
+  raw-scale input), deferred pending a separate design decision.
+- **Segment-alignment root cause**: **diagnosed and fixed this round**
+  (18.2/18.3) -- `select_aligned_segments` implemented, function tested
+  (regression: naive byte-identical to prior behavior; multi-burst mode
+  regression-confirmed with both ambiguous- and unambiguous-match cases),
+  and validated via a real 7-modulation comparison (18.4) showing
+  max-energy matches oracle-path accuracy when normalization is held
+  constant.
+- **`--alignment-policy`/`--segment-hop`**: **PASS this round** -- CLI
+  wired into both `run_full_experiment.py` and `run_batch.py`, validated
+  (`naive` default preserves every prior round's exact behavior;
+  `max-energy` reproducible cross-process).
+- **Combined real-pipeline accuracy (alignment fix + still-open
+  normalization bug)**: explicitly **NOT resolved** -- the as-committed
+  default pipeline's real predictions remain dominated by the normalization
+  confound (18.4 footnote) until that separate issue is addressed.
+- **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
+  STARTED** (unchanged, explicitly out of scope this round)
+

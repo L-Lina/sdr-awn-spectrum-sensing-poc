@@ -211,6 +211,15 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         sensing_failure_reason = str(exc)
         regions = []
 
+    # Region-count diagnostics (docs/parameter_validation.md section 22) --
+    # exposes the three intermediate stage counts (mask_to_regions ->
+    # merge_close_regions -> filter_by_min_length) that were previously only
+    # local variables, never returned. Purely additive/diagnostic -- does
+    # not change which regions are used anywhere downstream.
+    num_raw_regions = len(raw_regions)
+    num_merged_regions = len(merged_regions)
+    num_filtered_regions = len(regions)
+
     # Ground-truth/multi-burst metrics are computed regardless of whether
     # filter_by_min_length succeeded -- both compute_*_sensing_metrics
     # functions handle an empty `regions` list correctly (every truth burst
@@ -327,6 +336,9 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "attack_available": False,
             "defense_available": False,
             **sensing_agg,
+            "num_raw_regions": num_raw_regions,
+            "num_merged_regions": num_merged_regions,
+            "num_filtered_regions": num_filtered_regions,
             "iq_source": cfg.iq_source,
             "alignment_policy": effective_alignment_policy,
             "segment_hop": cfg.segment_hop,
@@ -694,6 +706,9 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         "attack_available": True,
         "defense_available": True,
         **sensing_agg,
+        "num_raw_regions": num_raw_regions,
+        "num_merged_regions": num_merged_regions,
+        "num_filtered_regions": num_filtered_regions,
         "iq_source": cfg.iq_source,
         "alignment_policy": effective_alignment_policy,
         "segment_hop": cfg.segment_hop,

@@ -84,6 +84,13 @@ _RUN_META_FIELDS = [
     "awn_input_max",
     "awn_input_has_nan",
     "awn_input_has_inf",
+    # Region-count diagnostics (docs/parameter_validation.md section 22) --
+    # the three mask_to_regions -> merge_close_regions -> filter_by_min_length
+    # stage counts, always populated (0 is a valid, meaningful count, not a
+    # missing value).
+    "num_raw_regions",
+    "num_merged_regions",
+    "num_filtered_regions",
 ]
 
 
@@ -193,6 +200,9 @@ def run_batch_combos(
                 "awn_input_max": None,
                 "awn_input_has_nan": None,
                 "awn_input_has_inf": None,
+                "num_raw_regions": None,
+                "num_merged_regions": None,
+                "num_filtered_regions": None,
             }
             for field in _SENSING_AGG_FIELDS:
                 row[field] = None

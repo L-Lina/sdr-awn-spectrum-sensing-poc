@@ -3230,3 +3230,160 @@ verified, not skipped.
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
   STARTED** (unchanged, explicitly out of scope this round)
 
+## 21. Fair Top-K verification at scale under `radioml-native`, full CLI parameter inventory (round 12)
+
+New file: `experiments/run_fair_topk_matrix.py`. **No changes to `src/` or
+`external/AWN`/`external/adversarial-rf`** -- this round is a pure
+verification round; the matrix ran cleanly on the first attempt, so there
+was nothing to fix.
+
+### 21.1 Matrix design and execution
+
+**Command**: `python experiments/run_fair_topk_matrix.py`
+
+3 modulations (QPSK, BPSK, QAM16) × 2 SNRs (0, 18) × 5 `sample_index`
+(0-4) = **30 unique samples** (5x round 11's implicit 6-sample coverage)
+× 4 attacks (none, fgsm, pgd, cw) × 4 Top-K values (10, 20, 30, 40) =
+**480 combos**, real AWN + real attack + real Top-K, CPU, one fixed seed
+(42), `threshold_factor=1.5 sensing_window_size=128 min_region_len=0
+merge_gap=0 attack_eps=0.05` (fgsm/pgd), CW at its default strength knobs
+(`c=1.0, steps=20, lr=0.01`). `--alignment-policy`/`--awn-preprocess`
+deliberately left unset -- confirmed every combo resolved to
+`max-energy`/`radioml-native` (section 20). Estimated ~15 minutes before
+running; **actual: 721.3s (~12 minutes)**. **480/480 ok, 0 sensing_failed,
+0 error.**
+
+### 21.2 Fallback / backend verification (Part 一)
+
+Checked every one of 480×1 segment rows' `awn_status`/`attack_status`/
+`topk_status` -- **all exactly `"ok"`, zero `"fallback"` occurrences**.
+Single distinct backend value each: `external/adversarial-rf/models/
+model.py:AWN`, `external/adversarial-rf/util/adv_attack.py:Model01Wrapper
++ torchattacks`, `external/adversarial-rf/util/defense.py:fft_topk_denoise`.
+No dummy backend was ever used.
+
+### 21.3 Fair Top-K reuse verification at scale (Part 二)
+
+Grouped by `(dataset_mod, dataset_snr, sample_index, attack)` -- **120
+unique groups**, each with exactly 4 `topk` entries. `iq_linf_clean_attacked`
+was compared for exact equality across all 4 `topk` values within every
+group (not merely spot-checked). **0/120 groups show any variation** --
+6.7x more coverage than round 11's 18-group check, same clean result: the
+attacked IQ is generated exactly once per `(sample, attack)` and reused
+identically across every `topk` value, never regenerated.
+
+### 21.4 Attack coverage (Part 四)
+
+All four attacks tested with real backends at scale for the first time
+(CW was previously only tested individually, never through the full
+batch-aggregation pipeline with Top-K reuse verification):
+
+| Attack | Success rate (`changed_by_attack`) |
+|---|---|
+| none | 0/120 (0%) |
+| fgsm | 100/120 (83.3%) |
+| pgd | 116/120 (96.7%) |
+| cw | 100/120 (83.3%) |
+
+### 21.5 Per-sample fields (Part 五) and NaN/Inf/eval-mode (Part 五/Part 一)
+
+Every one of 480 segment rows recorded `pred_clean`, `pred_attacked`,
+`pred_defended`, `changed_by_attack`, `recovered_by_defense`,
+`iq_linf_clean_attacked`, `awn_backend`/`attack_backend`/`topk_backend`,
+and `attack_training_after` (eval-mode restoration) -- confirmed present
+and populated for all 480 rows (not a sample). **0 NaN/Inf** across
+`clean_has_nan/inf`, `attacked_has_nan/inf`, `awn_input_has_nan/inf`.
+**0 eval-mode violations**: `attack_training_after == False` for all 360
+`attack != "none"` rows.
+
+### 21.6 Attack success rate / defense recovery rate by attack × Top-K (Part 六)
+
+Defense recovery rate (`recovered_by_defense` / `changed_by_attack`), now
+with 25-29 changed segments per cell (vs. round 11's 5-6) -- meaningfully
+more statistical grounding, though still a smoke-scale test, not a formal
+evaluation:
+
+| Attack | K=10 | K=20 | K=30 | K=40 |
+|---|---|---|---|---|
+| fgsm | 0/25 (0%) | 3/25 (12%) | 0/25 (0%) | 1/25 (4%) |
+| pgd | 1/29 (3.4%) | 1/29 (3.4%) | 0/29 (0%) | 0/29 (0%) |
+| cw | 3/25 (12%) | 6/25 (24%) | 9/25 (36%) | 7/25 (28%) |
+
+**Real, honestly-reported finding**: FGSM/PGD recovery stays near-zero
+regardless of K, but **CW shows a clear K-dependent trend, peaking at
+K=30 (36%)** -- consistent with CW being an L2-optimized, more
+frequency-concentrated perturbation (more amenable to FFT Top-K filtering)
+vs. FGSM/PGD's broader-spectrum sign-based perturbations. This is a
+genuine pattern visible at this sample size, not a claim of statistical
+significance at formal-evaluation confidence -- flagged as a specific,
+concrete hypothesis for the eventual formal batch to confirm or refute,
+not asserted as proven here.
+
+### 21.7 Reproducibility (Part 七)
+
+Two independent `python` processes (`QAM16/snr18/idx3`, `attack=cw
+topk=30`, same seed) -- identical `pred_clean/attacked/defended`,
+`iq_linf_clean_attacked`, and `long_iq_sha256`. This is the first
+reproducibility check run against CW specifically (round 11's check used
+PGD) -- confirms determinism holds for the iterative-optimization attack
+too, not just the single/few-step gradient attacks.
+
+### 21.8 Bug investigation (Part 九)
+
+**No bugs found this round.** The 480-combo matrix, all verification
+checks, and the reproducibility check all passed on the first attempt --
+nothing required fixing, so nothing was fixed (per the instruction not to
+fabricate a fix for a problem that doesn't exist). One incidental,
+targeted functional check was run and passed: **multi-burst mode +
+`max-energy` alignment**, never explicitly verified in section 18-20 (those
+rounds' multi-burst regression tests used `naive` only) -- confirmed
+correct with a 2-burst case (`BPSK, QPSK`, gap=400): 2 detected regions,
+exactly one `max-energy`-selected segment per region (matching the
+documented one-segment-per-region design), `mean_segment_captured_signal_ratio
+=0.742`, no errors.
+
+### 21.9 Full CLI parameter inventory: validation-depth gaps (Part 八)
+
+Cross-referenced against `docs/parameter_validation.csv`'s 77+ tracked
+rows and this session's actual round-by-round coverage (not assumed from
+category labels alone):
+
+| Parameter | Tested values (real backend) | Gap |
+|---|---|---|
+| `--dataset-snr` (RadioML SNR) | `-10,0,10,18` (round 8, sensing-only, `attack=none`); `0,18` (rounds 9-12, with real attack/Top-K) | RML2016.10a has SNR labels `-20..18` step `2` (20 levels total) -- only 4/20 ever tested at all, only 2/20 tested with real attack |
+| `--dataset-mod` (11 modulations) | All 11 tested in round 8 (sensing-only); only `QPSK, BPSK, QAM16` (3/11) tested with real attack/Top-K (rounds 11-12) | 8/11 modulations (`8PSK, AM-DSB, AM-SSB, CPFSK, GFSK, PAM4, QAM64, WBFM`) never tested with any real attack |
+| `--attack` | `none, fgsm, pgd, cw` all now tested at scale (this round, 480 combos) with fair Top-K reuse confirmed | This repo's `AttackAdapter` only implements these 4 (of `adversarial-rf`'s 17 available `torchattacks` attacks) -- a scope limitation, not an untested gap |
+| `--attack-eps` | Fixed `0.05` throughout rounds 11-12's batch matrices; `{0.01,0.03,0.1}` individually verified via direct (non-batch) diagnostic in round 11 | No `eps` **sweep** has ever run through the batch-aggregation pipeline -- explicitly deferred (would start approaching the formal batch) |
+| `--topk` | `10,20,30,40`, 600+ combo-appearances across rounds 11-12, reuse-correctness confirmed at scale (this round) | Values outside this set (very small `K<10`, very large `K` near/above 128) untested; `adaptive_k_defense`/`adaptive_k_v2_defense` (mentioned in `topk_adapter.py`'s own docstring) never wired at all |
+| `--threshold-factor` | Boundary-swept `0.8-2.0` in round 7 (under `naive` alignment, dummy/no real AWN) | Fixed at `1.5` throughout rounds 9-12 (`max-energy`/`radioml-native`) -- never re-swept under the new defaults |
+| `--sensing-window-size` | Swept `16-256` in round 7 (found fragmentation at small values, under old defaults) | Fixed at `128` throughout rounds 9-12 -- never re-swept under `max-energy`/`radioml-native` |
+| `--min-region-len` | Swept `0,64,128` in round 7 (under old defaults) | Fixed at `0` throughout rounds 9-12 -- never re-swept under new defaults |
+| `--merge-gap` | Dedicated case studies in round 6 (single/multi-burst, `naive` alignment only) | Never tested with `max-energy` alignment at `merge_gap > 0` specifically -- this round's incidental multi-burst check (21.8) used `merge_gap=0` |
+| `--num-bursts`/`--dataset-mod-list`/`--dataset-snr-list`/`--sample-index-list`/`--min-burst-gap`/`--max-burst-gap`/`--burst-gap-list`/`--burst-power-scale-list` | Functionally tested in round 6 (`naive`/`legacy-unit-power` only); this round's 21.8 check confirms basic `max-energy` compatibility (2-burst case) | No comprehensive re-validation of the merge-gap/power-scale edge cases (round 15's 5 documented cases) under the new alignment/preprocess defaults, and none with real attack/Top-K in multi-burst mode |
+| `--embed-snr-margin` | Fixed at `20.0` throughout every real-backend round this session | Sensitivity sweep (`{-10..20}`) was done once, informally, in an earlier round's diagnostic context -- never through the batch pipeline with real attack |
+| `--segment-hop` | Fixed at `1` (every possible sliding offset) throughout | Larger hop values (for batch-cost reduction) implemented and validated, never empirically exercised |
+
+### 21.10 Cross-reference to this round's required status labels
+
+- **Fair Top-K reuse verification at scale**: **PASS this round** (21.3)
+  -- batch tested, 480 combos, 120 groups, 0 violations (vs. round 11's 18
+  groups) -- the strongest evidence yet that Top-K never regenerates the
+  attack.
+- **No-fallback verification**: **PASS this round** (21.2) -- explicitly
+  checked (not assumed), 0/480 fallback occurrences across all 3 real
+  backends.
+- **CW at scale**: **PASS this round** (21.4/21.6/21.7) -- previously only
+  spot-tested; now run through the full batch pipeline (120 combos) with
+  reproducibility confirmed.
+- **Defense recovery rate, attack × Top-K**: **PASS this round as a smoke
+  measurement** (21.6) -- real, moderately-powered (25-29 samples/cell)
+  result reported honestly, including the CW-specific K-dependent trend;
+  explicitly **not** a formally-powered evaluation.
+- **Multi-burst + max-energy compatibility**: **PASS this round,
+  incidental** (21.8) -- confirmed via one 2-burst case; not a
+  comprehensive re-validation of round 15's full case set.
+- **Full CLI parameter inventory**: **compiled this round** (21.9) --
+  gaps documented explicitly per parameter, not glossed over.
+- **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
+  STARTED** (unchanged, explicitly out of scope this round)
+

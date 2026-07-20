@@ -968,3 +968,217 @@ apply()`'s signature, which `fgsm`/`pgd` also call through, so it is not a
   separate decision, informed by but not resolved by section 10.2's
   finding that `c=10,steps=100,lr=0.1` is more effective against this
   checkpoint).
+
+---
+
+## 12. CW CLI implementation, CW reproducibility, Top-K boundary, spectrum-sensing boundary (round 3)
+
+Implements section 11.4's design. Code changes this round: `src/utils/
+config.py`, `src/adapters/attack_adapter.py`, `src/utils/pipeline.py`,
+`experiments/run_batch.py` (**no changes to `external/AWN`/
+`external/adversarial-rf`**).
+
+### 12.1 CW CLI implementation
+
+`--cw-c` (`arg_positive_finite_float`, default `1.0`), `--cw-steps`
+(`arg_positive_int`, default `20`), `--cw-lr` (`arg_positive_finite_float`,
+default `0.01`) added to both `build_arg_parser` and `build_batch_arg_parser`
+exactly as designed in section 11.4. `ExperimentConfig.cw_c/cw_steps/cw_lr`
+added with matching defaults. `_build_torchattacks` and `AttackAdapter.
+apply()` signatures extended; the `fgsm`/`pgd` branches of
+`_build_torchattacks` are textually unchanged and never read the three new
+parameters. Validated at three layers: CLI `type=` (identical error text to
+`attack_temperature`/`burst_len`), `validate_experiment_config(cfg)`
+(pipeline boundary), and directly inside `AttackAdapter.apply()` (adapter
+boundary, since it's called directly by diagnostic scripts bypassing
+`ExperimentConfig`). `cw_c`/`cw_steps`/`cw_lr` recorded on every row of both
+`summary.csv` and `batch_summary.csv`, unconditionally (same precedent as
+`attack_temperature`).
+
+**Verified this round**:
+- `--cw-c -5` rejected at CLI parse time: `cw_c must be a positive finite
+  number, got -5.0`.
+- FGSM run with `--cw-c 999 --cw-steps 999 --cw-lr 999` vs. the same FGSM run
+  with default CW params: `summary.csv` diffs **only** in the `cw_c`/
+  `cw_steps`/`cw_lr` columns themselves — every other column (`pred_clean`,
+  `pred_attacked`, `pred_defended`, `iq_linf_clean_attacked`, etc.) is
+  byte-identical. Confirms FGSM (and by the same code path, PGD) is
+  completely unaffected by these CW-only parameters.
+
+### 12.2 CW correctness + reproducibility test (3 param sets × 2 independent processes)
+
+Fixed: `--seed 42 --snr 18 --mod QPSK --threshold-factor 1.5 --window-size
+128 --sensing-window-size 128 --topk 10 --attack-temperature 100`, real
+AWN + real attack + real Top-K throughout.
+
+| c / steps / lr | pred_clean | pred_attacked | changed | original IQ Linf (max) | NaN/Inf | attack_backend | eval after attack |
+|---|---|---|---|---|---|---|---|
+| 1.0 / 20 / 0.01 (default) | `[1,1,1,1,1]` | `[1,1,1,1,1]` | 0/5 | 0.0 (bit-exact) | none | real torchattacks | yes |
+| 10.0 / 100 / 0.1 | `[1,1,1,1,1]` | `[0,2,0,0,1]` | 4/5 | 2.48 | none | real torchattacks | yes |
+| 100.0 / 200 / 0.1 | `[1,1,1,1,1]` | `[0,0,1,0,1]` | 3/5 | 2.03 | none | real torchattacks | yes |
+
+All three sets: `attack_status="ok"`, `attack_backend` contains
+`torchattacks` (confirmed real, no fallback), no NaN/Inf,
+`attack_training_before=True`/`attack_training_after=False` (expected fresh-
+wrapper pattern, eval mode correctly restored — same mechanism verified in
+section 10.2), and **the real `awn.model` submodule's own `.training` flag
+was independently checked `False` after each attack call** (not just the
+wrapper's flag).
+
+**Reproducibility** (two independent `python` processes per param set):
+all of synthetic-IQ SHA256, `x_clean` SHA256, `x_attacked` SHA256,
+`pred_clean`, `pred_attacked`, `changed_by_attack`, `logits_clean`/
+`logits_attacked` SHA256, and the on-disk `summary.csv` (byte-identical,
+file SHA256 match) were identical across both processes, for **all three**
+param sets.
+
+**Correctness conclusion** (per this round's explicit pass criteria —
+prediction change is NOT required):
+- ✅ real CW backend correctly invoked in all 3 sets (never fell back)
+- ✅ `cw_c`/`cw_steps`/`cw_lr` correctly reached the constructed
+  `torchattacks.CW` object (verified via `atk.c`/`atk.steps`/`atk.lr`
+  attribute inspection in section 10.2's diagnostic script, reused here)
+- ✅ results reproducible across independent processes, all 3 sets
+- ✅ no fallback in any of the 6 runs
+- ✅ no NaN/Inf in any of the 6 runs
+- ✅ model correctly returns to eval mode after every attack call
+- ✅ **different CW parameters produced different `x_attacked`** — set1
+  (defaults) produced a bit-exact no-op (IQ Linf `0.0`), set2/set3 produced
+  materially different perturbations (IQ Linf 2.48 / 2.03) and different
+  `pred_attacked` patterns (4/5 vs 3/5 changed) — confirms CW's parameters
+  are live, not inert, exactly as this round's pass criteria required.
+
+### 12.3 Top-K boundary validation (algorithm unmodified — behavior observation only)
+
+Tested directly against `dummy_topk_defense` and `TopKAdapter` (real backend
+auto-selected, `torch`/`torchattacks` available), plus what `--topk`'s
+current `type=int` CLI layer accepts, at `T=128`:
+
+| topk | dummy result | real (`TopKAdapter`) result | CLI (`type=int`) |
+|---|---|---|---|
+| `0` | bypass (`k=T`, full FFT round-trip, ~2.4e-7 noise) | **bypass, bit-exact** (`x` returned literally, real backend's own `if topk<=0: return x`) | accepted |
+| `1` | denoise, `k=1` | denoise, `k=1`, real/dummy agree | accepted |
+| `10` | denoise, `k=10` | denoise, `k=10` | accepted |
+| `128` (=T) | `k=128` (all bins) | `k=128` (all bins) | accepted |
+| `129` (>T) | clamped to `k=128` | clamped to `k=128` | accepted |
+| `1000000` (≫T) | clamped to `k=128` | clamped to `k=128` | accepted |
+| `-1` | bypass (`k=T`) | **bypass, bit-exact** | accepted |
+| `-5` | bypass (`k=T`) | **bypass, bit-exact** | accepted |
+| `1.5` (non-integer) | `int(1.5)=1`, denoise | same | **rejected by argparse** (`invalid int value: '1.5'`) — never reaches adapter code via CLI |
+| `nan` | **bypass** (`nan and nan>0` is `False`, no crash) | real raises `ValueError` internally → **caught → silent fallback to dummy** (`topk_status="fallback"`, no error surfaced) | **rejected by argparse** — unreachable via CLI |
+| `inf` | **raises `OverflowError`** (`int(inf)`) | real raises `OverflowError` → caught → falls back to dummy → **dummy ALSO raises the same `OverflowError`, uncaught, escapes `TopKAdapter.apply()` entirely** | **rejected by argparse** — unreachable via CLI |
+| `-inf` | bypass (`k=T`) | bypass, bit-exact | **rejected by argparse** — unreachable via CLI |
+
+**Findings, no algorithm changes made**:
+1. **`topk<=0` means "keep everything" (bypass/no-op), NOT "keep 0 bins."**
+   Confirmed for both backends; the real backend does this as a literal
+   early-return (`x` unchanged bit-for-bit), the dummy backend achieves the
+   same numerical result via a full-bin FFT/IFFT round-trip (introducing
+   ~2.4e-7 float32 noise, not bit-exact).
+2. **`topk > T` is silently clamped to `T`** (all bins kept) in both
+   backends — same numerical result as `topk<=0`, just reached via a
+   different code path (`min(int(topk), T)` vs. an early return).
+3. **Real and dummy backends behave consistently for every value except
+   `nan`** — real crashes internally on `nan` (uncaught `int(nan)`
+   `ValueError` inside `fft_topk_denoise` itself), which `TopKAdapter`
+   catches and silently falls back to dummy (which does NOT crash on `nan`,
+   since `nan and nan > 0` short-circuits to `False` before ever reaching
+   `int(nan)`). Net effect: a `nan` topk request quietly downgrades to
+   dummy — no exception reaches the caller, but the "real backend" request
+   was silently not honored.
+4. **`topk=inf` is the only value that crashes uncaught** — confirmed still
+   reproducible exactly as documented in section 8 (unchanged this round).
+   Both the real backend's fallback-triggering exception AND the dummy
+   fallback's own attempt raise the identical `OverflowError`, so the
+   second one is never caught by anything and propagates out of
+   `TopKAdapter.apply()`. Reproduced directly this round via
+   `ExperimentConfig(topk=float('inf'), ...)` + `run_dry_run_experiment`
+   (full pipeline, not just the adapter in isolation) — the `OverflowError`
+   propagates uncaught out of the entire pipeline call.
+5. **`nan`/`inf`/non-integer topk are all unreachable via the actual CLI** —
+   `--topk`'s current `type=int` rejects them at `argparse` parse time,
+   before any adapter code runs. The crash in (4) and the silent fallback in
+   (3) are only reachable via direct Python API usage (constructing
+   `ExperimentConfig`/calling `TopKAdapter.apply()` directly), not via
+   `run_full_experiment.py`/`run_batch.py`'s actual command line.
+6. No algorithm-level changes were made to reconcile the `nan`/`inf`
+   divergence between backends or to fix the `inf` double-crash — this
+   section is observation only, per this round's explicit instruction.
+
+### 12.4 Spectrum-sensing boundary validation (dummy backend, `attack=none`, `--seed 42`, `SNR=18`/`QPSK`)
+
+25 combinations across 5 parameter groups, each via a single dry-run call
+through the real `ExperimentConfig`/`run_dry_run_experiment` entrypoint (so
+CLI-equivalent validation applies); representative subset re-run in a fresh
+process to spot-check reproducibility (all identical).
+
+**A. `merge_gap` = 0, 1, 5, 1000000, -1** — all 5 succeeded identically
+(`n_segments=5`, region `(3734,4459)`) because this test's synthetic IQ only
+ever produces a single raw region at `threshold_factor=1.5`, so
+`merge_close_regions` has nothing to merge regardless of `merge_gap`'s
+value — **this test did not actually exercise the merge logic itself**, only
+confirmed no crash/no validation exists at any of these values (matches
+`docs/parameter_validation.csv`'s existing `merge_gap` row: unvalidated,
+`<=0` is a documented no-op, and this round found no crash at a very large
+gap either). No error message for negative or huge values (none expected,
+none occurred).
+
+**B. `min_region_len` = 0, 1, 64, 128, 1000000, -1**:
+
+| value | result |
+|---|---|
+| 0, 1, 64, 128 | OK, `n_segments=5`, region `(3734,4459)` len 725 (all below the 725-sample region, no filtering triggered) |
+| 1000000 | clear `RuntimeError`: "Occupied region(s) found but all shorter than --min-region-len=1000000 samples: [(3734, 4459, 725)]..." |
+| -1 | clear `ValueError`: "min_region_len must be a non-negative integer, got -1" (existing `require_nonneg_int` validation, re-confirmed) |
+
+**C. `burst_len` = 1, 128, 600, 8192, 9000**:
+
+| value | result |
+|---|---|
+| 1 | `RuntimeError`: "No occupied region detected at all..." — burst too brief for the 128-sample smoothing window to register above threshold |
+| 128 | OK, `n_segments=1`, region `(3970,4223)` len 253 (smoothing spreads energy wider than the burst itself) |
+| 600 | OK, `n_segments=5` (baseline) |
+| 8192 (= n_samples) | `RuntimeError`: "No occupied region detected at all..." — burst fills the entire stream, so nothing is statistically distinguishable from the median-based "noise floor" |
+| 9000 (> n_samples) | clear `ValueError`: "burst_len (9000) must not exceed n_samples (8192)" (existing check, re-confirmed) |
+
+**D. `threshold_factor` = 1.5 (normal), 0.0001 (near-zero), 1000000 (huge)**:
+
+| value | result |
+|---|---|
+| 1.5 | OK, `n_segments=5` (baseline) |
+| 0.0001 | OK but degenerate — threshold far below noise floor, **entire stream** (`(0,8192)`) marked occupied, `n_segments=64` |
+| 1000000 | `RuntimeError`: "No occupied region detected at all..." — threshold far above any real signal |
+
+**E. `sensing_window_size` = 1, 16, 32, 64, 128, 256, 9000 (> stream length 8192)**:
+
+| value | n_segments | region |
+|---|---|---|
+| 1 | 4 | `(3796,4396)` len 600 |
+| 16 | 4 | `(3789,4404)` len 615 |
+| 32 | 4 | `(3781,4412)` len 631 |
+| 64 | 5 | `(3765,4428)` len 663 |
+| 128 | 5 | `(3734,4459)` len 725 |
+| 256 | 6 | `(3671,4522)` len 851 |
+| 9000 | clear `ValueError`: "IQ stream (8192 samples) shorter than energy window (9000)" (existing check, re-confirmed) |
+
+**Summary across all 25 combinations**: every case either (a) succeeded with
+a well-defined `n_segments`/region result, or (b) failed with a specific,
+descriptive exception already present in the code (`require_nonneg_int`/
+`require_positive_int` validators, or pre-existing `RuntimeError`/
+`ValueError` checks in `energy_detection.py`/`iq_source.py`) — **no silent
+no-ops, no unclear tracebacks found**. All spot-checked re-runs (a fresh
+process each) were identical. `x_clean.shape[1:] == (2, 128)` held for every
+successful case (segment length unaffected by any of these 5 parameters, as
+expected — only `--window-size` controls it).
+
+### 12.5 Cross-reference to this round's required status labels
+
+- **seed propagation**: PASS (section 11.1/11.2, re-confirmed section 12.2)
+- **PGD reproducibility**: PASS (section 11.2, fixed and verified)
+- **fair Top-K comparison**: PASS (section 11.3)
+- **Top-K effectiveness**: NOT YET ESTABLISHED (sections 10.3/11.3, unchanged)
+- **CW CLI**: PASS — implemented and verified this round (section 12.1)
+- **CW reproducibility**: PASS — 3 param sets × 2 independent processes, all bit-identical (section 12.2)
+- **Top-K boundary**: documented, no algorithm changes (section 12.3) — `topk=inf` double-crash and `topk=nan` silent-fallback both confirmed still present, both unreachable via the actual CLI
+- **Spectrum-sensing boundary**: documented, no algorithm changes (section 12.4) — no silent no-ops found across 25 combinations
+- **Modulation waveform implementation**: **NOT IMPLEMENTED** (unchanged — see section 5; `--mod` remains a cosmetic frequency-offset selector, not a real waveform synthesizer)

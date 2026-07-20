@@ -138,6 +138,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         x_adv, attack_meta = AttackAdapter(awn_model=real_model, device=cfg.device).apply(
             x_clean, attack=cfg.attack, eps=cfg.attack_eps, temperature=cfg.attack_temperature,
             seed=cfg.seed, diagnostics=cfg.attack_diagnostics,
+            cw_c=cfg.cw_c, cw_steps=cfg.cw_steps, cw_lr=cfg.cw_lr,
         )
     else:
         x_adv = dummy_attack(x_clean, attack=cfg.attack, epsilon=cfg.attack_eps, seed=cfg.seed)
@@ -232,6 +233,12 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "attack_training_before": attack_meta.get("attack_training_before"),
             "attack_training_after": attack_meta.get("attack_training_after"),
             "attack_temperature": cfg.attack_temperature,
+            # CW-only knobs (src/adapters/attack_adapter.py); recorded on
+            # every row regardless of cfg.attack, same precedent as
+            # attack_temperature above -- inert for none/fgsm/pgd.
+            "cw_c": cfg.cw_c,
+            "cw_steps": cfg.cw_steps,
+            "cw_lr": cfg.cw_lr,
             "iq_linf_normalized_clean_attacked": (
                 float(attack_iq_linf_normalized[i]) if attack_iq_linf_normalized is not None else None
             ),

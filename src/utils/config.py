@@ -45,6 +45,14 @@ class ExperimentConfig:
     # hardcoded SEED=0 in pipeline.py, so omitting --seed reproduces prior
     # behavior exactly.
     seed: int = 0
+    # CW-only strength knobs (src/adapters/attack_adapter.py:_build_torchattacks).
+    # fgsm/pgd never read these. attack_eps is NOT applicable to cw -- these
+    # three parameters are deliberately separate, never derived from
+    # attack_eps. Defaults match the previously hardcoded CW values, so
+    # omitting --cw-c/--cw-steps/--cw-lr reproduces prior CW behavior exactly.
+    cw_c: float = 1.0
+    cw_steps: int = 20
+    cw_lr: float = 0.01
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +109,9 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
     require_finite_float("snr_db", cfg.snr)
     require_nonneg_finite_float("attack_eps", cfg.attack_eps)
     require_positive_finite_float("attack_temperature", cfg.attack_temperature)
+    require_positive_finite_float("cw_c", cfg.cw_c)
+    require_positive_int("cw_steps", cfg.cw_steps)
+    require_positive_finite_float("cw_lr", cfg.cw_lr)
 
 
 def resolve_sensing_window_size(window_size: int, sensing_window_size: Optional[int]) -> int:
@@ -235,6 +246,14 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
                         help="Global reproducibility seed: seeds random/numpy/torch(+cuda if available) once "
                              "at the start of the run, and is threaded through to synthetic-IQ generation and "
                              "every dummy/real attack call. Default 0 reproduces prior (hardcoded) behavior.")
+    parser.add_argument("--cw-c", type=arg_positive_finite_float("cw_c"), default=1.0,
+                        help="CW-ONLY. torchattacks.CW's c (misclassification-loss weight). Ignored entirely "
+                             "by fgsm/pgd. NOT the same knob as --attack-eps, which CW does not use at all.")
+    parser.add_argument("--cw-steps", type=arg_positive_int("cw_steps"), default=20,
+                        help="CW-ONLY. torchattacks.CW's optimization step count. Ignored entirely by fgsm/pgd.")
+    parser.add_argument("--cw-lr", type=arg_positive_finite_float("cw_lr"), default=0.01,
+                        help="CW-ONLY. torchattacks.CW's Adam learning rate. Ignored entirely by fgsm/pgd. "
+                             "NOT the same knob as --attack-eps, which CW does not use at all.")
     return parser
 
 
@@ -263,4 +282,7 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         attack_temperature=args.attack_temperature,
         attack_diagnostics=args.attack_diagnostics,
         seed=args.seed,
+        cw_c=args.cw_c,
+        cw_steps=args.cw_steps,
+        cw_lr=args.cw_lr,
     )

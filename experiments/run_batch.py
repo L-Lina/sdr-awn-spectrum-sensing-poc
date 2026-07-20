@@ -84,6 +84,17 @@ def build_batch_arg_parser() -> argparse.ArgumentParser:
                              "start of every combo's run_dry_run_experiment call, and is threaded through to "
                              "synthetic-IQ generation and every dummy/real attack call. Applied uniformly to "
                              "every combo in this batch. Default 0 reproduces prior (hardcoded) behavior.")
+    parser.add_argument("--cw-c", type=arg_positive_finite_float("cw_c"), default=1.0,
+                        help="CW-ONLY. torchattacks.CW's c (misclassification-loss weight). Ignored entirely "
+                             "by fgsm/pgd. NOT the same knob as --attack-eps, which CW does not use at all. "
+                             "Applied uniformly to every combo in this batch.")
+    parser.add_argument("--cw-steps", type=arg_positive_int("cw_steps"), default=20,
+                        help="CW-ONLY. torchattacks.CW's optimization step count. Ignored entirely by fgsm/pgd. "
+                             "Applied uniformly to every combo in this batch.")
+    parser.add_argument("--cw-lr", type=arg_positive_finite_float("cw_lr"), default=0.01,
+                        help="CW-ONLY. torchattacks.CW's Adam learning rate. Ignored entirely by fgsm/pgd. "
+                             "NOT the same knob as --attack-eps, which CW does not use at all. Applied "
+                             "uniformly to every combo in this batch.")
     return parser
 
 
@@ -135,6 +146,9 @@ def main() -> None:
             attack_temperature=args.attack_temperature,
             attack_diagnostics=args.attack_diagnostics,
             seed=args.seed,
+            cw_c=args.cw_c,
+            cw_steps=args.cw_steps,
+            cw_lr=args.cw_lr,
         )
 
         try:
@@ -149,6 +163,9 @@ def main() -> None:
             "attack": attack,
             "topk": topk,
             "attack_temperature": args.attack_temperature,
+            "cw_c": args.cw_c,
+            "cw_steps": args.cw_steps,
+            "cw_lr": args.cw_lr,
             "seed": result["seed"],
             "sensing_window_size": result["sensing_window_size"],
             "segment_length": result["segment_length"],

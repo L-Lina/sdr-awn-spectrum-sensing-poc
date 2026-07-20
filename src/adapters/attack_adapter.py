@@ -57,7 +57,11 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
-from src.utils.config import require_nonneg_finite_float, require_positive_finite_float
+from src.utils.config import (
+    require_nonneg_finite_float,
+    require_positive_finite_float,
+    require_positive_int,
+)
 
 _ADVERSARIAL_RF_ROOT = Path(__file__).resolve().parents[2] / "external" / "adversarial-rf"
 _REAL_ATTACK_SOURCE = "external/adversarial-rf/util/adv_attack.py:Model01Wrapper + torchattacks"
@@ -137,15 +141,23 @@ def dummy_attack(x: np.ndarray, attack: str, epsilon: float = 0.02, seed: Option
     return x_adv
 
 
-def _build_torchattacks(attack_name: str, wrapped_model, eps: float):
+def _build_torchattacks(
+    attack_name: str, wrapped_model, eps: float,
+    cw_c: float = 1.0, cw_steps: int = 20, cw_lr: float = 0.01,
+):
+    """cw_c/cw_steps/cw_lr are CW-only knobs -- the fgsm/pgd branches below
+    never read them, and eps (attack-eps) is likewise never read by the cw
+    branch: CW has no eps concept (confirmed empirically, no `eps` attribute
+    exists on a constructed torchattacks.CW object -- see
+    docs/parameter_validation.md section 10.2/11.4). Defaults match the
+    previously hardcoded values, so an omitted --cw-c/--cw-steps/--cw-lr
+    reproduces prior CW behavior exactly."""
     if attack_name == "fgsm":
         return _torchattacks.FGSM(wrapped_model, eps=eps)
     if attack_name == "pgd":
         return _torchattacks.PGD(wrapped_model, eps=eps, alpha=eps / 4, steps=10)
     if attack_name == "cw":
-        # Deliberately modest steps -- this phase only builds the interface,
-        # not a full-scale attack run (see docs/integration_plan.md).
-        return _torchattacks.CW(wrapped_model, c=1.0, steps=20, lr=0.01)
+        return _torchattacks.CW(wrapped_model, c=cw_c, steps=cw_steps, lr=cw_lr)
     raise ValueError(f"No real-attack builder for '{attack_name}'")
 
 
@@ -201,6 +213,9 @@ class AttackAdapter:
         temperature: float = 1.0,
         seed: Optional[int] = 0,
         diagnostics: bool = False,
+        cw_c: float = 1.0,
+        cw_steps: int = 20,
+        cw_lr: float = 0.01,
     ) -> Tuple[np.ndarray, Dict[str, str]]:
         """x: [N, 2, T] float32. Returns (x_adv, meta) with x_adv of the same shape.
 
@@ -212,6 +227,15 @@ class AttackAdapter:
         diagnostics: if True, run one extra autograd.grad pass (same attack
         model, same clean-prediction label) purely to report gradient
         nonzero-count/maxabs in the returned meta; never affects x_adv.
+
+        cw_c/cw_steps/cw_lr: CW-only strength knobs, passed to
+        _build_torchattacks only when attack=='cw'; fgsm/pgd ignore them
+        entirely. eps (attack-eps) is NOT applicable to cw -- it is never
+        read by the cw branch of _build_torchattacks, and cw_c/cw_steps/
+        cw_lr are never silently mapped from eps. Validated unconditionally
+        below (regardless of the requested attack) so a boundary violation
+        is caught at the same call site as attack_eps/attack_temperature,
+        not only when attack=='cw'.
         """
         # NaN/Inf both fail a plain "<= 0" check (any comparison with NaN is
         # False, and Inf > 0 is True), so a bare "if temperature <= 0" lets
@@ -219,6 +243,9 @@ class AttackAdapter:
         # math.isfinite() first, closing that gap.
         require_positive_finite_float("attack_temperature", temperature)
         require_nonneg_finite_float("attack_eps", eps)
+        require_positive_finite_float("cw_c", cw_c)
+        require_positive_int("cw_steps", cw_steps)
+        require_positive_finite_float("cw_lr", cw_lr)
         if x.ndim != 3 or x.shape[1] != 2:
             raise ValueError(f"AttackAdapter expects input [N, 2, T], got {x.shape}")
         attack_name = _validate_attack_name(attack)
@@ -248,6 +275,9 @@ class AttackAdapter:
                 "attack_gradient_nonzero_count": None,
                 "attack_gradient_total_count": None,
                 "attack_gradient_maxabs": None,
+                "cw_c": cw_c,
+                "cw_steps": cw_steps,
+                "cw_lr": cw_lr,
             }
 
         normalized_min = None
@@ -291,7 +321,10 @@ class AttackAdapter:
                 # (and therefore clean/attacked/defended AWN inference
                 # elsewhere in the pipeline) is never touched by this.
                 attack_model = TemperatureLogitsWrapper(self.wrapped_model, temperature)
-                atk = _build_torchattacks(attack_name, attack_model, eps)
+                atk = _build_torchattacks(
+                    attack_name, attack_model, eps,
+                    cw_c=cw_c, cw_steps=cw_steps, cw_lr=cw_lr,
+                )
                 x_ta_adv = atk(x_ta, y_pred)
                 iq_linf_normalized = (
                     (x_ta_adv - x_ta).abs().amax(dim=(1, 2, 3)).detach().cpu().numpy().astype(np.float32)
@@ -372,4 +405,7 @@ class AttackAdapter:
             "attack_gradient_nonzero_count": gradient_nonzero_count,
             "attack_gradient_total_count": gradient_total_count,
             "attack_gradient_maxabs": gradient_maxabs,
+            "cw_c": cw_c,
+            "cw_steps": cw_steps,
+            "cw_lr": cw_lr,
         }

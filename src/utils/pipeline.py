@@ -8,6 +8,7 @@ experiments/run_batch.py (parameter grid).
 
 from __future__ import annotations
 
+import random
 from pathlib import Path
 from typing import Dict
 
@@ -34,7 +35,33 @@ from src.utils.config import (
 from src.utils.csv_writer import write_summary_csv
 from src.utils.plotting import plot_sensing_result
 
-SEED = 0
+try:
+    import torch as _torch  # type: ignore
+except Exception:  # noqa: BLE001 - torch not installed in dummy-only environments
+    _torch = None
+
+
+def _seed_everything(seed: int) -> None:
+    """
+    Seed every RNG this pipeline (or a real attack backend it calls into) can
+    draw from, once per run_dry_run_experiment call. random/numpy are seeded
+    defensively -- this repo's own dummy_* functions already use local
+    np.random.default_rng(seed) instances unaffected by the global numpy
+    seed, but a global seed still covers any third-party code that reads
+    global RNG state. torch.manual_seed is the one that actually matters for
+    reproducibility here: torchattacks.PGD's random_start draws from
+    torch.empty_like(...).uniform_(...), which reads torch's global default
+    generator -- traced via inspect.getsource(torchattacks.PGD.forward),
+    confirmed to be the only independent RNG source among FGSM/PGD/CW (FGSM
+    is a single deterministic step; CW's Adam init is a deterministic
+    function of the clean image, no randomness).
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    if _torch is not None:
+        _torch.manual_seed(seed)
+        if _torch.cuda.is_available():
+            _torch.cuda.manual_seed_all(seed)
 
 
 def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
@@ -48,6 +75,12 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     # entirely), e.g. experiments/run_batch.py's own ExperimentConfig(...)
     # construction, or anyone importing this module directly.
     validate_experiment_config(cfg)
+
+    # Seed every RNG source (random/numpy/torch/+cuda) at the start of every
+    # single experiment -- not just once per process -- so run_batch.py's
+    # multi-combo loop gives each combo the same reproducibility guarantee a
+    # standalone run_full_experiment.py call gets, regardless of combo order.
+    _seed_everything(cfg.seed)
 
     # sensing_window_size (energy_detect's smoothing window) and window_size
     # (segment_regions'/to_awn_input's seg_len == AWN input temporal length)
@@ -68,7 +101,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         burst_len=cfg.burst_len,
         snr_db=cfg.snr,
         mod=cfg.mod,
-        seed=SEED,
+        seed=cfg.seed,
     )
     iq = validate_iq(iq)
 
@@ -86,10 +119,10 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         awn_adapter = AWNModelAdapter(checkpoint_path=cfg.checkpoint, device=cfg.device)
 
         def run_awn(x):
-            return awn_adapter.infer(x, seed=SEED)
+            return awn_adapter.infer(x, seed=cfg.seed)
     else:
         def run_awn(x):
-            logits = dummy_awn_inference(x, seed=SEED)
+            logits = dummy_awn_inference(x, seed=cfg.seed)
             meta = {
                 "awn_backend": "dummy_awn_inference",
                 "awn_status": "ok",
@@ -104,10 +137,10 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         real_model = awn_adapter.model if awn_adapter is not None else None
         x_adv, attack_meta = AttackAdapter(awn_model=real_model, device=cfg.device).apply(
             x_clean, attack=cfg.attack, eps=cfg.attack_eps, temperature=cfg.attack_temperature,
-            seed=SEED, diagnostics=cfg.attack_diagnostics,
+            seed=cfg.seed, diagnostics=cfg.attack_diagnostics,
         )
     else:
-        x_adv = dummy_attack(x_clean, attack=cfg.attack, epsilon=cfg.attack_eps, seed=SEED)
+        x_adv = dummy_attack(x_clean, attack=cfg.attack, epsilon=cfg.attack_eps, seed=cfg.seed)
         attack_meta = {
             "attack_backend": "dummy_attack",
             "attack_status": "ok",
@@ -163,6 +196,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     for i in range(x_clean.shape[0]):
         rows.append({
             "segment_id": i,
+            "seed": cfg.seed,
             "snr_db": cfg.snr,
             "mod": cfg.mod,
             "attack": cfg.attack,
@@ -229,6 +263,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
 
     result = {
         "n_segments": x_clean.shape[0],
+        "seed": cfg.seed,
         "sensing_window_size": effective_sensing_window_size,
         "segment_length": cfg.window_size,
         "regions": regions,
@@ -248,6 +283,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     }
 
     print("\n--- Dry-run summary ---")
+    print(f"Seed:               {cfg.seed} (random/numpy/torch[+cuda] seeded at start of this run)")
     print(f"IQ stream length:   {len(iq)} samples")
     print(f"Sensing window:     {effective_sensing_window_size} (energy_detect smoothing window)")
     print(f"Segment length:     {cfg.window_size} (segment_regions/to_awn_input seg_len == AWN input length)")

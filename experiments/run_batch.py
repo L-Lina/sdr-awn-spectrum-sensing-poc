@@ -79,6 +79,11 @@ def build_batch_arg_parser() -> argparse.ArgumentParser:
                         help="Run an extra diagnostic-only autograd.grad pass per real attack call to report "
                              "gradient nonzero-count/maxabs in summary.csv. Adds runtime cost per segment; "
                              "leave off for large batches.")
+    parser.add_argument("--seed", type=int, default=0,
+                        help="Global reproducibility seed: seeds random/numpy/torch(+cuda if available) at the "
+                             "start of every combo's run_dry_run_experiment call, and is threaded through to "
+                             "synthetic-IQ generation and every dummy/real attack call. Applied uniformly to "
+                             "every combo in this batch. Default 0 reproduces prior (hardcoded) behavior.")
     return parser
 
 
@@ -129,6 +134,7 @@ def main() -> None:
             use_real_attack=args.use_real_attack,
             attack_temperature=args.attack_temperature,
             attack_diagnostics=args.attack_diagnostics,
+            seed=args.seed,
         )
 
         try:
@@ -143,6 +149,7 @@ def main() -> None:
             "attack": attack,
             "topk": topk,
             "attack_temperature": args.attack_temperature,
+            "seed": result["seed"],
             "sensing_window_size": result["sensing_window_size"],
             "segment_length": result["segment_length"],
             "n_segments": result["n_segments"],

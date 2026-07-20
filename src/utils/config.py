@@ -37,6 +37,14 @@ class ExperimentConfig:
     use_real_attack: bool = False
     attack_temperature: float = 1.0
     attack_diagnostics: bool = False
+    # Global reproducibility seed: seeds random/numpy/torch(+cuda) once at the
+    # top of run_dry_run_experiment (src/utils/pipeline.py) AND is threaded
+    # through to generate_synthetic_iq / dummy_awn_inference / dummy_attack /
+    # AttackAdapter.apply's own seed= parameters, so every source of
+    # randomness in one run uses the same value. Default 0 matches the prior
+    # hardcoded SEED=0 in pipeline.py, so omitting --seed reproduces prior
+    # behavior exactly.
+    seed: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +231,10 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
                         help="Run an extra diagnostic-only autograd.grad pass per real attack call to report "
                              "gradient nonzero-count/maxabs in summary.csv. Adds runtime cost per segment; "
                              "leave off for large batches.")
+    parser.add_argument("--seed", type=int, default=0,
+                        help="Global reproducibility seed: seeds random/numpy/torch(+cuda if available) once "
+                             "at the start of the run, and is threaded through to synthetic-IQ generation and "
+                             "every dummy/real attack call. Default 0 reproduces prior (hardcoded) behavior.")
     return parser
 
 
@@ -250,4 +262,5 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         use_real_attack=args.use_real_attack,
         attack_temperature=args.attack_temperature,
         attack_diagnostics=args.attack_diagnostics,
+        seed=args.seed,
     )

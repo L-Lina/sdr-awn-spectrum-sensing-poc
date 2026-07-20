@@ -788,3 +788,183 @@ values invented) plus the repo default, same synthetic IQ/SNR/mod/seed,
 6. `merge-gap`, `topk<=0`/`topk=Inf` boundary behavior, `--checkpoint`
    existence validation, and `--device cuda` remain exactly as documented in
    section 7 — untouched by this round.
+
+---
+
+## 11. Reproducibility fix + fair Top-K comparison + CW CLI design (round 2)
+
+Follow-up round to section 10's PGD non-determinism finding. Code changes
+this round: `src/utils/config.py`, `src/utils/pipeline.py`,
+`experiments/run_batch.py` (adds a `--seed` CLI flag / `ExperimentConfig.
+seed` field and global RNG seeding; **no changes to
+`external/AWN`/`external/adversarial-rf`**). Section 10's smoke-test /
+eps-sweep / K-sweep results (all recorded with the *old*, unseeded code) are
+left as-is above, not retroactively edited — this section documents what
+changed and re-verifies against the new code.
+
+### 11.1 Seed data flow (before / after)
+
+**Before**: `SEED = 0` was a module-level constant hardcoded in
+`src/utils/pipeline.py`, threaded into `generate_synthetic_iq(..., seed=
+SEED)`, `dummy_awn_inference(..., seed=SEED)`, `dummy_attack(..., seed=
+SEED)`, and `AttackAdapter.apply(..., seed=SEED, ...)`. Not configurable via
+CLI or `ExperimentConfig`. Critically, `AttackAdapter.apply()`'s own `seed`
+parameter was **only ever consumed by its `dummy_attack` fallback branch**
+(`src/adapters/attack_adapter.py`) — the real `torchattacks`-based branch
+never seeded anything, so `torch`'s global RNG (used by `torchattacks.PGD`'s
+`random_start=True`, confirmed via `inspect.getsource`) was left entirely
+unseeded.
+
+**After**: `ExperimentConfig.seed: int = 0` (`src/utils/config.py`, default
+matches the old hardcoded value so omitting `--seed` reproduces prior
+behavior exactly) is set via a new `--seed` CLI flag on both
+`build_arg_parser` (single-run) and `build_batch_arg_parser`
+(`experiments/run_batch.py`, applied uniformly to every combo in a batch, no
+per-combo `--seed-list`). `src/utils/pipeline.py:_seed_everything(seed)` — a
+new function, called once at the very top of every single
+`run_dry_run_experiment(cfg)` call (so a `run_batch.py` sweep reseeds
+identically before each combo, giving every combo the same guarantee a
+standalone run gets regardless of combo order) — does:
+```python
+random.seed(seed)
+np.random.seed(seed)
+if _torch is not None:
+    _torch.manual_seed(seed)
+    if _torch.cuda.is_available():
+        _torch.cuda.manual_seed_all(seed)
+```
+`torch` is imported optionally (same `try/except`-guarded pattern the
+adapters already use), so this is a no-op in a torch-less dummy-only
+environment. The old module-level `SEED` constant was removed; every
+`seed=SEED` call site now reads `seed=cfg.seed`. The seed is **not**
+hardcoded inside `attack_adapter.py` — `AttackAdapter.apply()`'s `seed`
+parameter is still just a pass-through argument (used only by its own
+`dummy_attack` fallback, as before); the actual global `torch.manual_seed`
+call lives exclusively in `pipeline.py`, called before the adapter is ever
+constructed.
+
+`seed` is now recorded in every `summary.csv` row (`src/utils/pipeline.py`)
+and every `batch_summary.csv` row (`experiments/run_batch.py`, read back
+from `result["seed"]`, same pattern as `sensing_window_size`/
+`segment_length`).
+
+**Independent RNG sources tracked**: `torchattacks.PGD.forward`'s
+`random_start` branch (`torch.empty_like(adv_images).uniform_(-self.eps,
+self.eps)`) is the only randomness among FGSM/PGD/CW — traced via
+`inspect.getsource`. FGSM is a single deterministic gradient-sign step; CW's
+optimization starts from a deterministic `inverse_tanh_space(images)` with
+no randomness. All draw from `torch`'s single global default generator, so
+one `torch.manual_seed()` call covers all three.
+
+### 11.2 PGD reproducibility test (after the fix)
+
+Fixed conditions: `--snr 18 --mod QPSK --threshold-factor 1.5 --window-size
+128 --sensing-window-size 128 --attack pgd --attack-eps 0.5
+--attack-temperature 100 --seed 42`, real AWN + real attack + real Top-K.
+Two fully independent `python` process invocations (fresh interpreter each
+time, no shared state).
+
+| Quantity | run 1 | run 2 | identical? |
+|---|---|---|---|
+| synthetic IQ SHA256 | `524161f2...` | `524161f2...` | yes |
+| sensing mask SHA256 | `a6c38eb7...` | `a6c38eb7...` | yes |
+| x_clean SHA256 | `96636f98...` | `96636f98...` | yes |
+| x_attacked SHA256 | `7c69933c...` | `7c69933c...` | yes |
+| pred_clean | `[1,1,1,1,1]` | `[1,1,1,1,1]` | yes |
+| pred_attacked | `[2,1,0,1,1]` | `[2,1,0,1,1]` | yes |
+| logits_clean SHA256 | `a26c8861...` | `a26c8861...` | yes |
+| logits_attacked SHA256 | `4f53807f...` | `4f53807f...` | yes |
+| `summary.csv` | `a7cc8e5f...` (file SHA256) | `a7cc8e5f...` | yes (byte-identical) |
+
+All nine checks are bit-for-bit identical across the two independent
+processes — the fix closes the gap found in section 10. (For contrast,
+section 10.3's *old*-code observation — `pred_attacked` varying across
+different `--topk` values despite identical `eps`/`temperature`/input,
+traced to unseeded `random_start=True` — remains valid evidence of the
+**pre-fix** failure mode; not re-run destructively against the old code to
+"prove" it again.)
+
+### 11.3 Fair Top-K sweep (single shared attacked IQ per attack, real backend)
+
+Diagnostic script only (`fair_topk_sweep.py`, scratchpad — **not** a formal
+experiment entrypoint; `run_full_experiment.py`/`run_batch.py` still
+regenerate the attack from scratch per combo, which section 10.3 showed is
+fine for FGSM but not appropriate for a same-input Top-K comparison under
+PGD). For each attack, the clean IQ and the attacked IQ were each computed
+**exactly once** (`--seed 42`, same fixed conditions as 11.2, `topk=10`
+attack-independent params) and the identical `x_adv` array was then run
+through the real `TopKAdapter` at K=10/20/30/40 — so any difference in
+`pred_defended` across K is attributable to K alone, not to attack
+re-randomization.
+
+| attack | pred_attacked (fixed once) | K=10 recovered | K=20 recovered | K=30 recovered | K=40 recovered |
+|---|---|---|---|---|---|
+| none | `[1,1,1,1,1]` (0 attacked) | n/a | n/a | n/a | n/a |
+| fgsm | `[1,8,0,8,8]` (4 attacked) | **1/4** (seg1) | 0/4 | 0/4 | 0/4 |
+| pgd | `[2,1,0,1,1]` (2 attacked) | **1/2** (seg0) | **1/2** (seg0) | 0/2 | 0/2 |
+
+`topk_backend` confirmed `fft_topk_denoise` (real) for all 12 (attack×K)
+combinations. **Conclusion (fair comparison, still real-backend
+evidence, still only 5 segments)**: recovery is clearly K-dependent (lower K
+recovered more in both fgsm and pgd here), but the effect is small, only
+partial (never full recovery), and based on a single 5-segment sample — this
+is a genuine, apples-to-apples signal that **lower K trends toward more
+recovery**, not proof of a reliable defensive effect; still **NOT
+ESTABLISHED** as a validated general claim, consistent with section 10.3's
+conclusion, now with the attack-randomness confound removed.
+
+### 11.4 CW CLI design proposal (design only — not implemented this round)
+
+**Where `c`/`steps`/`lr` are currently hardcoded**: `src/adapters/
+attack_adapter.py:_build_torchattacks`, the `cw` branch:
+```python
+if attack_name == "cw":
+    return _torchattacks.CW(wrapped_model, c=1.0, steps=20, lr=0.01)
+```
+No CLI flag, no `ExperimentConfig` field, no way to override without editing
+this line directly.
+
+**Proposed minimal design** (not implemented — touches `AttackAdapter.
+apply()`'s signature, which `fgsm`/`pgd` also call through, so it is not a
+"very small, isolated" change per this round's instructions):
+
+- Three new CLI flags, mirroring the existing `--attack-temperature`
+  pattern (single value, applied uniformly to every combo in a batch, no
+  `--cw-c-list` sweep flag): `--cw-c` (`arg_positive_finite_float`, default
+  `1.0`), `--cw-steps` (`arg_positive_int`, default `20`), `--cw-lr`
+  (`arg_positive_finite_float`, default `0.01`) — defaults exactly match the
+  current hardcoded values, so omitting all three reproduces current CW
+  behavior bit-for-bit.
+- Three new `ExperimentConfig` fields: `cw_c: float = 1.0`, `cw_steps: int =
+  20`, `cw_lr: float = 0.01`.
+- `_build_torchattacks(attack_name, wrapped_model, eps, cw_c=1.0,
+  cw_steps=20, cw_lr=0.01)` — extend the signature; the `fgsm`/`pgd`
+  branches ignore the three new parameters entirely, unchanged.
+  `AttackAdapter.apply()` passes `cfg`'s three values through only when
+  `attack_name == "cw"`.
+- **Deliberately kept separate from `--attack-eps`** — CW does not take an
+  `eps` argument at all (confirmed section 10.2, `hasattr(atk, "eps")` is
+  `False`); merging CW's strength knobs into `attack-eps` would silently
+  imply a shared semantic across attacks that does not exist. `cw_c`/
+  `cw_steps`/`cw_lr` are attack-specific parameters with their own names,
+  same principle as `attack-eps` already being FGSM/PGD-specific in
+  practice.
+- Validation: reuse the existing `require_positive_finite_float`/
+  `require_positive_int` validators (same functions already backing
+  `attack_temperature`/`burst_len`) at the CLI `type=` layer AND inside
+  `validate_experiment_config(cfg)`; optionally also a direct check inside
+  `AttackAdapter.apply()` itself (matching the existing `attack_eps`/
+  `attack_temperature` dual-layer pattern), since `AttackAdapter` is called
+  directly by scratch/diagnostic scripts that bypass `ExperimentConfig`
+  entirely (as section 10.2's and this round's own diagnostic scripts do).
+- **CSV columns**: yes, add `cw_c`/`cw_steps`/`cw_lr` to both `summary.csv`
+  and `batch_summary.csv`, populated unconditionally on every row (same
+  precedent as `attack_temperature`, which is present even on `attack=none`
+  rows where it's inert) — keeps the CSV schema uniform across all combos
+  rather than conditionally including columns only for `cw` rows.
+- Out of scope for this proposal: a `--cw-c-list`-style per-combo sweep in
+  `run_batch.py` (mirrors why `--attack-temperature` also has no `-list`
+  variant); changing the *shipped defaults* away from `1.0/20/0.01` (a
+  separate decision, informed by but not resolved by section 10.2's
+  finding that `c=10,steps=100,lr=0.1` is more effective against this
+  checkpoint).

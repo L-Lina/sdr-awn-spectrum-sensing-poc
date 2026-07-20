@@ -28,6 +28,7 @@ from src.sensing.energy_detection import (
 from src.sensing.ground_truth_metrics import (
     compute_multi_burst_sensing_metrics,
     compute_sensing_ground_truth_metrics,
+    derive_batch_aggregate_sensing_fields,
 )
 from src.sensing.iq_source import generate_synthetic_iq, validate_iq
 from src.sensing.normalize import normalize_segments, to_awn_input
@@ -177,8 +178,35 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     mask = energy_detect(iq, window=effective_sensing_window_size, threshold_factor=cfg.threshold_factor)
     raw_regions = mask_to_regions(mask)
     merged_regions = merge_close_regions(raw_regions, merge_gap=cfg.merge_gap)
-    regions = filter_by_min_length(merged_regions, min_len=cfg.min_region_len)
 
+    # Two EXPECTED sensing-outcome failure modes exist below, and only
+    # these two: filter_by_min_length raises RuntimeError when no region
+    # survives (either none were ever detected, or all detected regions
+    # were shorter than --min-region-len), and segment_regions raises
+    # RuntimeError when every surviving region is individually shorter than
+    # --window-size (so zero full windows can be cut from any of them).
+    # Both are narrowly try/excepted around EXACTLY their own call site --
+    # nothing else in this function is caught here, so a genuine bug
+    # anywhere else (adapter shape mismatches, config errors, dataset
+    # loading errors) still raises normally, uncaught, exactly as before
+    # this round. See docs/parameter_validation.md section 16.1 for the
+    # full rationale and docs/parameter_validation.csv for the flag this
+    # behavior is recorded against.
+    sensing_failure_stage = None
+    sensing_failure_reason = None
+    try:
+        regions = filter_by_min_length(merged_regions, min_len=cfg.min_region_len)
+    except RuntimeError as exc:
+        sensing_failure_stage = "filter_by_min_length"
+        sensing_failure_reason = str(exc)
+        regions = []
+
+    # Ground-truth/multi-burst metrics are computed regardless of whether
+    # filter_by_min_length succeeded -- both compute_*_sensing_metrics
+    # functions handle an empty `regions` list correctly (every truth burst
+    # comes back "missed", not an error), so this is real, honest
+    # information about the sensing outcome even on a failure, not a
+    # fabricated success.
     ground_truth = None
     if radioml_meta is not None:
         ground_truth = compute_sensing_ground_truth_metrics(
@@ -199,14 +227,85 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             n_windows = (r_end - r_start) // cfg.window_size
             segment_region_ids.extend([region_idx] * n_windows)
 
-    segments = segment_regions(iq, regions, seg_len=cfg.window_size)
-    segments = normalize_segments(segments)
-    x_clean = to_awn_input(segments, seg_len=cfg.window_size)
+    x_clean = None
+    if sensing_failure_stage is None:
+        try:
+            segments = segment_regions(iq, regions, seg_len=cfg.window_size)
+            segments = normalize_segments(segments)
+            x_clean = to_awn_input(segments, seg_len=cfg.window_size)
+        except RuntimeError as exc:
+            sensing_failure_stage = "segment_regions"
+            sensing_failure_reason = str(exc)
+            segment_region_ids = None  # no segments exist to attribute to a region
 
-    if segment_region_ids is not None:
+    if segment_region_ids is not None and x_clean is not None:
         assert len(segment_region_ids) == x_clean.shape[0], (
             f"segment/region attribution count mismatch: {len(segment_region_ids)} vs {x_clean.shape[0]}"
         )
+
+    # Aggregate sensing fields, normalized across synthetic/single-burst/
+    # multi-burst sources -- computed even on a sensing failure (using
+    # whatever `regions` resulted, possibly []), since detection outcome
+    # is meaningful and known regardless of whether segmentation itself
+    # later succeeded.
+    sensing_agg = derive_batch_aggregate_sensing_fields(ground_truth, multi_burst_result, regions, cfg.n_samples)
+
+    if sensing_failure_stage is not None:
+        # SENSING FAILURE: an expected, structured outcome, NOT a program
+        # error -- return normally (do not raise) so a batch loop calling
+        # this function can record a row for this combo instead of
+        # aborting or silently dropping it. No fake segments are created:
+        # summary.csv (fundamentally one row per SEGMENT) is not written
+        # at all when there are zero segments. bursts_summary.csv/
+        # regions_summary.csv (which describe the SENSING outcome, not
+        # per-segment AMC results) ARE written whenever multi_burst_result
+        # was computable, since a region can legitimately be detected and
+        # then still fail to yield any full-length segment.
+        print(f"\n[sensing] FAILED at stage={sensing_failure_stage}: {sensing_failure_reason}")
+        bursts_summary_csv_path = None
+        regions_summary_csv_path = None
+        if multi_burst_result is not None:
+            bursts_summary_csv_path = output_dir / "bursts_summary.csv"
+            burst_rows = [
+                {k: (str(v) if isinstance(v, list) else v) for k, v in pb.items()}
+                for pb in multi_burst_result["per_burst"]
+            ]
+            write_summary_csv(bursts_summary_csv_path, burst_rows)
+
+            regions_summary_csv_path = output_dir / "regions_summary.csv"
+            region_rows = [
+                {k: (str(v) if isinstance(v, list) else v) for k, v in pr.items()}
+                for pr in multi_burst_result["per_region"]
+            ]
+            if region_rows:
+                write_summary_csv(regions_summary_csv_path, region_rows)
+            else:
+                regions_summary_csv_path = None  # write_summary_csv refuses an empty row list
+
+        return {
+            "run_status": "sensing_failed",
+            "sensing_success": False,
+            "failure_stage": sensing_failure_stage,
+            "failure_reason": sensing_failure_reason,
+            "clean_amc_available": False,
+            "attack_available": False,
+            "defense_available": False,
+            **sensing_agg,
+            "n_segments": 0,
+            "seed": cfg.seed,
+            "sensing_window_size": effective_sensing_window_size,
+            "segment_length": cfg.window_size,
+            "regions": regions,
+            "output_dir": str(output_dir),
+            "summary_csv_path": None,
+            "bursts_summary_csv_path": str(bursts_summary_csv_path) if bursts_summary_csv_path else None,
+            "regions_summary_csv_path": str(regions_summary_csv_path) if regions_summary_csv_path else None,
+            "plot_path": None,
+            "gen_meta": gen_meta,
+            "long_iq_sha256": long_iq_sha256,
+            "ground_truth": ground_truth,
+            "multi_burst_result": multi_burst_result,
+        }
 
     awn_adapter = None
     if cfg.use_real_awn:
@@ -436,6 +535,19 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     plot_created = plot_sensing_result(iq, regions, plot_path)
 
     result = {
+        "run_status": "ok",
+        "sensing_success": True,
+        "failure_stage": None,
+        "failure_reason": None,
+        # If we've reached this point, AWN/attack/Top-K all ran to
+        # completion without raising (a shape-mismatch would have raised
+        # already, above) -- "available" reflects the stage completed, real
+        # or dummy backend notwithstanding (backend type is separately
+        # recorded in awn_backend/attack_backend/topk_backend).
+        "clean_amc_available": True,
+        "attack_available": True,
+        "defense_available": True,
+        **sensing_agg,
         "n_segments": x_clean.shape[0],
         "seed": cfg.seed,
         "sensing_window_size": effective_sensing_window_size,

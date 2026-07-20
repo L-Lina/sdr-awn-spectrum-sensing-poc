@@ -16,6 +16,7 @@ from typing import List, Optional, Tuple
 __all__ = [
     "compute_sensing_ground_truth_metrics",
     "compute_multi_burst_sensing_metrics",
+    "derive_batch_aggregate_sensing_fields",
 ]
 
 
@@ -315,3 +316,71 @@ def compute_multi_burst_sensing_metrics(
     }
 
     return {"per_burst": per_burst, "per_region": per_region, "aggregate": aggregate}
+
+
+def derive_batch_aggregate_sensing_fields(
+    ground_truth: Optional[dict],
+    multi_burst_result: Optional[dict],
+    regions: List[Tuple[int, int]],
+    n_samples: int,
+) -> dict:
+    """
+    Normalizes single-burst (`ground_truth`, from
+    compute_sensing_ground_truth_metrics), multi-burst (`multi_burst_result`,
+    from compute_multi_burst_sensing_metrics), and no-ground-truth
+    (synthetic source, both None) cases into ONE common set of fields, for
+    src/utils/pipeline.py's batch-summary aggregate columns
+    (docs/parameter_validation.md section 16).
+
+    The single-burst case is NOT a separate/duplicated formula -- it is
+    computed by calling compute_multi_burst_sensing_metrics with a
+    single-entry true_bursts list (the exact same bipartite-matching code
+    path multi-burst mode uses), so there is exactly one implementation of
+    every Pd/Pfa/ratio formula in this module, not two that could drift
+    apart.
+
+    Called with whatever `regions` resulted even from a sensing failure
+    (e.g. an empty list when no region survived --min-region-len) --
+    compute_multi_burst_sensing_metrics handles an empty detected_regions
+    list correctly (every burst becomes "missed", not an error), so this
+    function never raises on a failure input; it turns it into 0s/Nones.
+    """
+    if multi_burst_result is not None:
+        agg = multi_burst_result["aggregate"]
+    elif ground_truth is not None:
+        true_bursts = [{
+            "burst_id": 0,
+            "true_start": ground_truth["true_start"],
+            "true_end": ground_truth["true_end"],
+        }]
+        agg = compute_multi_burst_sensing_metrics(true_bursts, regions, n_samples)["aggregate"]
+    else:
+        agg = None
+
+    if agg is None:
+        # Synthetic source: no ground truth exists at all, so Pd/Pfa/ratio
+        # are fundamentally undefined (not just unmeasured) -- None, not 0.
+        # num_detected_regions is still knowable regardless of ground truth.
+        return {
+            "num_truth_bursts": None,
+            "num_detected_regions": len(regions),
+            "detection_probability": None,
+            "false_alarm_region_rate": None,
+            "sample_level_false_positive_rate": None,
+            "sample_level_false_negative_rate": None,
+            "mean_captured_signal_ratio": None,
+            "mean_absolute_start_boundary_error": None,
+            "mean_absolute_end_boundary_error": None,
+        }
+
+    return {
+        "num_truth_bursts": agg["num_truth_bursts"],
+        "num_detected_regions": agg["num_detected_regions"],
+        "detection_probability": agg["detection_probability"],
+        "false_alarm_region_rate": agg["false_alarm_region_rate"],
+        "sample_level_false_positive_rate": agg["sample_level_false_positive_rate"],
+        "sample_level_false_negative_rate": agg["sample_level_false_negative_rate"],
+        "mean_captured_signal_ratio": agg["mean_captured_signal_ratio"],
+        "mean_absolute_start_boundary_error": agg["mean_abs_start_boundary_error"],
+        "mean_absolute_end_boundary_error": agg["mean_abs_end_boundary_error"],
+    }

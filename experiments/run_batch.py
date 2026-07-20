@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import argparse  # noqa: E402
 
+from src.utils.batch_aggregation import run_batch_combos  # noqa: E402
 from src.utils.config import (  # noqa: E402
     ExperimentConfig,
     _parse_comma_list,
@@ -30,8 +31,6 @@ from src.utils.config import (  # noqa: E402
     arg_positive_finite_float,
     arg_positive_int,
 )
-from src.utils.csv_writer import write_summary_csv  # noqa: E402
-from src.utils.pipeline import run_dry_run_experiment  # noqa: E402
 
 
 def _parse_list(raw: str, cast):
@@ -153,18 +152,21 @@ def main() -> None:
     )
 
     base_dir = Path(args.output_dir)
-    batch_rows = []
 
-    combos = list(itertools.product(snrs, mods, attacks, topks))
-    print(f"[batch] running {len(combos)} combination(s)")
+    combo_tuples = list(itertools.product(snrs, mods, attacks, topks))
+    print(f"[batch] running {len(combo_tuples)} combination(s)")
 
-    for snr, mod, attack, topk in combos:
-        run_dir = base_dir / f"snr{snr}_mod{mod}_attack{attack}_topk{topk}"
-        cfg = ExperimentConfig(
-            snr=snr,
-            mod=mod,
-            attack=attack,
-            topk=topk,
+    combos = [
+        {"snr_db": snr, "mod": mod, "attack": attack, "topk": topk}
+        for snr, mod, attack, topk in combo_tuples
+    ]
+
+    def build_cfg(combo: dict, run_dir: Path) -> ExperimentConfig:
+        return ExperimentConfig(
+            snr=combo["snr_db"],
+            mod=combo["mod"],
+            attack=combo["attack"],
+            topk=combo["topk"],
             threshold_factor=args.threshold_factor,
             window_size=args.window_size,
             sensing_window_size=args.sensing_window_size,
@@ -201,32 +203,7 @@ def main() -> None:
             burst_power_scale_list=_parse_comma_list(args.burst_power_scale_list, float, "burst_power_scale_list"),
         )
 
-        try:
-            result = run_dry_run_experiment(cfg)
-        except (ValueError, TypeError, RuntimeError) as exc:
-            print(f"[batch][ERROR] combo snr={snr} mod={mod} attack={attack} topk={topk}: {exc}", file=sys.stderr)
-            continue
-
-        batch_rows.append({
-            "snr_db": snr,
-            "mod": mod,
-            "attack": attack,
-            "topk": topk,
-            "attack_temperature": args.attack_temperature,
-            "cw_c": args.cw_c,
-            "cw_steps": args.cw_steps,
-            "cw_lr": args.cw_lr,
-            "seed": result["seed"],
-            "sensing_window_size": result["sensing_window_size"],
-            "segment_length": result["segment_length"],
-            "n_segments": result["n_segments"],
-            "output_dir": result["output_dir"],
-        })
-
-    if batch_rows:
-        write_summary_csv(base_dir / "batch_summary.csv", batch_rows)
-    else:
-        print("[batch] no successful runs -- batch_summary.csv not written")
+    run_batch_combos(base_dir, combos, build_cfg)
 
 
 if __name__ == "__main__":

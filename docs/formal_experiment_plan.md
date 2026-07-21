@@ -1838,3 +1838,205 @@ sample_index values were drawn.
 
 No files modified beyond this documentation update; no algorithm code,
 `external/AWN`, or `external/adversarial-rf` touched.
+
+---
+
+## 15. Phase 4 Top-K preprocessing-policy ablation (round 24)
+
+Diagnostic ablation only -- no formal defense algorithm changed, no
+policy set as any default, `external/AWN`/`external/adversarial-rf`
+untouched. New script: `experiments/run_phase4_topk_ablation.py`,
+architecturally extending the fair-reuse pattern one level further: the
+same attacked IQ is computed exactly once per attack-instance and reused
+across all 10 K values AND all 3 preprocessing policies (30 combinations
+per instance), never regenerated.
+
+### 15.1 Design
+
+**K values**: `10, 20, 30, 40, 50, 64, 80, 96, 112, 128` (10, extending
+well past the formal grid's `{10,20,30,40}`, per this round's explicit
+instruction). **Attacks**: `none, fgsm, pgd, cw`. **Modulations**: `QPSK,
+BPSK, QAM16, QAM64, WBFM, AM-SSB` (6, the required minimum set).
+**SNRs**: `-10, 0, 10, 18` (4, the required minimum set).
+**sample_index**: `0,1,2` (3). **eps**: `0.05` (single representative
+value). **CW**: `c=1.0, steps=20, lr=0.01` (formal defaults). **seed=42**.
+
+**Three preprocessing policies**, all calling the exact same unmodified
+`fft_topk_denoise`:
+
+- **A. `current_radioml_native`**: the existing formal path, completely
+  unmodified (`TopKAdapter.apply(x_adv, topk)` as-is).
+- **B. `normalized_topk_rescaled`**: records each sample's own power
+  scale (`power = mean(x_adv**2)`, the same mathematical convention as
+  `src/sensing/normalize.py:normalize_segments`, adapted to real
+  `[N,2,T]` tensors), temporarily normalizes to unit power, runs the
+  SAME `fft_topk_denoise`, then rescales the result back to `x_adv`'s
+  own original power level -- AWN never sees normalized-scale input.
+- **C. `legacy_awn_all_reference`**: reproduces `AWN_All.py`'s actual
+  historical usage (confirmed round 23, `AWN_All.py:335-339`) exactly:
+  `x_norm = (x_adv+0.02)/0.04`, then `fft_topk_denoise(x_norm, topk)`,
+  fed DIRECTLY to AWN with no rescale-back. Diagnostic only -- flagged
+  throughout as likely out-of-distribution for the pinned 2016.10a
+  checkpoint (`AWN_All.py` targets different checkpoint files entirely).
+
+`--dry-run`: **8640 final rows** (72 cells x 4 attack-instances x 10 K x
+3 policies), **288 attack-instances**, all `combo_id`s unique. A 24-combo
+smoke test (1 mod/1 SNR/1 idx, K={10,128}, all 4 attacks x 3 policies)
+passed cleanly and already revealed the two headline patterns (below) at
+small scale before the full run.
+
+### 15.2 Execution
+
+Launched via `nohup`, monitored at ~10-minute intervals (live
+error/fairness watch never fired). **Actual runtime: 220.5s (3.7
+minutes)** -- well under the 10-30 minute target. **8640/8640
+`run_status=ok`, 0 `sensing_failed`, 0 `error`.** 0 fairness violations
+across 288 attack-instances x 30 (K x policy) = 8640 rows exactly. 0
+NaN/Inf anywhere. 100% real backends. `eval_mode_restored`: `True` on
+6480 rows, blank on the 2160 `attack=none` rows (same structurally-
+expected reason as every prior round -- the real `none` branch never
+touches train/eval state). **Reproducibility**: 72 combos (AM-SSB/WBFM x
+SNR{-10,18} x eps/K{40,80,128} x {cw,fgsm} -- deliberately targeting the
+round's most striking findings) in a fresh independent process: 0
+mismatches.
+
+### 15.3 Control checks (Part 三)
+
+**Control 1 -- K=128 per policy** (n=288 each):
+
+| policy | mean Linf | mean L2 | pred agreement | defended_accuracy |
+|---|---|---|---|---|
+| A `current_radioml_native` | 0.000000 | 0.000000 | 1.0000 | 0.3194 |
+| B `normalized_topk_rescaled` | 0.000000 | 0.000000 | 1.0000 | 0.3194 |
+| C `legacy_awn_all_reference` | **0.870977** | **8.180620** | **0.0938** | **0.0972** |
+
+**A and B are bit-for-bit IDENTICAL at K=128 (confirmed to full float
+precision, not just visually close) -- true no-op, exactly as expected.
+C is emphatically NOT a no-op**: Linf=0.87 (vs A/B's 0.0), only 9.4%
+prediction agreement with the undefended prediction, and 9.7% accuracy
+(near/below chance for 11 classes) -- confirms round 23's prediction
+that C's fixed-offset normalization is severely out-of-distribution for
+this checkpoint, even when K=128 nominally "keeps everything" in the
+frequency domain (C never rescales back, so the model receives
+permanently wrong-scale input regardless of K).
+
+**Control 2 -- `attack=none`, per K per policy** (n=72 per K):
+
+| K | A/B after_acc | A/B changed_rate | **A/B clean_degradation** | C after_acc | C clean_degradation |
+|---|---|---|---|---|---|
+| 10 | 0.1667 | 0.7222 | 0.8140 | 0.0972 | 0.8837 |
+| 20 | 0.3611 | 0.5417 | 0.5116 | 0.1111 | 0.8605 |
+| 30 | 0.4028 | 0.4861 | 0.4419 | 0.1250 | 0.8372 |
+| 40 | 0.5000 | 0.2917 | 0.2558 | 0.1111 | 0.8605 |
+| 50 | 0.5139 | 0.2083 | 0.1860 | 0.0972 | 0.8605 |
+| 64 | 0.5833 | 0.0556 | 0.0233 | 0.0972 | 0.8605 |
+| **80** | **0.5972** | 0.0278 | **0.0000** | 0.0972 | 0.8605 |
+| 96 | 0.5833 | 0.0694 | 0.0233 | 0.0972 | 0.8605 |
+| 112 | 0.5833 | 0.0139 | 0.0233 | 0.0972 | 0.8605 |
+| 128 | 0.5972 | 0.0000 | 0.0000 | 0.0972 | 0.8605 |
+
+(clean accuracy before Top-K, this cell set: 0.5972, 43/72)
+
+**Major revision of round 22/23's finding**: clean degradation for
+policies A/B decreases essentially MONOTONICALLY as K increases,
+reaching **exactly 0.0000 by K=80**. The reduced tier and round 23's
+diagnosis only ever tested `K in {10,20,30,40}` -- entirely within the
+steep-damage region of this curve. Policy C stays catastrophically bad
+(84-88% clean degradation) at EVERY K, never recovering, consistent with
+its permanent out-of-distribution scale.
+
+### 15.4 Per-attack full breakdown, policy A (Part 六, all 10 K, n=72/K)
+
+| attack | K=10 | K=20 | K=30 | K=40 | K=50 | K=64 | **K=80** | K=96 | K=112 | K=128 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| fgsm net_gain | -0.028 | +0.014 | -0.028 | -0.014 | -0.042 | -0.014 | 0.000 | 0.000 | 0.000 | 0.000 |
+| pgd net_gain | **+0.097** | +0.083 | +0.028 | +0.014 | +0.028 | +0.014 | +0.014 | +0.014 | 0.000 | 0.000 |
+| cw net_gain | -0.083 | +0.042 | +0.083 | +0.125 | +0.097 | +0.028 | **+0.139** | +0.069 | +0.042 | 0.000 |
+
+**fgsm never shows a meaningful positive net gain at any K** -- the
+largest is +0.014 (essentially noise, net_transition +1 out of 72).
+**pgd peaks early, at K=10 (+0.097, net_transition +7/72), declining
+toward 0 as K grows.** **cw peaks LATE, at K=80 (+0.139, net_transition
++10/72: 18 recoveries vs. 8 degradations)** -- a genuinely large, non-
+trivial effect entirely outside the formal grid's tested range. Policy C
+(diagnostic) shows net_gain -0.056 to -0.167 at every attack and every K
+sampled (10/64/128) -- consistently worse than doing nothing, confirming
+the out-of-distribution scale is actively harmful, not neutral.
+
+**CW K=80's modulation/SNR breakdown (n=12/modulation, n=18/SNR)**
+reveals the aggregate +13.9pp is NOT uniform: AM-SSB +0.750 (0%->75%),
+QPSK +0.417, QAM64 +0.333, BPSK/QAM16 +0.000 (no effect), **WBFM -0.667
+(Top-K actively WORSE for WBFM at this exact K/attack combination)**. Per
+SNR: benefit is largest at low/mid SNR (-10dB: +0.167, 0dB: +0.278) and
+smaller at high SNR (10/18dB: +0.056 each). Mean IQ distortion at this
+cell: 0.00347 (small, consistent with K=80 retaining 62.5% of the
+spectrum).
+
+### 15.5 Answers (Part 四)
+
+1. **是否存在net_gain>0的K**: **是，明確存在.** cw shows net_gain>0 at 7
+   of 9 non-trivial K values (20 through 112), peaking +0.139 at K=80.
+   pgd shows net_gain>0 at 8 of 9 (10 through 96), peaking +0.097 at
+   K=10.
+2. **是否存在recovery_count>degradation_count的K**: **是**, same cells
+   as above (net_transition positive: cw K=20/30/40/50/64/80/96/112; pgd
+   K=10 through K=96).
+3. **K增大時clean degradation是否單調下降**: **基本上是**（一個微小的
+   K=112 反彈 0.0233,可能是單一樣本雜訊；整體趨勢明確單調：0.814 ->
+   0.000 by K=80）。
+4. **K=128是否近似no-op**: **對policy A/B是，精確確認**(Linf=L2=0,
+   agreement=1.0)；**對policy C不是**(Linf=0.87, agreement僅0.094)。
+5. **normalized_topk_rescaled是否優於current_radioml_native**: **否 --
+   逐位元完全相同**（K=128及所有其他抽查K皆確認），數學上被magnitude-
+   based top-k選擇對正數均勻縮放的不變性所保證。
+6. **normalized_topk_rescaled的改善是否來自頻域選擇,而不是AWN scale
+   改變**: **此問題的前提不成立** -- 因為policy B與A完全沒有差異
+   （不只是"改善很小"，是精確相等），這個exact-equality本身就是一個
+   乾淨的數學證明：均勻的per-sample正數縮放結構上不可能改變magnitude
+   排序,因此不可能改變Top-K選中的頻域bins。
+7. **不同attack是否需要不同K**: **是,非常明確.** cw最佳K約為80,pgd最佳
+   K約為10,fgsm在任何K都沒有真正有效的K。三者的最佳操作點彼此不同,
+   且方向相反（cw隨K上升,pgd隨K下降）。
+8. **是否有任何policy足以支持完整Phase4**: **有條件地是,但不是以現有
+   的正式K範圍.** Policy A（現行正式路徑，未改動）在K=80時對cw攻擊
+   確實顯示出實質、可重現的正向效果；但**現有正式Phase4設計的K範圍
+   （10/20/30/40）完全落在此效果尚未出現的區間**，如果照現有設計跑完整
+   15840組，只會重新確認reduced-tier已經確立的「K≤40下Top-K有害」結論
+   ，不會捕捉到K=80這個新發現的有利區間。
+9. **若所有policy都沒有正net gain,明確結論為Top-K不適用**: **此條件
+   不成立** -- policy A/B在多個K值下對cw和pgd皆顯示正向net gain，因此
+   不能下「Top-K在此pipeline完全不適用」的結論；正確結論是「Top-K在
+   K≤40的範圍內對這組formal參數確實有害，但K=80附近對CW攻擊顯示出
+   一個此前未被正式矩陣涵蓋、值得進一步驗證的潛在有效區間」。
+
+### 15.6 Outputs
+
+```
+results/formal_phase4_topk_ablation/ablation_summary.csv     (8640 rows, 41 columns)
+results/formal_phase4_topk_ablation/ablation_manifest.json
+results/formal_phase4_topk_ablation/stdout.log, stderr.log
+results/formal_phase4_topk_ablation/{mod}_snr{snr}_idx{idx}/  (72 per-sample subdirectories)
+```
+`ablation_failures.csv` was not written (0 failures). Not added to git,
+matching `.gitignore`'s existing `results/*` rule.
+`results/formal_phase4_defense_reduced/` (the round-22 reduced tier) was
+never touched or overwritten.
+
+### 15.7 Conclusion
+
+This ablation both CONFIRMS round 22/23's diagnosis (within `K<=40`,
+policy A is genuinely net-harmful, not a formula bug, and policy B
+provides no improvement) AND MATERIALLY REVISES its scope: the earlier
+"Top-K is confirmed net-harmful" conclusion was correct only for the
+narrow K range the formal grid and reduced tier ever tested. Extending
+to `K<=128` reveals CW-specific defense value peaking around K=80 (+13.9
+percentage points, non-uniform across modulations, largest for AM-SSB
+and actively negative for WBFM) that the existing formal Phase 4 design
+(K limited to {10,20,30,40}) structurally cannot see. **No formal
+default was changed; no algorithm was modified; the full 15840-row
+Phase 4 (at its current K range) is NOT recommended, consistent with
+this finding -- it would not capture the newly-discovered K=80 region.**
+Whether to redesign Phase 4's K range (e.g., adding 64/80/96) to properly
+investigate this CW-specific opportunity, and whether the WBFM-specific
+negative effect at the same K needs separate characterization, are left
+as explicit open decisions for the next round, not decided here.

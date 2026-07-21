@@ -565,3 +565,175 @@ correctly, with correct schema and strict fair Top-K reuse, before Phase
 1-6 are attempted -- is **satisfied**. No bug was found; nothing needed
 fixing. Phase 1-6 remain designed-but-not-run, per this round's explicit
 scope (only Phase 0 was authorized to execute).
+
+---
+
+## 9. Phase 1 execution: Spectrum Sensing baseline + direct/sensed AMC (round 18)
+
+Executed via `experiments/run_phase1_sensing_baseline.py`, which calls
+`src/utils/pipeline.py:run_dry_run_experiment()` directly (unlike Phase 0,
+Phase 1 has no cross-combo fairness constraint forcing a bypass) plus a
+`pred_direct` oracle-path addition (same method as Phase 0's
+`compute_direct_amc`, via a separately-constructed, once-built
+`AWNModelAdapter` reused across all 2200 combos for the oracle inference
+only). No sensing/AWN algorithm code was written or modified.
+`external/AWN`/`external/adversarial-rf` were not touched.
+
+Fixed params, copied verbatim from `docs/formal_experiment_matrix.csv`'s
+phase=1 row (not guessed): `iq_source=radioml, attack=none,
+use_real_awn=True, use_real_attack=False, use_real_topk=False,
+checkpoint=2016.10a (pinned), device=cpu, alignment_policy=max-energy,
+awn_preprocess=radioml-native, threshold_factor=1.5,
+sensing_window_size=128, min_region_len=0, merge_gap=0, num_bursts=1,
+seed=42`. N=10 sample_index per (modulation,SNR) cell, the plan's
+recommended default -> 11 x 20 x 10 = **2200 combos**.
+
+### 9.1 Dry-run and smoke checks
+
+`--dry-run`: 2200 combos, all unique, 11/11 modulation coverage, 20/20 SNR
+coverage, 0 attack combos present. Smoke test (QPSK/BPSK x SNR{0,18} x
+idx0, 4 combos, run in 2 independent processes): 4/4 `run_status=ok`,
+`awn_backend` real on every row, 0 NaN/Inf, direct-path
+`original_sample_sha256` matched the pipeline's own internally-loaded
+sample hash on all 4 combos (proves direct and sensed use the identical
+RadioML sample), all 31 content columns bit-identical across the two
+processes (only `runtime_seconds`, a wall-clock measurement, differed).
+No bug found.
+
+### 9.2 Full 2200-combo run
+
+**2200/2200 `run_status=ok`, 0 `sensing_failed`, 0 `error`.** Actual
+runtime: **5528.7s (92.1 minutes)** -- slower than the plan's ~51-minute
+estimate (1.4s/combo assumed; actual ~2.5s/combo, likely from
+`run_dry_run_experiment()` reloading the checkpoint fresh on every combo,
+the same established behavior every prior batch script also has, plus
+general system load during a 92-minute run). All `awn_backend` values
+across all 2200 rows are exactly the real-path string
+(`external/adversarial-rf/models/model.py:AWN`), 0 fallback anywhere; 0
+NaN/Inf in `clean_nan`/`direct_nan`. A live error-signature watch
+(`Traceback|ERROR|CRITICAL|Exception|non-real backend|fell back|fallback`)
+across `stdout.log`/`stderr.log` never fired during the run; the only
+stderr content for the entire run is the pre-existing, harmless
+`VisibleDeprecationWarning` from `pickle.load(..., encoding="latin1")`
+(unrelated to this round, present in every prior radioml-mode round).
+
+**Modulation coverage: 11/11.** **SNR coverage: 20/20.**
+
+**Reproducibility, checked at scale (not just the smoke test)**: 16
+combos (8PSK/QPSK/WBFM/QAM64 x SNR{12,18,-20,10} x idx0, deliberately
+spanning both high- and low-captured-ratio cases) re-run in a completely
+fresh, independent process launched hours after the main run finished --
+all 30 comparable columns (excluding `output_dir`/`runtime_seconds`)
+bit-identical to the corresponding rows in the 2200-combo output.
+
+### 9.3 Metrics (N=2200 -- this IS the formal Phase 1 baseline result, not a pilot-scale observation)
+
+- **Direct AMC accuracy (oracle, sensing-independent)**: 1314/2200 =
+  **0.5973**
+- **Sensed end-to-end AMC accuracy**: 1277/2200 = **0.5805**
+- **Gap (direct - sensed)**: **+0.0168** (1.68 percentage points -- the
+  sensing front end costs a small but real amount of accuracy compared to
+  the oracle, at this checkpoint/dataset)
+- **Direct-sensed prediction agreement**: 2001/2200 = **0.9095** (9.05%
+  of combos, sensing-based classification disagrees with the oracle
+  classification -- not always a "loss": 34 of those disagreements are
+  cases where the SENSED prediction was correct and the direct one was
+  not, e.g. `QAM16_snr8_idx0`)
+- **Detection probability**: **1.0000** (2200/2200 -- the burst was
+  detected in every single combo at `threshold_factor=1.5`, consistent
+  with round 13's stable-range finding)
+- **False alarm region rate**: mean **0.0043** (near-zero, as expected at
+  `threshold_factor=1.5`)
+- **Mean captured signal ratio**: **0.9986** (min 0.5703, max 1.0000);
+  **12/2200** combos have `captured_signal_ratio < 0.999` (partial
+  captures -- includes the previously-documented `BPSK_snr18_idx0=0.625`
+  case, reproduced again here, plus 11 new partial-capture cases spread
+  across 8PSK/PAM4/QAM16/QAM64/QPSK -- all are genuine per-sample energy
+  variation, not a systematic modulation-specific pattern: QAM64 alone
+  has 4 of the 12)
+- **Boundary errors**: mean start_boundary_error **-59.27** (mean abs
+  59.63), mean end_boundary_error **+59.40** (mean abs 59.40) -- both
+  consistent in sign and magnitude with the known max-energy/radioml-
+  native alignment behavior (region typically ~53-61 samples wider than
+  the true burst on both edges, per md section 18's original diagnosis)
+- **Missed sample count**: mean **0.18** (near-zero -- almost the entire
+  true burst is captured essentially every time)
+- **False occupied sample count**: mean **118.85** (the smoothing-widened
+  detected region includes on average ~119 extra noise samples beyond the
+  true burst -- consistent with the boundary-error magnitudes above)
+- **Segment count**: **2200/2200 combos produced exactly 1 segment**
+  (expected: single burst, single detected region, max-energy policy
+  selects exactly one segment per region)
+- **Per-modulation** (direct_acc / sensed_acc / agreement / mean
+  captured_ratio, n=200 each): AM-SSB highest (0.955/0.925/0.950), WBFM
+  lowest by a wide margin (0.090/0.135/0.930 -- this checkpoint appears to
+  struggle with WBFM specifically, both with and without sensing -- not a
+  sensing-introduced problem, since direct accuracy is equally low).
+  QAM16 has the lowest direct-sensed agreement (0.770), notably below
+  every other modulation (next-lowest is QAM64 at 0.840) -- worth a closer
+  look in a future round, not explained by this round's data alone.
+- **Per-SNR**: accuracy rises monotonically-ish from near-chance
+  (~0.09-0.12 at -20/-18/-16 dB) to a plateau around 0.83-0.89 from 0 dB
+  upward, exactly the expected SNR-accuracy curve shape. Agreement
+  between direct and sensed predictions also dips in the -12..-4 dB range
+  (0.80-0.85) relative to both the very-low-SNR (chance-level, so
+  agreement is less meaningful) and high-SNR (agreement 0.93-0.98) ends --
+  consistent with sensing-introduced misclassification being most likely
+  in the moderate-noise regime where a small segment misalignment can tip
+  a borderline classification.
+- **Sensing failure reasons**: none -- 0 `sensing_failed` across all 2200
+  combos at `threshold_factor=1.5` (matches round 13's finding that this
+  value is inside the stable, 0-failure range).
+
+### 9.4 Explicit classification (per this round's instruction)
+
+- **正式 Phase 1 baseline 結果 (formal, citable at this N=2200)**: direct
+  AMC accuracy 0.5973, sensed end-to-end AMC accuracy 0.5805, gap +0.0168,
+  agreement 0.9095, detection probability 1.0000, false alarm region rate
+  0.0043, mean captured signal ratio 0.9986, boundary errors (~59 samples
+  each edge), missed sample count (~0.18), false occupied sample count
+  (~118.85), segment count (100% singletons), and the full per-modulation
+  /per-SNR breakdowns above -- all computed over the complete, intended
+  2200-combo grid (11/11 modulations, 20/20 SNRs), not a subsample.
+- **系統驗證結果 (system-correctness verification)**: real AWN backend
+  end-to-end with zero fallback across 2200 combos; 0 NaN/Inf; `--resume`
+  and incremental-write mechanism exercised in production (the run
+  self-completed without needing an actual resume, but the same code path
+  smoke-tested cleanly); reproducibility confirmed bit-identical at scale
+  (16 combos, fresh process, hours later); direct and sensed AMC
+  independently confirmed to use the identical RadioML sample via SHA256
+  cross-check.
+- **尚不能下結論的觀察 (not yet conclusive, flagged not overclaimed)**:
+  the WBFM low-accuracy and QAM16 low-agreement patterns are real
+  observations at full N but their ROOT CAUSE (model training artifact?
+  checkpoint-specific confusion pair? something about this particular
+  awn_preprocess/alignment combination?) is not established by this
+  round's data -- would need a confusion-matrix-level follow-up, out of
+  this round's scope. The `direct - sensed` accuracy gap (+0.0168) is a
+  real, formal-N result for THIS checkpoint/threshold_factor/alignment
+  configuration specifically -- it should not be read as a universal
+  "sensing costs ~1.7% accuracy" claim beyond these exact fixed
+  parameters (Phase 5's sensitivity analysis is what would characterize
+  how this gap moves with threshold_factor/sensing_window_size/etc.).
+
+### 9.5 Outputs
+
+```
+results/formal_phase1_sensing_clean_amc/phase1_summary.csv    (2200 rows, 32 columns)
+results/formal_phase1_sensing_clean_amc/phase1_manifest.json
+results/formal_phase1_sensing_clean_amc/stdout.log, stderr.log
+results/formal_phase1_sensing_clean_amc/{mod}_snr{snr}_idx{idx}/   (2200 per-combo subdirectories,
+                                                                     each with the standard
+                                                                     run_dry_run_experiment output:
+                                                                     summary.csv, sensing_plot.png)
+```
+`phase1_failures.csv` was not written (0 failures). Not added to git,
+matching `.gitignore`'s existing `results/*` rule.
+
+### 9.6 Conclusion
+
+Phase 1's full 2200-combo baseline is complete and clean: 100% `ok`, 0
+sensing failures, 0 errors, 0 backend fallback, reproducible. Phase 2 (the
+direct-vs-sensed accuracy comparison) is answered inline in section 9.3
+above, since it shares 100% of Phase 1's data by design (no separate run
+was needed, per the original plan). Phase 3-6 remain designed-but-not-run.

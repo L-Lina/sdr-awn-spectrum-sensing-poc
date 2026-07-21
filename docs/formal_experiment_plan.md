@@ -911,3 +911,147 @@ results/formal_phase3_attack_reduced/{combo_id}/           (792 per-combo subdir
 ```
 `phase3_failures.csv` was not written (0 failures). Not added to git,
 matching `.gitignore`'s existing `results/*` rule.
+
+---
+
+## 11. Phase 3 FULL execution: attack effectiveness, N=3960 (round 20)
+
+Full formal tier, executed exactly as designed in section 10.2 -- all 6
+modulations, all 6 SNRs, all 5 eps values, full `sample_index` 0-9 (the
+complete formal set, not the reduced tier's `[0,1]`). Run into a
+**separate** output directory (`results/formal_phase3_attack_full/`) so
+the reduced-tier's `results/formal_phase3_attack_reduced/` was never
+touched or overwritten. Launched via `nohup`, monitored at ~10-minute
+intervals with the same live error-signature watch as the reduced tier
+(never fired). **Actual runtime: 5317.6s (88.6 minutes)**, close to the
+~2-hour estimate.
+
+**3960/3960 `run_status=ok`, 0 `sensing_failed`, 0 `error`.** Coverage
+confirmed exactly: 6/6 modulations, 6/6 SNRs, 5/5 eps values, all 10
+sample_index values (0-9, the complete formal set), fgsm=1800/pgd=1800/
+cw=360 (exact match to the design).
+
+### 11.1 Formal Phase 3 results (N=3960 -- the complete, intended grid,
+not a subsample)
+
+- **clean_accuracy**: **0.5889** (higher than the reduced tier's 0.5139 --
+  expected, since N=3960 draws from the full sample_index range 0-9
+  rather than just [0,1], averaging out the specific-sample variance the
+  reduced tier's smaller draw was subject to)
+- **attacked_accuracy**: **0.2876**
+- **Overall attack success rate** (denominator = all 3960 `ok` rows):
+  3278/3960 = **0.8278**
+- **Conditional attack success rate** (denominator = the 2332 rows where
+  `clean_correct=True`): 1864/2332 = **0.7993**
+- **Prediction changed rate**: same as overall, 0.8278
+- **Per-attack**: cw highest (0.9278), pgd (0.8861), fgsm (0.7494) --
+  same ordering as the reduced tier, now confirmed at full N.
+- **Per-eps** (fgsm/pgd pooled): 0.01->0.4931, 0.03->0.8347, 0.05->0.9236,
+  0.1->0.9028, 0.3->0.9347. **The reduced tier's eps=0.05->0.1 dip
+  (flagged in section 10.4 as a small-sample observation, n=144) is
+  RESOLVED at full N**: pooled, the dip narrows to a statistically
+  unremarkable 0.9236->0.9028; and per-attack (section 11.2 below) it
+  turns out to be entirely a `fgsm`-specific pattern, not present in pgd
+  at all.
+- **Per-modulation**: WBFM's clean_acc (0.0833) and the
+  higher-than-clean attacked_acc (0.4818) pattern from Phase 1/the
+  reduced tier is reproduced at full N, confirming it is not a
+  small-sample artifact -- see section 11.4's explicit re-statement of
+  why this is a clean-baseline problem, not attack robustness. QAM16 most
+  vulnerable (overall_sr=0.9030); BPSK most resistant (overall_sr=0.7212).
+- **Per-SNR**: success rate highest at low SNR (-10dB: 0.9379, -4dB:
+  0.9470) and lowest at high SNR (18dB: 0.7152) -- monotonic-ish decline
+  confirmed at full N, same direction as the reduced tier.
+
+### 11.2 Cross-tabulations (new this round, not computed for the reduced tier)
+
+- **attack x eps** (overall success rate): **pgd saturates to 1.000 at
+  eps>=0.1** (eps=0.1: 1.000, eps=0.3: 1.000) -- a clean ceiling effect.
+  **fgsm does NOT saturate and shows a genuine, full-N-confirmed
+  non-monotonic dip**: eps=0.01:0.461, 0.03:0.747, 0.05:0.864,
+  **0.1:0.806** (dip), 0.3:0.869. Since n=360 per (attack,eps) cell here
+  (vs the reduced tier's n=144 pooling both attacks), this specific
+  fgsm-only dip is now a firmer, though still unexplained, observation --
+  it survived a 2.5x sample-size increase and isolation from pgd's
+  confounding saturation.
+- **modulation x attack** (overall success rate): **BPSK is a clear
+  outlier for cw specifically** -- cw success rate is 0.617 for BPSK vs
+  0.983-1.000 for every other modulation. fgsm/pgd show no comparable
+  BPSK-specific dip (0.680/0.783, in line with other modulations). This
+  is a real pattern at n=60 for the BPSK-cw cell (6 SNR x 10 sample_index,
+  cw has no eps dimension), newly surfaced only by this cross-tabulation
+  -- neither Phase 1 nor the per-modulation-only view in section 10.4/
+  11.1 would have revealed it.
+- **SNR x attack** (overall success rate): cw consistently highest at
+  every SNR (0.867-1.000), fgsm consistently lowest (0.597-0.920), pgd
+  in between -- the per-attack ordering (cw>pgd>fgsm) holds at every
+  single SNR value, not just on average.
+
+### 11.3 System verification (all 3960 rows)
+
+- **Eval-mode restoration**: **100% (3960/3960)**
+  `eval_mode_restored=True` -- the section 10.1 fix holds at full scale.
+- **eps invariant**: **100%** held exactly for every fgsm/pgd row.
+- **NaN/Inf**: 0 anywhere.
+- **Backends**: 100% real
+  (`external/adversarial-rf/models/model.py:AWN`,
+  `external/adversarial-rf/util/adv_attack.py:Model01Wrapper +
+  torchattacks`) on every one of 3960 rows, 0 fallback.
+- **IQ perturbation**: fgsm/pgd both mean `iq_linf`=0.00285 (matches
+  reduced tier closely); cw mean=0.00050 (5.7x smaller) -- same pattern
+  as the reduced tier, confirmed at full N.
+- **Sensing failure reasons**: none -- 0 `sensing_failed` across all
+  3960 combos.
+- **Reproducibility**: 40 combos (BPSK/8PSK x SNR{-10,18} x
+  sample_index{5,9} x eps{0.05,0.3} x all 3 attacks -- deliberately
+  targeting BPSK, the newly-found cw outlier, and 8PSK, the highest-cw-
+  success modulation) re-run in a fresh independent process -- **all 36
+  comparable columns bit-identical**.
+
+### 11.4 Explicit classification (per this round's instruction)
+
+- **正式 Phase 3 結果 (formal, citable at N=3960, the complete intended
+  grid)**: all numbers in sections 11.1-11.2 above.
+- **系統驗證結果 (system-correctness verification)**: 100% eval-mode
+  restoration, 100% eps-invariant compliance, 0 NaN/Inf, 0 fallback, 0
+  sensing_failed, 0 error, bit-identical reproducibility -- all confirmed
+  at the full, intended N, not extrapolated from the reduced tier.
+- **尚不能下結論的觀察 (not yet conclusive, explicitly flagged)**:
+  - The fgsm-specific eps=0.1 dip (section 11.2) is real at N=360 for
+    that cell but its MECHANISM is not established by this round's data
+    -- would need a dedicated diagnostic (e.g. per-sample gradient
+    inspection at eps=0.05 vs 0.1) to explain, not assumed here.
+  - The BPSK-cw-specific resistance (0.617 vs 0.983-1.000 elsewhere) is a
+    genuinely new, striking finding first surfaced by this round's
+    cross-tabulation -- root cause (something about BPSK's decision
+    boundary geometry under this checkpoint? an interaction with CW's
+    L2-minimization objective specifically?) is NOT established here.
+  - WBFM's clean-baseline problem (re-confirmed at full N) still has no
+    established root cause (training artifact vs. checkpoint-specific
+    confusion vs. something in this repo's preprocessing) -- flagged
+    again, not re-investigated this round (same status as Phase 1
+    section 9.4).
+
+### 11.5 Outputs
+
+```
+results/formal_phase3_attack_full/phase3_summary.csv   (3960 rows, 38 columns)
+results/formal_phase3_attack_full/phase3_manifest.json
+results/formal_phase3_attack_full/stdout.log, stderr.log
+results/formal_phase3_attack_full/{combo_id}/            (3960 per-combo subdirectories)
+```
+`phase3_failures.csv` was not written (0 failures). Not added to git,
+matching `.gitignore`'s existing `results/*` rule. `results/
+formal_phase3_attack_reduced/` (the earlier reduced-tier run) was left
+completely untouched.
+
+### 11.6 Conclusion
+
+Phase 3 is complete at full formal scale: 3960/3960 clean, 0 errors, 0
+fallback, 100% eval-mode restoration, 100% eps-invariant compliance,
+reproducible. Two genuinely new findings emerged only at this scale/via
+cross-tabulation (the fgsm-specific eps=0.1 dip, and BPSK's CW-specific
+resistance) that neither the reduced tier nor Phase 1 could have
+surfaced -- both explicitly flagged as unexplained, not overclaimed.
+Phase 4 (Top-K defense) remains designed-but-not-run, per this round's
+explicit scope.

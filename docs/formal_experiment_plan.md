@@ -163,7 +163,7 @@ only this planning pass and the existing-script suitability check above.
 See `docs/formal_experiment_matrix.csv` for the exact machine-readable
 version of every field below (same data, one row per phase/tier).
 
-### Phase 0 -- Pilot (designed this round, NOT executed)
+### Phase 0 -- Pilot (designed round 16, EXECUTED round 17 -- see section 8)
 
 - **研究問題**: does the full real-backend pipeline (sensing→alignment→
   AWN-preprocess→AWN→attack→Top-K) execute correctly, with correct output
@@ -435,3 +435,133 @@ phase (no metric is orphaned, no phase invents an untraceable metric):
   known-broken; cuda unavailable in this environment; plotting fallback is
   cosmetic, non-blocking for numeric results), consistent with `docs/
   parameter_validation.md` section 7's existing outstanding-items list.
+
+---
+
+## 8. Phase 0 pilot execution (round 17)
+
+Executed via `experiments/run_phase0_pilot.py`, a new, self-contained
+script that calls the same underlying building blocks `src/utils/
+pipeline.py` uses (`energy_detect`, `select_aligned_segments`,
+`apply_awn_preprocess`, `AWNModelAdapter`, `AttackAdapter`, `TopKAdapter`,
+`compute_sensing_ground_truth_metrics`) directly, rather than calling
+`run_dry_run_experiment()` -- this round's fairness requirement is
+STRICTER than round 12's ("same attacked IQ reused across K, verified
+bit-identical after the fact"): the SAME in-memory clean/attacked IQ array
+must be reused literally, never regenerated. `run_dry_run_experiment()`
+computes the whole pipeline once per (mod,snr,idx,attack,topk) combo and
+cannot express that without being refactored, so this script factors the
+front end (sensing through attacked-AWN-inference) out into a shared
+per-attack-instance computation, then loops only the Top-K + defended-AWN
+stage over the 4 K values, reusing the exact same `x_adv` array object.
+No sensing/AWN/attack/Top-K algorithm code was written or modified.
+`external/AWN`/`external/adversarial-rf` were not touched.
+
+### 8.1 Dry-run and smoke checks
+
+- `--dry-run`: 128 combos enumerated, all `combo_id`s unique (checked
+  programmatically, not by eye).
+- Smoke pilot (`--mods QPSK --snrs 18 --sample-indices 0 --attacks
+  none,fgsm --topks 10,20,30,40`, 8 combos): 8/8 `run_status=ok`, all three
+  backends exactly the real-path strings (`external/adversarial-rf/
+  models/model.py:AWN`, `external/adversarial-rf/util/adv_attack.py:
+  Model01Wrapper + torchattacks`, `external/adversarial-rf/util/
+  defense.py:fft_topk_denoise`) on every row, 0 NaN/Inf, `none`-attack
+  rows show `clean_iq_sha256 == attacked_iq_sha256` (bit-identical, proven
+  no-op), `fgsm` rows show exactly 1 unique `attacked_iq_sha256` across
+  all 4 K rows (fair reuse, verified from the CSV itself post-hoc, not
+  only the in-process assertion). No bug found -- proceeded directly to
+  the full 128-combo run.
+
+### 8.2 Full 128-combo pilot
+
+Run with `--resume` on top of the smoke test's 8 completed rows (also
+exercises the `--resume` mechanism required by this round). **128/128
+`run_status=ok`, 0 `sensing_failed`, 0 `error`.** All 32
+`(modulation,snr,sample_index,attack)` attack-instances show exactly 1
+unique `attacked_iq_sha256` across their 4 K rows -- 0 fairness
+violations. All backends real on every row; 0 NaN/Inf anywhere. Total
+runtime 13.8s (smoke + full combined).
+
+### 8.3 Metrics (N=8 samples -- small-sample observations, NOT a paper-citable result)
+
+- **direct AMC accuracy (oracle, sensing-independent)**: 7/8 = 0.875
+- **clean sensing-to-AMC accuracy**: 7/8 = 0.875 -- **identical to direct
+  at this N** (the one sensing-based miss and the one oracle miss are the
+  same sample; not evidence sensing never degrades accuracy, just that no
+  gap appeared in these 8 samples)
+- **attack success rate**: pgd 8/8 (1.00), cw 7/8 (0.875), fgsm 6/8
+  (0.75) -- all at `attack_eps=0.05` (fgsm/pgd) and default CW
+  hyperparameters, consistent in direction with round 12/14's
+  radioml-native-mode findings (risk R4)
+- **defense recovery rate among successfully-attacked instances**, by
+  (attack, K): cw rises with K (0.14 -> 0.29 -> 0.57 -> 0.43 at
+  K=10/20/30/40, n=7 each) -- same qualitative K-dependent pattern round
+  12 found at 480-combo scale; fgsm/pgd stay at or near 0 (0/6 to 1/6 for
+  fgsm; 1/8 to 0/8 for pgd) -- also consistent with round 12/14
+- **defended-prediction correctness by K, across ALL 32 rows regardless
+  of attack outcome**: K=10 -> **0/32 (0.000)**, K=20 -> 11/32 (0.344),
+  K=30 -> 13/32 (0.406), K=40 -> 12/32 (0.375). Spot-checked directly
+  (not just aggregated): at K=10, every single row's `pred_defended`
+  collapsed to one of a small handful of classes (1 for every QPSK row
+  regardless of `pred_clean`; 8 or 1 for every BPSK row) independent of
+  whether that row's clean prediction was already correct or which attack
+  (if any) was applied. This is a genuine, reproducible pattern in this
+  data, not a script bug -- but it is an N=8 observation about one
+  specific checkpoint/sample set, not a general claim that "K=10 always
+  fails."
+- **mean runtime**: 0.087s per (attack-instance, distributed across its
+  4 K-sharing rows); min 0.0054s (cached/no-op cases), max 0.692s
+  (CW's 20-step optimization)
+- **failure reasons**: none -- 0 `sensing_failed`, 0 `error` across all
+  128 combos
+
+### 8.4 Explicit classification (per this round's instruction)
+
+- **系統正確性驗證 (system-correctness verification, now confirmed)**:
+  real AWN/attack/Top-K backends run end-to-end with zero fallback; fair
+  Top-K reuse holds exactly (0/32 violations); `none`-attack is a proven
+  bit-identical no-op; output schema (50 columns incl. the 2 bonus hash
+  columns) is complete; `--resume` correctly skips already-done combos;
+  `run_status` cleanly distinguishes `ok`/`sensing_failed`/`error` (no
+  case of either occurred in this pilot, both paths were exercised and
+  validated separately in round 15's dummy-fallback work and round 13's
+  sensing-failure rounds).
+- **小樣本觀察 (small-sample observations, informative but not
+  conclusive)**: attack success rate ordering (pgd > cw > fgsm) and the
+  cw recovery-rate-rises-with-K pattern, at N=8, are directionally
+  consistent with round 12's 480-combo/round 14's 88-combo findings --
+  worth noting as a consistency check, not as new evidence on their own.
+- **尚不可作為論文結論 (not yet citable as a paper conclusion)**: the
+  K=10 -> 0/32 defended-accuracy collapse is the most striking number in
+  this pilot and is exactly the kind of finding Phase 4 (Top-K defense,
+  full formal design) exists to properly characterize across many more
+  samples, modulations, and SNRs -- citing "K=10 destroys accuracy" from
+  8 samples would be overreaching. Direct-vs-sensing accuracy gap (0.000
+  at this N) is likewise not yet a claim that sensing never costs
+  accuracy -- Phase 1/2 (2200 combos) is what will actually answer that
+  question.
+
+### 8.5 Outputs
+
+```
+results/formal_pilot_phase0/pilot_summary.csv    (128 rows, 50 columns)
+results/formal_pilot_phase0/pilot_aggregate.csv  (25 rows: overall/modulation/snr/attack/attack_topk/topk/runtime breakdowns)
+results/formal_pilot_phase0/pilot_manifest.json
+results/formal_pilot_phase0/stdout.log, stderr.log        (full 128-combo run)
+results/formal_pilot_phase0/smoke_stdout.log, smoke_stderr.log  (8-combo smoke run)
+results/formal_pilot_phase0/{mod}_snr{snr}_idx{idx}/       (8 per-sample subdirectories; currently empty
+                                                             beyond directory creation -- this pilot writes
+                                                             its records into the shared pilot_summary.csv,
+                                                             not a per-combo summary.csv like run_dry_run_experiment)
+```
+Not written to git (matches `.gitignore`'s existing `results/*` rule, same
+as every prior round's results).
+
+### 8.6 Conclusion
+
+Phase 0's stated purpose -- confirm the real-backend pipeline executes
+correctly, with correct schema and strict fair Top-K reuse, before Phase
+1-6 are attempted -- is **satisfied**. No bug was found; nothing needed
+fixing. Phase 1-6 remain designed-but-not-run, per this round's explicit
+scope (only Phase 0 was authorized to execute).

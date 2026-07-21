@@ -737,3 +737,177 @@ sensing failures, 0 errors, 0 backend fallback, reproducible. Phase 2 (the
 direct-vs-sensed accuracy comparison) is answered inline in section 9.3
 above, since it shares 100% of Phase 1's data by design (no separate run
 was needed, per the original plan). Phase 3-6 remain designed-but-not-run.
+
+---
+
+## 10. Phase 3 code review + reduced-tier execution (round 19)
+
+### 10.1 Code review (against pipeline.py/AttackAdapter, not just dry-run)
+
+Before any execution, `experiments/run_phase3_attack_effectiveness.py` was
+reviewed against `src/utils/pipeline.py`, `src/adapters/attack_adapter.py`,
+and `src/utils/batch_aggregation.py` directly (not just its own dry-run
+output):
+
+1. **Traceability**: `original_sample_sha256`/`long_iq_sha256` recorded
+   per combo, sourced from `run_dry_run_experiment()`'s own `gen_meta`.
+2. **Clean/attacked share the same sensed segment**: confirmed by
+   construction -- `pipeline.py` computes `x_clean` once, then both
+   `logits_clean` (from `x_clean`) and `logits_attacked` (from
+   `AttackAdapter.apply(x_clean, ...)`'s output) derive from the same
+   segment, and both `pred_clean`/`pred_attacked` are written into the
+   SAME per-segment `summary.csv` row.
+3/4/5. **FGSM/PGD use `eps`, CW uses `cw_c`/`cw_steps`/`cw_lr`**: confirmed
+   by reading `_build_torchattacks()` directly
+   (`src/adapters/attack_adapter.py:144-161`) -- `torchattacks.FGSM(model,
+   eps=eps)`, `torchattacks.PGD(model, eps=eps, alpha=eps/4, steps=10)`,
+   `torchattacks.CW(model, c=cw_c, steps=cw_steps, lr=cw_lr)`. The `cw`
+   branch never reads `eps` at all -- structurally impossible for CW to be
+   silently driven by `attack_eps`.
+6. **AWN eval-mode restoration**: `AttackAdapter.apply()`'s `finally`
+   block unconditionally calls `self.wrapped_model.eval()` before
+   returning (confirmed by reading the source). **This was NOT actively
+   verified by the runner before this round's review** -- fixed by adding
+   `attack_training_before`/`attack_training_after`/`eval_mode_restored`
+   columns (read from each combo's own `summary.csv`) and an explicit
+   check that forces `run_status=error` if `attack_training_after` is
+   ever `True`.
+7. **pred_clean/pred_attacked/clean_correct/attacked_correct/changed_by_attack**:
+   cross-checked in the smoke test -- this script's own
+   independently-recomputed `changed_by_attack` (`pred_attacked !=
+   pred_clean`) matched `pipeline.py`'s own pre-computed
+   `changed_by_attack` column on 5/5 smoke combos, exactly.
+8/9. **Attack success rate denominators**: made explicit in section 10.3
+   below -- `overall_attack_success_rate` = `changed_by_attack` count /
+   ALL `ok` rows; `conditional_attack_success_rate` = `changed_by_attack`
+   count among rows where `clean_correct=True`, divided by that subset's
+   count. Both computed and reported separately, never conflated.
+10. **sensing_failed vs error**: `run_status` distinguishes the two;
+   0 of either occurred in this round's data.
+11. **No silent fallback**: `awn_ok`/`attack_ok` require the EXACT real
+   backend string + `status=="ok"`; any mismatch forces `run_status=error`
+   regardless of what the adapter itself reported.
+12. **Incremental write + `--resume`**: same `CsvWriter` (flush-per-row)
+   pattern as Phase 0/1, confirmed via `--resume` semantics (loads
+   already-done `combo_id`s, skips them).
+13. **combo_id/output_dir uniqueness**: `check_combo_ids_unique()` +
+   `--dry-run` confirmed 3960 unique IDs; `output_dir = base/combo_id`.
+14. **No collision with Phase 0/1**: `results/formal_phase3_attack_reduced/`
+   is a distinct path from `results/formal_pilot_phase0/` and
+   `results/formal_phase1_sensing_clean_amc/`.
+15. **`.gitignore`**: covered by the existing `results/*` rule.
+16. **external/AWN, external/adversarial-rf**: untouched (read-only via
+   the existing adapters, same as every prior round).
+
+### 10.2 Formal parameters (re-read from `docs/formal_experiment_matrix.csv`,
+not assumed)
+
+modulations: `QPSK, BPSK, QAM16, 8PSK, QAM64, WBFM` (6). SNRs: `-10, -4, 0,
+6, 12, 18` (6). attack_eps: `0.01, 0.03, 0.05, 0.1, 0.3` (5, fgsm/pgd
+only). Attacks: fgsm, pgd, cw. `n_per_cell=10` (full formal tier) ->
+fgsm=1800, pgd=1800, cw=360, total **3960** combos, ~2 hours. CW knobs:
+`cw_c=1.0, cw_steps=20, cw_lr=0.01` (defaults, per risk R4).
+
+### 10.3 Reduced-tier design and execution
+
+Reduced tier keeps the FULL formal grid (all 6 modulations, all 6 SNRs,
+all 5 eps values, all 3 attacks) and restricts ONLY `sample_index` to the
+first 2 of the formal 0-9 set (`[0,1]`) -- **no change to the research
+design**, purely a sample-count reduction for a faster verification pass
+before committing to the full ~2-hour run.
+
+`--dry-run`: **792 combos** (fgsm=360, pgd=360, cw=72), all unique.
+Estimated ~24 minutes (792 x 1.8s).
+
+Executed via `nohup`, monitored at ~10-minute intervals (no high-frequency
+polling) with a live error-signature watch covering
+`Traceback|ERROR|CRITICAL|Exception|non-real backend|fell back|fallback|
+eval mode|eps invariant` -- never fired. **Actual runtime: 1100.7s (18.3
+minutes)**, faster than estimated. **792/792 `run_status=ok`, 0
+`sensing_failed`, 0 `error`.**
+
+### 10.4 Results (N=792 -- reduced-tier, formal-grid-shaped but 1/5 the
+sample count of the full 3960 design; directionally informative, not yet
+the full-N formal Phase 3 result)
+
+- **Per-attack combo counts**: fgsm=360, pgd=360, cw=72 (exactly matches
+  the reduced-tier design).
+- **clean_accuracy**: 0.5139 (same clean-path accuracy regardless of
+  which attack row -- clean prediction never depends on attack type,
+  confirmed identical across all three attack subsets).
+- **attacked_accuracy** (all attacks pooled): 0.2487.
+- **Overall attack success rate** (denominator = all 792 `ok` rows):
+  654/792 = **0.8258**.
+- **Conditional attack success rate** (denominator = the 407 rows where
+  `clean_correct=True`): 321/407 = **0.7887**.
+- **Per-attack**: cw highest overall success rate (0.9306) despite by far
+  the SMALLEST perturbation (mean `iq_linf_normalized`=0.0213 vs
+  fgsm/pgd's 0.098) -- consistent with CW being an optimization-based
+  attack that searches for a minimal sufficient perturbation, vs
+  fgsm/pgd's fixed-eps perturbation. pgd (0.8861) > fgsm (0.7444) at
+  pooled-eps success rate, matching the expected iterative-vs-single-step
+  attack strength ordering.
+- **Per-eps** (fgsm/pgd pooled): success rate rises from 0.4722 (eps=0.01)
+  to 0.9306 (eps=0.05), dips slightly to 0.8958 (eps=0.1), then rises
+  again to 0.9583 (eps=0.3) -- the eps=0.05->0.1 dip is a **small-sample
+  observation** (n=144 per eps value in this reduced tier) and should not
+  be treated as a real non-monotonicity without the full-N confirmation.
+- **Per-modulation**: QAM16 clean_acc=0.75 (highest) but attacked_acc
+  collapses to 0.0985 (among the most vulnerable). **WBFM is a case
+  requiring careful interpretation**: clean_acc=0.0833 (consistent with
+  Phase 1's finding that this checkpoint struggles with WBFM even without
+  any attack), but attacked_acc=0.5152 (HIGHER than clean) -- this is NOT
+  "WBFM is robust to attack." With `conditional_success_rate=1.0000`
+  (100% of the FEW correctly-classified clean WBFM samples get flipped),
+  the apparent accuracy increase is a base-rate artifact: WBFM's clean
+  classifier is so poor that most predictions are already wrong, and an
+  attack perturbing a mostly-wrong classifier's output landed on the
+  correct class more often than the unperturbed model's own (mostly
+  incorrect) predictions did. Flagged explicitly, not glossed over.
+- **Per-SNR**: attack success rate is HIGHEST at low SNR (-10dB: 0.9318,
+  -4dB: 0.9470) and generally lower at high SNR (12dB: 0.7045, 18dB:
+  0.7424) -- plausible (less "headroom" in a low-SNR/low-confidence
+  clean prediction for the attack to overcome), but this is the reduced
+  tier's n=132/SNR, not yet the full-N confirmation.
+- **IQ perturbation** (`iq_linf_clean_attacked`, un-normalized IQ units):
+  fgsm/pgd both mean 0.00322 (same requested eps range, expected since
+  both are eps-driven); cw mean 0.00060 (5.4x smaller), min 0.00000 --
+  consistent with CW finding minimal perturbations, occasionally
+  near-zero when the clean prediction is already at a decision boundary.
+- **Eval-mode restoration**: **100% (792/792) `eval_mode_restored=True`**
+  -- the fix from section 10.1 item 6 is confirmed working at full
+  reduced-tier scale, not just the smoke test.
+- **eps invariant**: 100% held exactly for every fgsm/pgd row.
+- **NaN/Inf**: 0 anywhere. **Backends**: 100% real
+  (`external/adversarial-rf/models/model.py:AWN`,
+  `external/adversarial-rf/util/adv_attack.py:Model01Wrapper +
+  torchattacks`) on every row, 0 fallback.
+- **Reproducibility**: 20 combos (WBFM/QAM16 x SNR{-10,18} x eps{0.05,0.3}
+  x all 3 attacks, deliberately re-targeting the two flagged-interesting
+  modulations) re-run in a fresh independent process -- **all 36
+  comparable columns bit-identical** to the reduced-tier run.
+- **Failure reasons**: none -- 0 `sensing_failed`, 0 `error`.
+
+### 10.5 Recommendation
+
+Reduced-tier (N=792, 1/5 sample count) passed every system-correctness
+check without exception: 0 error, 0 fallback, 100% eval-mode restoration,
+100% eps-invariant compliance, 0 NaN/Inf, bit-identical reproducibility.
+**The full 3960-combo Phase 3 run is recommended to proceed** -- no bug
+was found, no code change is pending, and the reduced-tier's directional
+findings (cw > pgd > fgsm success rate; QAM16 vulnerable, WBFM's baseline
+problem not attack-specific; low-SNR more attack-susceptible) are
+consistent with prior rounds' qualitative expectations. The full run is
+**not started automatically** -- awaiting explicit confirmation, per this
+round's instruction.
+
+### 10.6 Outputs
+
+```
+results/formal_phase3_attack_reduced/phase3_summary.csv   (792 rows, 38 columns)
+results/formal_phase3_attack_reduced/phase3_manifest.json
+results/formal_phase3_attack_reduced/stdout.log, stderr.log
+results/formal_phase3_attack_reduced/{combo_id}/           (792 per-combo subdirectories)
+```
+`phase3_failures.csv` was not written (0 failures). Not added to git,
+matching `.gitignore`'s existing `results/*` rule.

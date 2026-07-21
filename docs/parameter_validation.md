@@ -3889,3 +3889,141 @@ combination never exercised before this round) -- identical
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
   STARTED** (unchanged, explicitly out of scope this round)
 
+---
+
+## 24. Dummy-fallback end-to-end smoke test (round 15)
+
+Purpose: close the one remaining named gap identified by a fresh, from-
+scratch re-audit of git state + `docs/parameter_validation.csv` +
+`docs/parameter_validation.md` (this repo's own record, not memory) after
+the git-history author/co-author cleanup round. Every real-backend round
+since the project began explicitly passed all three `--use-real-*` flags;
+the numpy-only dummy backends (`dummy_awn_inference`, `dummy_attack`,
+`dummy_topk_defense`) had existed in the code since the earliest rounds but
+had **never once been run end-to-end through `run_dry_run_experiment()`**.
+This was documented but unresolved across many rounds (section 7 item 3;
+CSV rows for `use_real_awn`/`use_real_attack`/`use_real_topk`: "False
+(dummy) path never actually executed in-session"). No other parameter in
+the user's requested inventory (spectrum sensing, AMC/dataset, attack,
+Top-K, batch/output) had an equivalent never-run gap -- all had at least
+one real-backend execution on record somewhere in sections 10-23.
+
+### 24.1 Scope and method
+
+New script: `experiments/run_dummy_fallback_smoke.py`. No changes to
+`src/sensing/`, `src/adapters/`, or any algorithm code -- `src/utils/
+pipeline.py` already routes `cfg.use_real_awn`/`use_real_attack`/
+`use_real_topk == False` directly to `dummy_awn_inference`/`dummy_attack`/
+`dummy_topk_defense` (lines ~370-417, confirmed by direct code read before
+writing the script), setting `awn_status`/`attack_status`/`topk_status`
+literally to `"ok"` (never `"fallback"` -- that word is reserved for when a
+*real* backend was requested but failed at runtime, see `TopKAdapter.apply()`
+and `AWNModelAdapter.__init__`, an intentionally distinct code path this
+round does not exercise). This script only calls that already-wired path;
+`external/AWN` and `external/adversarial-rf` were not touched.
+
+4 required combos, each run **twice** (same `--seed 42`) to check
+reproducibility, for 8 total `run_dry_run_experiment()` calls:
+
+| combo | iq_source | attack | use-real-awn/attack/topk |
+|---|---|---|---|
+| 1 | synthetic | none | all False (omitted) |
+| 2 | synthetic | fgsm | all False (omitted) |
+| 3 | radioml (QPSK, snr=18, idx=0) | none | all False (omitted) |
+| 4 | radioml (QPSK, snr=18, idx=0) | fgsm | all False (omitted) |
+
+synthetic and radioml combos were run as two separate `run_batch_combos()`
+calls (`synthetic_run{1,2}/`, `radioml_run{1,2}/` under
+`results/dummy_fallback_smoke/`), per the pre-existing documented
+constraint that one call must use a single ground-truth mode
+(`src/utils/batch_aggregation.py` docstring) -- not a new finding, just
+followed. Additionally, `dummy_awn_inference`/`dummy_attack`/
+`dummy_topk_defense` were called directly (bypassing the pipeline/CSV
+entirely) on a fixed 5×2×128 array to check raw numpy output for NaN/Inf,
+satisfying the "IQ、logits 與 CSV 都不得包含 NaN 或 Inf" requirement at both
+the CSV layer and the direct-API layer.
+
+Estimated and actual time: well under 1 minute total (no torch, no
+checkpoint load, pure numpy).
+
+### 24.2 Results
+
+**8/8 pipeline runs: `run_status=ok`, 0 sensing_failed, 0 error.** All pass
+conditions verified programmatically by the script itself (not by
+inspection) against the actual CSV output, then independently
+spot-checked here via direct `csv.DictReader` reads:
+
+- **Backend labels**: every one of the 24 per-segment `summary.csv` rows
+  (5 segments × 2 synthetic combos × 2 runs = 20, plus 1 segment × 2
+  radioml combos × 2 runs = 4; 24 rows total) shows exactly
+  `awn_backend=dummy_awn_inference`, `attack_backend=dummy_attack`,
+  `topk_backend=dummy_topk_defense` -- matching `src/utils/pipeline.py`'s
+  hardcoded dummy-path strings exactly, zero deviation.
+- **Status fields**: `awn_status`/`attack_status`/`topk_status` are all
+  literally `"ok"` on every row -- the word "fallback" does not appear
+  anywhere in any of the 4 combos' output. This is the correct,
+  intentional distinction from a *real*-backend run that fails at call
+  time and falls back (which would show `topk_status="fallback"` per
+  `TopKAdapter.apply()`'s own logic, section 8) -- this round's combos
+  never requested a real backend in the first place, so there is nothing
+  to "fall back" from; `pipeline.py`'s own dummy-path notes say so
+  explicitly ("--use-real-awn not passed; using placeholder AWN inference
+  by default").
+- **Cannot be mistaken for real**: confirmed by direct contrast against an
+  existing real-backend run's `summary.csv` (`results/e2e_smoke_matrix/`):
+  real `awn_backend`/`attack_backend`/`topk_backend` are file-path-style
+  strings (`external/adversarial-rf/models/model.py:AWN`,
+  `external/adversarial-rf/util/adv_attack.py:Model01Wrapper +
+  torchattacks`, `external/adversarial-rf/util/defense.py:
+  fft_topk_denoise`) -- structurally and textually disjoint from the
+  dummy path's `dummy_awn_inference`/`dummy_attack`/`dummy_topk_defense`
+  literals. No shared substring, no ambiguity.
+- **NaN/Inf**: `clean_has_nan`/`clean_has_inf`/`attacked_has_nan`/
+  `attacked_has_inf`/`awn_input_has_nan`/`awn_input_has_inf` are `False`
+  on every one of the 24 rows. Direct-API check (`dummy_awn_inference`,
+  `dummy_attack`, `dummy_topk_defense` called directly on a fixed
+  `[5,2,128]` array, bypassing the CSV layer entirely) additionally
+  confirmed `np.isnan`/`np.isinf` both `False` on the raw returned arrays,
+  and `dummy_awn_inference`'s logits shape is `[5,11]` as expected.
+- **`summary.csv`/`batch_summary.csv` completeness**: all expected columns
+  present on every row (91-column `summary.csv` schema, 38-column
+  `batch_summary.csv` schema -- same schemas as every real-backend round,
+  confirming the dummy path does not silently drop or rename any field).
+  radioml combos additionally produced `batch_bursts_summary.csv`/
+  `batch_regions_summary.csv` (2 rows each); synthetic combos correctly
+  omitted both (no ground truth in synthetic mode, expected, matches
+  section 16.2's documented behavior).
+- **Reproducibility**: same `--seed 42`, run twice independently, for both
+  `batch_summary.csv` and every combo's per-segment `summary.csv` --
+  every column identical field-by-field across the two runs (the check
+  script excludes only path-valued columns: `output_dir`,
+  `summary_csv_path`, `bursts_summary_csv_path`,
+  `regions_summary_csv_path`, `plot_path`; no such path columns exist in
+  the per-segment `summary.csv` at all, so that exclusion list only
+  applied to `batch_summary.csv`). 0 mismatches found.
+
+### 24.3 Output locations
+
+```
+results/dummy_fallback_smoke/synthetic_run1/   (combo0000=none, combo0001=fgsm; batch_summary.csv)
+results/dummy_fallback_smoke/synthetic_run2/   (identical combos, reproducibility check)
+results/dummy_fallback_smoke/radioml_run1/     (combo0000=none, combo0001=fgsm; batch_summary.csv + batch_bursts_summary.csv + batch_regions_summary.csv)
+results/dummy_fallback_smoke/radioml_run2/     (identical combos, reproducibility check)
+```
+
+### 24.4 Explicitly not done this round
+
+- No algorithm code was modified (per explicit instruction) -- this round
+  is pure verification of an already-wired path.
+- Does not test the *runtime-failure* fallback path (a real backend
+  requested via `--use-real-*` that then fails mid-call and falls back
+  with `status="fallback"`) -- that is a different, already-separately-
+  documented code path (section 8's `topk=Inf`/`topk=NaN` findings, and
+  round 14's invalid-checkpoint direct-API check, CSV row
+  `coverage_remaining_flags`). This round only covers the **intentional**
+  dummy path (`--use-real-*` never requested at all).
+- Does not re-run any of the 199/480/132-combo real-backend batches --
+  none needed re-verification; this round is additive, not corrective.
+- Formal full SNR × modulation × attack × eps × topk batch: still **NOT
+  STARTED**, unchanged, still explicitly out of scope.
+

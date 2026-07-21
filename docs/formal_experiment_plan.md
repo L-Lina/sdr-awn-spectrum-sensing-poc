@@ -2040,3 +2040,359 @@ Whether to redesign Phase 4's K range (e.g., adding 64/80/96) to properly
 investigate this CW-specific opportunity, and whether the WBFM-specific
 negative effect at the same K needs separate characterization, are left
 as explicit open decisions for the next round, not decided here.
+
+---
+
+## 16. Phase 4 Expanded-K Confirmation Experiment (round 25)
+
+All values in this section are computed directly from the round's own
+14256-row `results/formal_phase4_expanded_k/ablation_summary.csv` --
+none are carried over or estimated from prior rounds' smaller-N results.
+`experiments/run_phase4_topk_ablation.py` was extended (its `--eps`
+argument now accepts a comma-separated list, matching Phase 3/4's own
+convention) to run the FULL Phase 3 formal grid at once; no algorithm
+code was touched. `external/AWN`/`external/adversarial-rf` untouched.
+
+### 16.1 Execution info (Part 一)
+
+- **Design**: Phase 3's exact formal grid (re-read from `docs/
+  formal_experiment_matrix.csv`, not assumed) -- modulations `QPSK, BPSK,
+  QAM16, 8PSK, QAM64, WBFM` (6); SNRs `-10,-4,0,6,12,18` (6); eps
+  `0.01,0.03,0.05,0.1,0.3` (5, fgsm/pgd only); attacks `fgsm, pgd, cw`;
+  `sample_index` = first 3 of the formal 0-9 set (`[0,1,2]`); K =
+  `10,20,30,40,50,64,72,80,88,96,112,128` (12); policy =
+  `current_radioml_native` ONLY (per this round's explicit instruction --
+  `normalized_topk_rescaled` and `legacy_awn_all_reference` were not
+  re-run, having already been proven bit-identical to A and
+  scale-incompatible respectively in round 24).
+- **Attack instances**: 1188 (108 cells x 11/cell). **Final rows**:
+  14256 (1188 x 12 K). Per-attack: fgsm=6480, pgd=6480, cw=1296.
+- **Runtime**: 248.3s (4.1 minutes).
+- **Backend**: 100% real on every row (`external/adversarial-rf/
+  models/model.py:AWN`, `.../util/adv_attack.py:Model01Wrapper +
+  torchattacks`, `.../util/defense.py:fft_topk_denoise`).
+- **`run_status`**: 14256/14256 `ok`. **`error`**: 0. **NaN/Inf**: 0
+  anywhere. **`eval_mode_restored`**: `True` on all 14256 rows (no
+  `attack=none` rows in this design, so no expected blanks).
+- **Fairness**: 0 violations across 1188 attack-instances x 12 K = 14256
+  rows exactly; `attacked_iq_sha256`/`pred_clean`/`pred_attacked`
+  confirmed identical across all 12 K within every instance.
+- **Reproducibility**: 64 combos (QAM64/WBFM x SNR{-10,18} x
+  idx{0,1} x {cw,pgd} x K{20,40,80,96} -- deliberately targeting the two
+  most extreme-response modulations) in a fresh independent process: 0
+  mismatches.
+- **K=128 no-op control**: max Linf = `1.86e-08` (float32-precision
+  no-op), mean prediction agreement = `1.0000` across all 1188 K=128
+  rows -- confirmed at full scale, matching round 24's smaller-scale
+  finding exactly.
+
+### 16.2 CW results (Part 二)
+
+**Per-K net gain, WITH WBFM** (n=108/K; numerator=defended_correct
+count, denominator=108 unless noted):
+
+| K | attacked | defended | net_gain |
+|---|---|---|---|
+| 10 | 32/108 | 23/108 | -0.0833 |
+| 20 | 32/108 | 38/108 | +0.0556 |
+| 30 | 32/108 | 36/108 | +0.0370 |
+| 40 | 32/108 | 34/108 | +0.0185 |
+| 50 | 32/108 | 33/108 | +0.0093 |
+| 64 | 32/108 | 25/108 | -0.0648 |
+| 72 | 32/108 | 25/108 | -0.0648 |
+| 80 | 32/108 | 29/108 | -0.0278 |
+| 88 | 32/108 | 25/108 | -0.0648 |
+| 96 | 32/108 | 24/108 | -0.0741 |
+| 112 | 32/108 | 31/108 | -0.0093 |
+| 128 | 32/108 | 32/108 | +0.0000 (no-op) |
+
+**Per-K net gain, EXCLUDING WBFM** (n=90/K, the other 5 modulations):
+
+| K | attacked | defended | net_gain |
+|---|---|---|---|
+| 10 | 16/90 | 19/90 | +0.0333 |
+| 20 | 16/90 | 34/90 | +0.2000 |
+| 30 | 16/90 | 33/90 | +0.1889 |
+| 40 | 16/90 | 33/90 | +0.1889 |
+| 50 | 16/90 | 32/90 | +0.1778 |
+| 64 | 16/90 | 24/90 | +0.0889 |
+| 72 | 16/90 | 24/90 | +0.0889 |
+| 80 | 16/90 | 25/90 | +0.1000 |
+| 88 | 16/90 | 19/90 | +0.0333 |
+| 96 | 16/90 | 18/90 | +0.0222 |
+| 112 | 16/90 | 19/90 | +0.0333 |
+| 128 | 16/90 | 16/90 | +0.0000 (no-op) |
+
+**Bootstrap 95% CI (5000 resamples, seed=42)**:
+
+| K | WITH WBFM net_gain [CI] | significant? | WITHOUT WBFM net_gain [CI] | significant? |
+|---|---|---|---|---|
+| 20 | +0.0556 [-0.065,+0.176] | no | **+0.2000 [+0.089,+0.311]** | **YES** |
+| 30 | +0.0370 [-0.083,+0.157] | no | **+0.1889 [+0.078,+0.300]** | **YES** |
+| 40 | +0.0185 [-0.102,+0.139] | no | **+0.1889 [+0.078,+0.300]** | **YES** |
+| 50 | +0.0093 [-0.111,+0.130] | no | **+0.1778 [+0.067,+0.289]** | **YES** |
+| 80 | -0.0278 [-0.130,+0.074] | no | **+0.1000 [+0.011,+0.189]** | **YES** |
+
+**`K=80` bootstrap CI overlaps zero when WBFM is included** (not
+significant) but **is significant when WBFM is excluded** -- and even
+then, K=80 is NOT the strongest point: K=20/30/40 are all larger
+(+0.19-0.20 vs +0.10) and equally significant.
+
+**Per-modulation numerator/denominator/net_gain** (n=18/modulation/K):
+
+| Modulation | K=20 | K=30 | K=40 | K=50 | K=80 |
+|---|---|---|---|---|---|
+| 8PSK | 2/18 (-0.111) | 0/18 (-0.222) | 1/18 (-0.167) | 1/18 (-0.167) | 2/18 (-0.111) |
+| BPSK | 7/18 (-0.111) | 8/18 (-0.056) | 8/18 (-0.056) | 9/18 (+0.000) | 9/18 (+0.000) |
+| QAM16 | 5/18 (+0.278) | 4/18 (+0.222) | 3/18 (+0.167) | 4/18 (+0.222) | 1/18 (+0.056) |
+| **QAM64** | **13/18 (+0.611)** | **13/18 (+0.611)** | **13/18 (+0.611)** | 12/18 (+0.556) | 9/18 (+0.389) |
+| QPSK | 7/18 (+0.333) | 8/18 (+0.389) | 8/18 (+0.389) | 6/18 (+0.278) | 4/18 (+0.167) |
+| **WBFM** | **4/18 (-0.667)** | **3/18 (-0.722)** | **1/18 (-0.833)** | **1/18 (-0.833)** | **4/18 (-0.667)** |
+
+(attacked-correct numerators, constant across K: 8PSK 4/18, BPSK 9/18,
+QAM16 0/18, QAM64 2/18, QPSK 1/18, WBFM 16/18)
+
+**WBFM's full negative effect, all K, all 3 attacks** (n=90 for
+fgsm/pgd, n=18 for cw): WBFM shows a NEGATIVE net gain at EVERY K for
+EVERY attack except the trivial K=128 no-op -- fgsm ranges -0.011 to
+-0.144, pgd ranges 0.000 to -0.133, cw ranges -0.222 to -0.833 (its own
+worst case, at K=40/50). WBFM is uniformly harmed by Top-K in this
+design, regardless of attack type or K, with no exception found.
+
+**Explicit note, per this round's requirement**: round 24's finding of
+"CW net_gain=+0.139 at K=80" (n=72, using AM-SSB instead of Phase 3's
+official 8PSK, and a smaller sample) **did NOT reproduce** at this
+round's larger, Phase-3-official-grid scale. With the correct modulation
+set: (a) K=80's WITH-WBFM net_gain is now NEGATIVE (-0.0278, CI includes
+0); (b) even WITHOUT WBFM, K=80 is real and significant but is NOT the
+strongest point -- K=20/30/40 all show larger, equally significant
+effects. Round 24's K=80 spike was substantially an artifact of AM-SSB
+(a modulation outside Phase 3's official 6-class set) combined with a
+smaller sample (n=72 vs this round's n=90/108).
+
+### 16.3 PGD results (Part 三)
+
+**Per-K net gain** (n=540/K, pooled across all 6 modulations):
+
+| K | attacked | defended | net_gain | 95% CI | significant? |
+|---|---|---|---|---|---|
+| 10 | 121/540 | 125/540 | +0.0074 | [-0.037,+0.052] | no |
+| **20** | 121/540 | **142/540** | **+0.0389** | **[+0.004,+0.074]** | **YES** |
+| 30 | 121/540 | 127/540 | +0.0111 | [-0.019,+0.041] | no |
+| 40 | 121/540 | 119/540 | -0.0037 | [-0.028,+0.020] | no |
+| 50 | 121/540 | 119/540 | -0.0037 | [-0.026,+0.020] | no |
+| 64-112 | (small, +0.002 to +0.007) | | | all include 0 | no |
+| 128 | 121/540 | 121/540 | +0.0000 (no-op) | -- | -- |
+
+**Only K=20 is statistically significant.** K=10 -- which round 24's
+smaller sample suggested was PGD's best K -- is NOT significant here
+(+0.0074, CI=[-0.037,+0.052], clearly includes 0). **K=10 is no longer
+treated as PGD's best K**: at the larger, correctly-scoped sample, its
+point estimate is small and its CI is wide and centered near zero;
+K=20's effect is both larger in magnitude and statistically distinguishable
+from zero, making it the only defensible "PGD works here" claim in this
+grid.
+
+### 16.4 FGSM results (Part 四)
+
+**Per-K net gain** (n=540/K):
+
+| K | attacked | defended | net_gain | 95% CI | significant? |
+|---|---|---|---|---|---|
+| **10** | 161/540 | 120/540 | **-0.0759** | **[-0.124,-0.028]** | **YES (negative)** |
+| 20 | 161/540 | 153/540 | -0.0148 | [-0.056,+0.026] | no |
+| 30-40 | 161/540 | 148/540 | -0.0241 | includes 0 | no |
+| **50** | 161/540 | 142/540 | **-0.0352** | **[-0.067,-0.006]** | **YES (negative)** |
+| 64-112 | 161/540 | 155-163/540 | -0.011 to +0.004 | all include 0 | no |
+| 128 | 161/540 | 161/540 | +0.0000 (no-op) | -- | -- |
+
+**No K shows a statistically significant POSITIVE net gain for fgsm.**
+Two K values (10 and 50) show statistically significant NEGATIVE net
+gain -- Top-K is confirmed actively harmful, not merely ineffective, at
+those specific K values. **Clean degradation for fgsm's own combo subset
+(n=295 clean-correct rows) ranges 68.8%-78.6% across all K**, with no
+sign of recovery even at high K within this design's tested range (K=112
+still shows 68.8% degradation) -- unlike the pure `attack=none` check in
+round 24, which found clean degradation reaching 0% by K=80, this
+fgsm-conditioned subset's clean-correct population apparently
+overlaps less favorably with K's improving region; not further
+decomposed this round.
+
+### 16.5 Deployment fairness (Part 五)
+
+Explicitly separated, per this round's instruction -- **none of the
+attack-specific or modulation-specific numbers above should be read as a
+deployable defense claim**:
+
+- **Global fixed-K** (the only category directly deployable without
+  additional information): no single K is uniformly good. Best
+  candidates by attack: fgsm has no K with significant positive gain;
+  pgd's only significant K is 20; cw (pooled, WITH WBFM) has no
+  significant K at all. A deployed system using ONE fixed K across all
+  traffic would see, at best, a small, attack-dependent, sometimes-
+  negative effect.
+- **Attack-specific oracle K** (fgsm's best available K vs. pgd's K=20
+  vs. cw's K=20-50): **requires knowing which attack was used** --
+  information a real defender does not have at inference time (an
+  attacker does not announce its algorithm). Presented above purely as
+  an analysis upper bound, NOT a deployable claim.
+- **Modulation-specific oracle K** (e.g. QAM64 benefiting from low K,
+  WBFM harmed at every K): **requires knowing the true modulation
+  label** -- but modulation classification is literally what this AWN
+  pipeline is trying to predict; using the true label to choose K is a
+  direct oracle leak of the answer the system is supposed to produce.
+  Presented above purely as an analysis upper bound, NOT a deployable
+  claim, unless a future round builds and validates an independent,
+  non-oracle modulation-or-attack detector to drive such a policy (out
+  of this round's scope).
+
+### 16.6 Outputs
+
+```
+results/formal_phase4_expanded_k/ablation_summary.csv    (14256 rows, 41 columns)
+results/formal_phase4_expanded_k/ablation_manifest.json
+results/formal_phase4_expanded_k/stdout.log, stderr.log
+```
+Not added to git, matching `.gitignore`'s existing `results/*` rule.
+
+### 16.7 Conclusion
+
+This round's larger, Phase-3-official-grid confirmation materially
+revises round 24's headline "CW net_gain=+13.9pp at K=80" finding: that
+result did not reproduce once AM-SSB (not part of Phase 3's official set)
+was replaced with 8PSK and the sample size grew. The corrected picture:
+CW's real, statistically significant benefit is concentrated in
+K=20-50 (not K=80) and ONLY visible once WBFM -- which is harmed at
+every K, for every attack -- is excluded from the aggregate; PGD has a
+single significant point at K=20 (not K=10, as round 24 suggested); FGSM
+never shows a significant positive effect at any K, and is significantly
+HARMFUL at K=10 and K=50. No global fixed-K, attack-specific, or
+modulation-specific pattern supports an unqualified "Top-K defense
+works" claim; the modulation- and attack-specific numbers are explicitly
+oracle-only, not deployable. Section 17 designs (but does not execute)
+a new formal Phase 4 at full N=10 sample_index informed by these
+findings.
+
+---
+
+## 17. New formal Phase 4 design (K-reduced, full-N): design and dry-run only (round 25)
+
+Not executed this round, per explicit instruction. Reuses the existing
+`experiments/run_phase4_topk_ablation.py` unmodified beyond this round's
+already-committed `--eps`-list extension -- no new script file needed,
+since the runner already accepts every required CLI parameter
+(`--mods`, `--snrs`, `--eps`, `--attacks`, `--sample-indices`, `--topks`,
+`--policies`).
+
+### 17.1 Design
+
+- **K set**: `10, 20, 30, 40, 50, 80, 128` (7 -- the reduced set this
+  round's findings justify: covers PGD's significant K=20, CW's
+  significant K=20-50 band plus the previously-claimed K=80 for direct
+  comparison, and K=128 as the mandatory no-op control). **K=128 is
+  explicitly a no-defense baseline for comparison, never counted as a
+  defense success in any aggregate.**
+- **Modulations**: full Phase 3 set, `QPSK, BPSK, QAM16, 8PSK, QAM64,
+  WBFM` (6) -- **WBFM retained**, not excluded, per explicit instruction.
+- **SNRs**: `-10,-4,0,6,12,18` (6). **eps**: `0.01,0.03,0.05,0.1,0.3`
+  (5). **attacks**: `fgsm, pgd, cw`. **sample_index**: full formal `0-9`
+  (10, not the confirmation round's `[0,1,2]`). **policy**:
+  `current_radioml_native` only. **seed=42**. CW: `c=1.0, steps=20,
+  lr=0.01` (formal defaults). Sensing/alignment params: same as every
+  prior formal phase (`threshold_factor=1.5, sensing_window_size=128,
+  min_region_len=0, merge_gap=0, alignment_policy=max-energy,
+  awn_preprocess=radioml-native`).
+
+### 17.2 Dry-run results
+
+```
+python3 experiments/run_phase4_topk_ablation.py --dry-run \
+  --mods QPSK,BPSK,QAM16,8PSK,QAM64,WBFM --snrs=-10,-4,0,6,12,18 \
+  --eps 0.01,0.03,0.05,0.1,0.3 --attacks fgsm,pgd,cw \
+  --sample-indices 0,1,2,3,4,5,6,7,8,9 \
+  --topks 10,20,30,40,50,80,128 --policies current_radioml_native \
+  --output-dir results/formal_phase4_expanded_full
+```
+
+1. **Attack instances**: **3960** (360 cells x 11/cell -- matches Phase
+   3-full's exact instance count, since it is the identical
+   mod/snr/eps/attack grid at `n_per_cell=10`).
+2. **Final rows**: **27720** (3960 x 7 K).
+3. **Per-attack**: fgsm=12600, pgd=12600, cw=2520 (confirmed via
+   `--dry-run`'s own count, not hand-calculated).
+4. **Estimated time**: extrapolated from this round's own measured
+   throughput (14256 rows/248.3s) and round 24's (8640 rows/220.5s) --
+   both figures are noisy over only 2 data points, so presented as a
+   range rather than false precision: roughly **15-45 minutes**,
+   plausibly toward the lower end given this session's consistent
+   pattern of actual runtimes beating conservative estimates at every
+   prior phase. Not yet empirically confirmed for this exact
+   configuration.
+5. **`output_dir`**: `results/formal_phase4_expanded_full/` -- a NEW,
+   distinct directory; does not exist yet, will not overwrite
+   `results/formal_phase4_expanded_k/` (this round's 14256-row
+   confirmation) or any earlier phase's output.
+6. **`--resume` design**: identical to every prior phase script --
+   `CsvWriter` flushes to disk after every single row; `load_done_combo_ids()`
+   reads the existing `ablation_summary.csv` on `--resume` and skips
+   already-completed `combo_id`s; a killed/interrupted run can be safely
+   continued without redoing completed work or losing any written rows.
+7. **CSV schema**: identical 41-column `ablation_summary.csv` schema
+   already in use (`combo_id, dataset, modulation, snr, sample_index,
+   seed, attack, attack_eps, topk, policy, label, pred_clean,
+   pred_attacked, pred_defended, clean_correct, attacked_correct,
+   defended_correct, changed_by_attack, attacked_wrong,
+   recovered_by_defense, defense_changed_prediction,
+   clean_broken_by_defense, iq_linf_clean_attacked,
+   iq_linf_attacked_defended, iq_l2_attacked_defended,
+   pred_agreement_defended_vs_attacked, awn_backend, attack_backend,
+   topk_backend, clean_nan, attacked_nan, defended_nan,
+   attack_training_after, eval_mode_restored, runtime_seconds,
+   run_status, failure_stage, failure_reason, output_dir,
+   attacked_iq_sha256, policy_notes`).
+8. **Aggregate CSV design** (not yet implemented as code -- described
+   here per this round's "design only" scope): a single
+   `ablation_aggregate.csv` with one row per unique combination of the
+   7 required groupings (`attack x K`, `modulation x K`, `SNR x K`,
+   `eps x K`, `attack x modulation x K`, `attack x SNR x K`,
+   `attack x eps x K`), each row carrying: `group_type` (which of the 7
+   groupings), the group key columns (whichever subset applies, blank
+   otherwise), `n`, `clean_accuracy`, `attacked_accuracy`,
+   `defended_accuracy`, `net_accuracy_gain`, `recovery_count`,
+   `degradation_count`, `net_transition`, `overall_recovery_rate`,
+   `conditional_recovery_rate`, `true_label_recovery_rate`,
+   `clean_prediction_recovery_rate`, `clean_degradation_rate`,
+   `prediction_changed_rate`, `mean_iq_distortion`, and
+   `bootstrap_ci_lo`/`bootstrap_ci_hi` for `net_accuracy_gain`. A
+   separate `ablation_wbfm_only.csv` and `ablation_excl_wbfm.csv` would
+   isolate the WBFM-specific sensitivity view (never replacing the main
+   all-modulation aggregate, per explicit instruction). All of this is a
+   straightforward extension of the analysis code already written ad hoc
+   in this and the previous round's chat-side Python snippets -- not
+   built as a permanent script this round, since there is no data yet to
+   run it against.
+9. **Checkpoint loading**: confirmed by reading `main()` --
+   `AWNModelAdapter(checkpoint_path=CHECKPOINT, ...)` is constructed
+   exactly ONCE at the top of `main()`, before the combo loop, and reused
+   (not reconstructed) for every one of the 27720 rows in a single
+   process launch.
+10. **Checkpoint loaded once per process**: **confirmed yes** (see above)
+    -- this is why every phase script in this project (Phase 0/1/3/4 and
+    both ablation rounds) completes in minutes rather than hours despite
+    thousands of combos; reloading the checkpoint per-combo was never
+    the design.
+11. **Safe to resume after interruption**: **confirmed yes** -- flush-
+    per-row CSV writing plus `--resume`'s done-ID skip logic (same
+    mechanism validated across every phase this session, including this
+    round's own smoke tests).
+12. **Will it overwrite existing results**: **no** -- distinct
+    `--output-dir`, never reuses `results/formal_phase4_expanded_k/` or
+    any earlier phase's directory.
+
+### 17.3 Not executed
+
+Per explicit instruction, this design was dry-run only. No combos were
+executed, no checkpoint was loaded for a live run, and
+`results/formal_phase4_expanded_full/` was not created (the directory
+referenced in `--output-dir` above does not exist on disk -- `--dry-run`
+exits before any directory creation or file write).

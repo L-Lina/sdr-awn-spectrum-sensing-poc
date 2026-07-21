@@ -92,7 +92,7 @@ WINDOW_SIZE = 128
 DEFAULT_MODS = ["QPSK", "BPSK", "QAM16", "QAM64", "WBFM", "AM-SSB"]
 DEFAULT_SNRS = [-10, 0, 10, 18]
 DEFAULT_ATTACKS = ["none", "fgsm", "pgd", "cw"]
-DEFAULT_EPS = 0.05  # single representative value, matching Phase 0 pilot's precedent
+DEFAULT_EPS = [0.05]  # single representative value by default; --eps accepts a comma-separated list
 DEFAULT_TOPKS = [10, 20, 30, 40, 50, 64, 80, 96, 112, 128]
 DEFAULT_POLICIES = ["current_radioml_native", "normalized_topk_rescaled", "legacy_awn_all_reference"]
 DEFAULT_N_PER_CELL = 3
@@ -160,13 +160,18 @@ def apply_policy(x_adv: np.ndarray, topk: int, topk_adapter: TopKAdapter, policy
     raise ValueError(f"Unknown policy {policy!r}")
 
 
-def build_attack_instances(attacks: List[str], eps: float) -> List[tuple]:
+def build_attack_instances(attacks: List[str], eps_values: List[float]) -> List[tuple]:
+    """eps_values: list of representative eps values swept for fgsm/pgd
+    (matches experiments/run_phase3_attack_effectiveness.py's and
+    run_phase4_defense_effectiveness.py's multi-eps convention). cw and
+    none have no eps concept, same as those scripts."""
     instances = []
     if "none" in attacks:
         instances.append(("none", None))
     for a in ("fgsm", "pgd"):
         if a in attacks:
-            instances.append((a, eps))
+            for eps in eps_values:
+                instances.append((a, eps))
     if "cw" in attacks:
         instances.append(("cw", None))
     return instances
@@ -451,6 +456,7 @@ def write_failures_csv(summary_path: Path, failures_path: Path) -> int:
 
 def parse_int_list(s): return [int(x) for x in s.split(",")]
 def parse_str_list(s): return [x.strip() for x in s.split(",")]
+def parse_float_list(s): return [float(x) for x in s.split(",")]
 
 
 def main() -> None:
@@ -462,7 +468,7 @@ def main() -> None:
     ap.add_argument("--mods", type=parse_str_list, default=DEFAULT_MODS)
     ap.add_argument("--snrs", type=parse_int_list, default=DEFAULT_SNRS)
     ap.add_argument("--attacks", type=parse_str_list, default=DEFAULT_ATTACKS)
-    ap.add_argument("--eps", type=float, default=DEFAULT_EPS)
+    ap.add_argument("--eps", type=parse_float_list, default=DEFAULT_EPS)
     ap.add_argument("--topks", type=parse_int_list, default=DEFAULT_TOPKS)
     ap.add_argument("--policies", type=parse_str_list, default=DEFAULT_POLICIES)
     ap.add_argument("--n-per-cell", type=int, default=DEFAULT_N_PER_CELL)

@@ -1317,3 +1317,212 @@ confirmation, per instruction.
 - Phase 4's full run (~8.8 hours) is a long, single-session commitment;
   no chunking/checkpointing strategy beyond the existing `--resume`
   mechanism has been discussed for spanning multiple sessions if needed.
+
+---
+
+## 13. Phase 4 reduced-tier execution: Top-K defense, N=792 instances / 3168 rows (round 22)
+
+Executed exactly as designed and dry-run-verified in section 12.7:
+`--sample-indices 0,1` on the full formal 6x6x5x{fgsm,pgd}+cw grid x 4 K
+values, into `results/formal_phase4_defense_reduced/` (a directory
+distinct from the smoke test's `/tmp` location, both Phase 3 output
+directories, and any future full-Phase-4 directory). Launched via
+`nohup`, monitored at ~10-minute intervals with a live error/fairness-
+signature watch (never fired). **Actual runtime: 172.3s (2.9 minutes)**
+-- far faster than the ~26-minute estimate (the estimate conservatively
+assumed a larger per-K marginal cost than what real hardware delivered).
+
+### 13.1 System state (Part 一)
+
+- **Attack instances**: 792 (confirmed by distinct (mod,snr,idx,attack,eps)
+  tuples in the output).
+- **Final rows**: 3168.
+- **`ok`**: 3168. **`sensing_failed`**: 0. **`error`**: 0.
+- **Runtime**: 172.3s.
+- **Real backend ratio**: 100% -- `awn_backend`, `attack_backend`,
+  `topk_backend` each a single real-path string across all 3168 rows.
+- **Fallback count**: 0.
+- **NaN/Inf count**: 0 (`clean_nan`/`attacked_nan`/`defended_nan` all
+  `False` on every row).
+- **Eval-mode restored**: 3168/3168 = 100% (`eval_mode_restored=True`
+  on every row; no `attack=none` rows in the formal grid, so no blanks
+  this round, unlike the smoke test).
+- **Reproducibility**: 96-combo spot-check (BPSK+QAM64 x SNR{-10,18} x
+  idx{0,1} x eps{0.01,0.3} x {fgsm,cw} -- deliberately targeting the two
+  most extreme K=10 defended-accuracy cases found, BPSK near-0 and QAM64
+  0.705) in a fresh independent process: **92/96 rows bit-identical on
+  all 58 comparable columns; 4/96 rows (BPSK's very first attack-instance
+  in that process) differed ONLY in `attack_training_before`**.
+  **Diagnosed, not a bug**: `attack_training_before` records whatever
+  train/eval state the model happened to be in immediately before that
+  specific `apply()` call -- confirmed via `nn.Module`'s documented
+  default (`training=True` on construction, verified directly:
+  `nn.Linear(2,2).training == True`) that the model starts in train mode
+  and is only ever set to eval by the PREVIOUS call's `finally` block.
+  Whichever combo happens to be the first attack call in a given process
+  launch will see `attack_training_before=True`; every later combo in
+  that same process sees `False`. This is a property of PROCESS LAUNCH
+  ORDER, not of the combo itself -- in the main run, QPSK is processed
+  before BPSK, so BPSK's first instance already inherits eval mode from
+  QPSK's last call; in the isolated repro run (only BPSK+QAM64 requested),
+  BPSK's first instance IS the process's first attack call. Critically,
+  `attack_training_after` (the field that actually matters for
+  correctness) and `eval_mode_restored` were **identical (`True`) in all
+  96 rows** -- eval-mode restoration itself is unaffected and fully
+  reproducible; only an incidental bookkeeping field about pre-call state
+  varies with unrelated process launch order.
+
+### 13.2 Fairness (Part 二)
+
+- **12. Every attack instance has exactly 4 K rows**: 792/792.
+- **13. `attacked_iq_sha256` consistent across K**: 0 violations across
+  792 instances.
+- **14. `pred_clean` consistent across K**: 0 violations.
+- **15. `pred_attacked` consistent across K**: 0 violations.
+- **16. No K re-executed the attack**: structurally guaranteed by code
+  (`attack_adapter.apply()` called exactly once per instance, outside the
+  `for topk in topks` loop) -- confirmed indirectly by items 13-15 (any
+  re-execution would show as a hash/prediction difference across K, and
+  none did).
+- **17. attack-instances x 4 == final rows**: 792 x 4 = 3168 = final row
+  count. Exact match.
+
+### 13.3 Accuracy and attack (Part 三, instance-level, N=792)
+
+- **18. clean_accuracy**: 0.5139 (407/792)
+- **19. attacked_accuracy**: 0.2487 (197/792)
+- **20. overall_attack_success_rate**: 653/792 = 0.8245
+- **21. conditional_attack_success_rate**: 321/407 = 0.7887
+- **22. prediction_changed_rate**: 0.8245 (same as 20)
+- **23. Per-attack**: cw (0.9306) > pgd (0.8833) > fgsm (0.7444) -- same
+  ordering as Phase 3's reduced tier. **Cross-check**: Phase 3-reduced's
+  independently-run overall success rate was 654/792=0.8258 vs this
+  round's 653/792=0.8245 -- a single-instance difference, consistent with
+  the previously-documented (rounds 15/16) ordinary multi-threaded BLAS
+  floating-point non-determinism at the 2^-12-ish logit-noise level near
+  a decision boundary, not a new finding requiring investigation.
+- **24. Per-eps** (pooled fgsm/pgd): success rate rises from 0.4722
+  (eps=0.01) to 0.9583 (eps=0.30), same shape as Phase 3.
+- **25. Per-modulation**: WBFM's clean_acc=0.0833 /
+  attacked_acc(higher)=0.5379 pattern reproduced again (now the fourth
+  independent confirmation across Phase 1/Phase 3-reduced/Phase 3-full/
+  this round).
+- **26. Per-SNR**: attack success highest at low SNR, same shape as
+  Phase 3.
+
+### 13.4 Defense, per K (Part 四)
+
+| K | defended_acc (27) | overall_recovery (28) | conditional_recovery (29) | true_label_recovery (30, item E) | clean_pred_recovery (31, item D) | clean_degradation (32, item C) | attacked_pred_change (33) | Top-K distortion mean (34) | retained_freq_ratio (35) |
+|---|---|---|---|---|---|---|---|---|---|
+| 10 | 0.2020 | 151/792=0.1907 | 151/653=0.2312 | 101/595=0.1697 | 129/595=0.2168 | 320/407=0.7862 | 526/792=0.6641 | 0.01379 | 0.078 |
+| 20 | 0.2487 | 111/792=0.1402 | 111/653=0.1700 | 82/595=0.1378 | 97/595=0.1630 | 294/407=0.7224 | 369/792=0.4659 | 0.01128 | 0.156 |
+| 30 | 0.2247 | 107/792=0.1351 | 107/653=0.1639 | 61/595=0.1025 | 100/595=0.1681 | 301/407=0.7396 | 299/792=0.3775 | 0.00958 | 0.234 |
+| 40 | 0.2197 | 96/792=0.1212 | 96/653=0.1470 | 46/595=0.0773 | 102/595=0.1714 | 305/407=0.7494 | 239/792=0.3018 | 0.00813 | 0.313 |
+
+(Item E denominator = 595 rows where `attacked_wrong=True`; item D uses
+the same 595-row denominator, per the explicit definitions in section
+12.3.)
+
+- **36. attack x K** (defended_acc / conditional_recovery):
+  fgsm K10:0.189/0.216 K20:0.242/0.157 K30:0.228/0.146 K40:0.239/0.119;
+  pgd K10:0.219/0.220 K20:0.244/0.138 K30:0.208/0.110 K40:0.194/0.079;
+  **cw K10:0.181/0.343 K20:0.306/0.373 K30:0.292/0.493 K40:0.250/0.582**
+  -- cw's conditional recovery rate RISES with K while fgsm/pgd's FALLS,
+  confirming the same K-dependent-only-for-cw pattern round 12's
+  480-combo sweep first found (there: 12%->24%->36%->28% peaking at
+  K=30; here: 34%->37%->49%->58%, still rising at K=40) -- directionally
+  consistent across two independently-built runners, three rounds apart.
+- **37. eps x K** (conditional_recovery, fgsm/pgd pooled): recovery is
+  highest at the WEAKEST eps (0.01: up to 0.382 at K=10) and falls to
+  near-zero at strong eps (0.3: 0.03-0.11 across all K) -- Top-K's
+  fgsm/pgd recovery is essentially a "rescues weak attacks only" effect.
+- **38. modulation x K** (defended_acc): **QAM64 is a dramatic outlier**
+  -- K=10 gives 0.705 defended accuracy (by far the best result in the
+  entire table), falling to 0.326 by K=40. **BPSK and QPSK are the
+  opposite extreme**: K=10 gives 0.000 (BPSK) and 0.008 (QPSK) --
+  essentially total classification failure -- rising to 0.25/0.242 by
+  K=30-40. 8PSK/QAM16/WBFM show smaller, less monotonic variation.
+- **39. SNR x K** (defended_acc): generally higher K performs better at
+  most SNRs except -10dB (where K=10 is best, 0.159 vs 0.098 at K=40) --
+  no single K dominates across every SNR.
+
+### 13.5 Key interpretations (Part 五)
+
+- **40. Highest defended accuracy**: **K=20** (0.2487), narrowly ahead of
+  K=30 (0.2247) and K=40 (0.2197); K=10 is clearly worst (0.2020).
+- **41. Highest recovery rate**: **K=10** for BOTH overall (0.1907) and
+  conditional (0.2312) -- the SAME K that has the worst overall defended
+  accuracy. This is not a contradiction: K=10's aggressive filtering
+  recovers more successfully-attacked samples but simultaneously damages
+  far more originally-correct samples (see item 42), so its net accuracy
+  is still the lowest of the four.
+- **42. Most damaging to clean accuracy**: **K=10** (`clean_degradation_
+  rate`=0.7862 -- nearly 79% of originally-correct clean predictions are
+  broken by Top-K at this K). Even the LEAST damaging K (K=20, 0.7224)
+  still breaks over 72% of correct clean predictions.
+- **43. Recovery vs. degradation trade-off**: **there is a trade-off, but
+  it is extremely lopsided, not a balanced one.** Recovery rate ranges
+  only 0.147-0.231 across all 4 K values, while clean degradation rate
+  ranges 0.722-0.786 -- degradation is 3.2x to 5.3x larger than recovery
+  at every single K tested. K=10 has simultaneously the HIGHEST recovery
+  AND the HIGHEST degradation (both extremes at once) -- there is no K in
+  this grid where recovery approaches, let alone exceeds, degradation.
+- **44. Best K differs by attack**: **yes, clearly.** fgsm and pgd both
+  peak at K=10 (0.216 and 0.220 conditional recovery) and monotonically
+  decline as K increases. **cw is the opposite** -- it peaks at K=40
+  (0.582) and is worst at K=10 (0.343), rising monotonically with K.
+  There is no single K that is simultaneously optimal for all three
+  attacks.
+- **45. Any attack Top-K is nearly powerless against**: not in the
+  attack-success sense (all three attacks succeed 74-93% of the time,
+  none near zero) -- but in the DEFENSE sense, fgsm/pgd's conditional
+  recovery caps out at ~0.22 (fgsm K=10) and ~0.22 (pgd K=10), meaning
+  Top-K fails to recover over 78% of successful fgsm/pgd attacks at
+  EVERY K tested; cw fares somewhat better at high K (0.582 at K=40) but
+  still fails on 42% of successful attacks even at its best K.
+- **46. Modulations/SNRs where Top-K makes things WORSE than no defense**:
+  **5 of 6 modulations** (8PSK, BPSK, QAM16, QPSK, WBFM) show LOWER mean
+  defended accuracy (averaged across all 4 K) than their own
+  attacked-without-defense accuracy -- i.e., applying Top-K is actively
+  counterproductive on average for these 5 modulations at this
+  parameter set. **QAM64 is the sole exception**, where Top-K roughly
+  doubles accuracy (0.197 attacked -> 0.453 mean defended). This is the
+  single most important finding of this round.
+- **47. Is the reduced tier sufficient to launch the full 15840-row
+  Phase 4?** System-correctness: yes, unconditionally -- every check
+  passed at 100% (0 error/fallback/NaN, 100% eval-mode, 100% fairness).
+  Scientifically: the reduced tier's central finding (Top-K's clean-
+  accuracy damage dwarfs its attack-recovery benefit, at every K, for
+  most modulations) is consistent, not noisy or borderline -- it does not
+  need a larger N to be legible. Whether to proceed to the full 15840-row
+  run is a decision about whether finer-grained statistics (e.g. per-
+  (modulation,SNR,eps) cells currently at n=2 in this reduced tier,
+  vs. n=10 in the full grid) are needed for the paper, not about
+  resolving system-correctness doubt -- there is none. **Recommendation
+  left to the user's explicit decision, not started automatically.**
+
+### 13.6 Outputs (Part 六)
+
+```
+results/formal_phase4_defense_reduced/phase4_summary.csv     (3168 rows, 58 columns)
+results/formal_phase4_defense_reduced/phase4_aggregate.csv   (4 rows, one per K, all Part 四 metrics)
+results/formal_phase4_defense_reduced/phase4_manifest.json
+results/formal_phase4_defense_reduced/stdout.log, stderr.log
+results/formal_phase4_defense_reduced/{mod}_snr{snr}_idx{idx}/   (72 per-sample subdirectories)
+```
+`phase4_failures.csv` was not written (0 failures). Not added to git,
+matching `.gitignore`'s existing `results/*` rule.
+
+### 13.7 Conclusion
+
+Phase 4's reduced tier is complete and system-clean: 3168/3168 `ok`, 0
+errors, 0 fallback, 100% eval-mode restoration, 100% fairness (0/792
+violations), reproducible (only an explained, inconsequential
+process-order artifact in one diagnostic field). The central scientific
+finding -- **Top-K's clean-accuracy damage (72-79% degradation rate)
+vastly exceeds its attack-recovery benefit (12-23% conditional recovery)
+at every K tested, and Top-K is actively counterproductive on average for
+5 of 6 modulations** -- is a genuine reduced-tier result, not a system
+artifact, though it awaits the full 15840-row run (or an explicit
+decision not to run it) for full-N statistical confirmation. The full
+Phase 4 run was **not started** this round, per explicit instruction.

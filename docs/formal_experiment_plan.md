@@ -1055,3 +1055,265 @@ resistance) that neither the reduced tier nor Phase 1 could have
 surfaced -- both explicitly flagged as unexplained, not overclaimed.
 Phase 4 (Top-K defense) remains designed-but-not-run, per this round's
 explicit scope.
+
+---
+
+## 12. Phase 4 audit: design, fairness review, metric definitions, smoke test (round 21)
+
+### 12.1 Exact design (re-read from `docs/formal_experiment_matrix.csv`,
+not assumed)
+
+`phase=4/tier=reduced` row: `fixed_params` = "same as Phase 3 (reduced)
+plus `use_real_topk=True`"; `sweep_params` = "Phase 3 (reduced)'s full
+combo set x topk in {10,20,30,40}". This means Phase 4's grid is built by
+taking Phase 3's exact (modulation, SNR, eps, attack) combo set and
+multiplying by the 4 K values -- not a new, independently-specified grid.
+
+- **modulation**: `QPSK, BPSK, QAM16, 8PSK, QAM64, WBFM` (6)
+- **SNR**: `-10, -4, 0, 6, 12, 18` (6)
+- **attack**: `fgsm, pgd, cw` (3 -- "none" is NOT in the formal grid, only
+  used in this round's smoke test for the bit-identical-no-op system check)
+- **attack_eps**: `0.01, 0.03, 0.05, 0.1, 0.3` (5, fgsm/pgd only)
+- **Top-K**: `10, 20, 30, 40` (4)
+- **sample_index**: `n_per_cell=10` (full formal 0-9 set) for the CSV's
+  named "reduced" tier
+- **FGSM combos**: 1800 attack-instances x 4 K = **7200**
+- **PGD combos**: 1800 x 4 = **7200**
+- **CW combos**: 360 x 4 = **1440**
+- **Total**: **15840** (confirmed exactly by `--dry-run`, matching the
+  CSV's `combo_count` field exactly)
+- **Estimated time**: ~8.8 hours (CSV `est_total_human`)
+- **Fixed sensing params**: `threshold_factor=1.5, sensing_window_size=128,
+  min_region_len=0, merge_gap=0` (same as Phase 1's formal values)
+- **alignment_policy**: `max-energy`. **awn_preprocess**: `radioml-native`.
+  **seed**: `42`. **CW**: `cw_c=1.0, cw_steps=20, cw_lr=0.01` (defaults).
+
+### 12.2 Fairness review
+
+`experiments/run_phase3_attack_effectiveness.py` (which calls
+`run_dry_run_experiment()` once per combo) is **not suitable** as a base
+for Phase 4 -- it provides no mechanism for literal cross-K IQ reuse, only
+reproducible regeneration. The only existing script with the required
+architecture is `experiments/run_phase0_pilot.py` (Phase 0's pilot),
+which already implements: compute clean IQ once, compute attacked IQ once
+per (mod,snr,idx,attack) instance, loop ONLY the Top-K + defended-AWN
+stage across K, and assert the attacked-IQ hash never changes mid-loop.
+**New script**: `experiments/run_phase4_defense_effectiveness.py`, built
+by extending this exact architecture with `attack_eps` as an added swept
+dimension (to match Phase 3's grid) and the eval-mode-restoration tracking
+added during Phase 3's review (section 10.1 item 6).
+
+All 12 required fairness properties confirmed by direct code read (not
+assumed) and/or the smoke test (section 12.5):
+
+1. Each (mod,snr,idx,attack,eps) combo generates attacked IQ **exactly
+   once** -- `attack_adapter.apply()` is called once per attack-instance,
+   outside the `for topk in topks` loop.
+2/3. The same `x_adv` array object is passed into `topk_adapter.apply()`
+   for all 4 K values -- never regenerated. A live assertion
+   (`recheck_hash == attacked_iq_hash`) fires if this is ever violated;
+   it never fired.
+4. `attacked_iq_sha256` recorded on every row; confirmed identical across
+   all 4 K rows for all 16 smoke-test attack-instances (0 violations).
+5. `pred_clean`/`pred_attacked` confirmed identical across all 4 K rows
+   for all 16 smoke-test instances (0 violations) -- both are computed
+   once per instance, before the K loop, and copied into every row.
+6. `pred_defended` confirmed to actually vary across K in the smoke test
+   (not a constant column) -- the ONLY prediction column that legitimately
+   changes per K.
+7. **AWN eval-mode restoration**: `attack_training_before`/
+   `attack_training_after`/`eval_mode_restored` columns added (same
+   mechanism as Phase 3's fix); confirmed 100% restored in the smoke test
+   for every attack that actually invokes the real torchattacks path
+   (fgsm/pgd/cw show `eval_mode_restored=True`; `attack=none` shows blank
+   -- confirmed this is because the real backend's `none` branch returns
+   immediately without ever toggling the model's train/eval state, so
+   there is nothing to "restore" -- not a gap).
+8. `TopKAdapter`'s real backend is confirmed via `_REAL_SOURCE =
+   "external/adversarial-rf/util/defense.py:fft_topk_denoise"` (imported
+   directly, not restated) -- matched on every smoke-test row.
+9/10. `precheck_real_backends()` refuses to run ANY combo if AWN, attack,
+   or Top-K construction did not report the real backend; per-row
+   `awn_ok`/`attack_ok`/`topk_ok` checks additionally force
+   `run_status=error` if any backend or eps-invariant or eval-mode check
+   fails at call time, regardless of what the adapter itself reported.
+11. `TopKAdapter.apply()`'s own `require_valid_topk()` boundary (already
+   validated in round 14, CSV row `S,coverage_topk_full_range`) is called
+   unconditionally inside the adapter -- this script passes only the 4
+   legal K values `{10,20,30,40}`, so no clamping of an undocumented value
+   occurs; K=10..40 are all well inside the validated `[1,128]` legal
+   range, none require the `<=0` bypass or `>128` clamp paths.
+12. `external/AWN`/`external/adversarial-rf` are read-only via the
+   existing adapters, same as every prior round -- not modified.
+
+### 12.3 Metric definitions (explicit denominators, per this round's
+instruction not to leave "recovered/total" ambiguous)
+
+Let `N` = all `ok` rows (one row per (mod,snr,idx,attack,eps,K) combo).
+Let `N_inst` = attack-instances (`N` divided by 4, since clean/attacked
+quantities don't vary by K).
+
+- **clean_accuracy** = mean(`clean_correct`) over `ok` rows, computed at
+  the ATTACK-INSTANCE level (each instance's `clean_correct` counted once,
+  not 4x) to avoid K-inflating a quantity that cannot vary with K.
+- **attacked_accuracy** = mean(`attacked_correct`), same instance-level
+  dedup as above.
+- **defended_accuracy** = mean(`defended_correct`) over ALL `ok` rows
+  (this one legitimately varies by K, so no dedup -- report per-K).
+- **overall_attack_success_rate** = count(`changed_by_attack`) /
+  `N_inst` (instance-level, matches Phase 3's exact definition).
+- **conditional_attack_success_rate** = count(`changed_by_attack`) among
+  instances where `clean_correct=True`, divided by that subset's count
+  (instance-level).
+- **prediction_changed_rate** = same as `overall_attack_success_rate`.
+- **overall_defense_recovery_rate** = count(`recovered_by_defense`) / `N`
+  (row-level, since recovery is inherently a per-K quantity) --
+  `recovered_by_defense` = `changed_by_attack AND pred_defended==pred_clean`
+  (same definition as Phase 0's pilot / round 12's precedent).
+- **conditional_defense_recovery_rate** = count(`recovered_by_defense`)
+  among rows where `changed_by_attack=True`, divided by that subset's
+  count (row-level, per K) -- "of the attacks that actually succeeded at
+  this K, what fraction did Top-K recover."
+- **recovery_count** = raw count(`recovered_by_defense`), reported
+  alongside the rate (never rate-only).
+- **attack_success_and_defense_recovery_count** = count(rows where
+  `changed_by_attack=True AND recovered_by_defense=True`) -- identical to
+  `recovery_count` by construction (recovery is defined conditionally on
+  attack success already), stated explicitly to avoid ambiguity.
+- **clean_broken_by_defense_rate** (item C) = count(`clean_broken_by_defense`)
+  / count(rows where `clean_correct=True`) -- `clean_broken_by_defense` =
+  `clean_correct=True AND defended_correct=False` (a NEW column this
+  round, not present in Phase 0's pilot, since Phase 0 never needed a
+  degradation-rate view).
+- **defense_changed_prediction_rate** = count(`defense_changed_prediction`)
+  / `N` -- `defense_changed_prediction` = `pred_defended != pred_attacked`
+  (a NEW column; "how often does Top-K change the attacked prediction to
+  ANYTHING else, not just back to the clean prediction").
+- **Item D** (recovery to the CLEAN prediction, conditioned on the
+  attacked prediction being WRONG, not merely changed): denominator =
+  count(rows where `attacked_wrong=True`, i.e. `attacked_correct=False`);
+  numerator = count of those where `pred_defended==pred_clean`. `attacked_wrong`
+  is a NEW column, deliberately distinct from `changed_by_attack` (a
+  sample can have `attacked_wrong=True` with `changed_by_attack=False` if
+  the CLEAN prediction was already wrong and the attack had no additional
+  effect).
+- **Item E** (recovery to the TRUE LABEL, conditioned on the attacked
+  prediction being wrong): denominator = same as D
+  (`attacked_wrong=True`); numerator = count of those where
+  `defended_correct=True`.
+- **IQ perturbation**: `iq_linf_clean_attacked` (attack's effect, same
+  definition as Phase 3), `iq_linf_normalized_clean_attacked` +
+  `eps_invariant_ok` (fgsm/pgd only, same round-14 invariant).
+- **Top-K distortion**: NEW `iq_linf_attacked_defended` column = Linf
+  norm between `x_defended` and `x_adv` -- isolates what Top-K itself
+  changes, separate from what the attack changed.
+- **Retained frequency ratio**: NEW `retained_freq_ratio` column =
+  `min(topk,128)/128` (or `1.0` if `topk<=0`, matching `TopKAdapter`'s
+  documented bypass semantics, round 14) -- a simple, directly
+  interpretable per-K quantity (K=10 -> 0.078, K=40 -> 0.3125).
+
+### 12.4 Dry-run verification
+
+`--dry-run` (formal reduced tier, default args): **15840 combos**, exact
+match to the CSV. `attack-instances (pre-topk-expansion): 3960` (matches
+Phase 3's FULL-tier attack-instance count exactly, since Phase 4's
+"reduced" tier is built on Phase 3's full 6x6x5x{fgsm,pgd}+cw grid at
+`n_per_cell=10`). Per-attack final-row counts: `fgsm=7200, pgd=7200,
+cw=1440` (exactly `4x` Phase 3's own 1800/1800/360). Per-topk final-row
+counts: `{10:3960, 20:3960, 30:3960, 40:3960}` -- confirms every attack
+combo maps to exactly 4 K rows, no combo is missing a K value, and no
+combo is duplicated. All `combo_id`s unique.
+
+### 12.5 Smoke test (QPSK/BPSK x SNR{0,18} x idx0 x {none,fgsm,pgd,cw} x
+eps=0.05 x K{10,20,30,40} = 64 combos, 16 attack-instances)
+
+Run in 2 independent processes. **64/64 `run_status=ok`** in both. Every
+check from this round's instruction passed:
+
+- 0 `error`, 0 fallback (`awn_backend`/`attack_backend`/`topk_backend`
+  each a single real-path string across all 64 rows).
+- 0 NaN/Inf (`clean_nan`/`attacked_nan`/`defended_nan` all `False`).
+- `eval_mode_restored`: `True` for every fgsm/pgd/cw row; blank for
+  `none` rows (expected -- the real `none` branch never touches the
+  model's train/eval state at all, see section 12.2 item 7).
+- **16/16 attack-instances**: `attacked_iq_sha256` identical across all 4
+  K rows, `pred_clean`/`pred_attacked` identical across all 4 K rows --
+  0 violations.
+- `pred_defended` confirmed to vary across K in at least one instance
+  (not a frozen column).
+- **Top-K genuinely modifies IQ**: `iq_linf_attacked_defended > 0` on
+  64/64 rows (never zero -- confirms Top-K is not a metadata-only no-op).
+- **`attack=none`**: `clean_iq_sha256 == attacked_iq_sha256` on all 16
+  `none` rows -- bit-identical, confirmed no-op.
+- **`attack=none` + Top-K distortion is recorded, not hidden**: e.g.
+  `QPSK_snr18_idx0_none_k10` flips `pred_clean=9 -> pred_defended=1`
+  (`defended_correct=False`) -- this is the EXACT SAME finding Phase 0's
+  pilot first surfaced in round 17 for the identical (mod,snr,idx,K)
+  triple, now independently reproduced by an architecturally-similar but
+  separately-written script, seven rounds later -- a strong cross-script
+  consistency signal, not merely a repeat of the same code path.
+- **Reproducibility**: 0 mismatches across all 58 comparable columns (60
+  total, excluding `output_dir`/`runtime_seconds`) between the two
+  independent processes.
+
+### 12.6 CSV schema (60 columns)
+
+```
+combo_id, dataset, modulation, snr, sample_index, seed, attack, attack_eps,
+attack_temperature, cw_c, cw_steps, cw_lr, topk, retained_freq_ratio,
+threshold_factor, sensing_window_size, min_region_len, merge_gap,
+detection_success, detection_probability, false_alarm_rate,
+captured_signal_ratio, extra_captured_noise_ratio, start_boundary_error,
+end_boundary_error, missed_sample_count, false_occupied_sample_count,
+segment_count, label, pred_clean, pred_attacked, pred_defended,
+clean_correct, attacked_correct, defended_correct, changed_by_attack,
+attacked_wrong, recovered_by_defense, defense_changed_prediction,
+clean_broken_by_defense, iq_linf_clean_attacked,
+iq_linf_normalized_clean_attacked, eps_invariant_ok,
+iq_linf_attacked_defended, awn_backend, attack_backend, topk_backend,
+clean_nan, attacked_nan, defended_nan, attack_training_before,
+attack_training_after, eval_mode_restored, runtime_seconds, run_status,
+failure_stage, failure_reason, output_dir, clean_iq_sha256,
+attacked_iq_sha256
+```
+
+### 12.7 Reduced-tier design (designed + dry-run ONLY, not executed this round)
+
+Keeps the full formal grid (all 6 modulations, all 6 SNRs, all 5 eps
+values, all 3 attacks, all 4 K) and restricts only `sample_index` to the
+first 2 of the formal 0-9 set (`[0,1]`) -- same reduction pattern as
+Phase 3's own reduced tier, no change to the research design.
+
+`--dry-run --sample-indices 0,1`: **3168 combos** (`fgsm=1440, pgd=1440,
+cw=288`), **792 attack-instances** (exactly matching Phase 3-reduced's
+own attack-instance count, since it is the identical mod/snr/eps/attack
+grid). Estimated time: Phase 3-reduced's 792 attack-instances took
+1100.7s measured; Phase 4 reuses that identical cost plus 2376 additional
+K-only rows (Top-K + 1 AWN forward pass each, cheap relative to a full
+attack computation) -- estimated **~26 minutes**, within the requested
+20-40 minute window. **Not started this round** -- awaiting explicit
+confirmation, per instruction.
+
+### 12.8 Outstanding risks
+
+- The reduced-tier time estimate (~26 min) is derived from Phase
+  3-reduced's measured attack-instance cost plus an estimated (not yet
+  measured) per-K marginal cost -- actual reduced-tier runtime may differ
+  once run.
+- `attack=none`'s `eval_mode_restored=blank` (not `True`/`False`) is a
+  structurally-expected null, but if a future refactor of
+  `AttackAdapter`'s `none` branch ever starts touching the model's
+  train/eval state, this script's current logic (`None if
+  attack_training_after is None`) would silently continue reporting blank
+  rather than catching a new failure mode -- worth revisiting if
+  `attack_adapter.py` is ever modified (out of this round's scope, no
+  such modification occurred or is planned).
+- Metric definitions in section 12.3 (especially items D/E) are new to
+  this round -- they have not yet been cross-validated against an
+  independent hand-calculation on real data (only structurally reviewed
+  and unit-level smoke-tested); the reduced-tier run (once approved)
+  would be the first chance to sanity-check them against a non-trivial
+  sample size.
+- Phase 4's full run (~8.8 hours) is a long, single-session commitment;
+  no chunking/checkpointing strategy beyond the existing `--resume`
+  mechanism has been discussed for spanning multiple sessions if needed.

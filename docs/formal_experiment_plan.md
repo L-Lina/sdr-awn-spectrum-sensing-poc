@@ -2396,3 +2396,136 @@ executed, no checkpoint was loaded for a live run, and
 `results/formal_phase4_expanded_full/` was not created (the directory
 referenced in `--output-dir` above does not exist on disk -- `--dry-run`
 exits before any directory creation or file write).
+
+---
+
+## 18. New formal Phase 4 smoke test (round 26)
+
+Uses the formal runner (`experiments/run_phase4_topk_ablation.py`)
+directly, no simplified bypass path. Extended this round to add explicit
+traceability hash columns (`original_iq_sha256`, `clean_iq_sha256`,
+`defended_iq_sha256`, `selected_segment_start`/`selected_segment_end`),
+requested for direct (not merely numeric-equality-inferred)
+reproducibility verification -- diagnostic columns only, no algorithm
+change.
+
+### 18.1 Smoke test design and results
+
+`--mods QPSK,WBFM --snrs 0,18 --sample-indices 0 --attacks
+none,fgsm,pgd,cw --eps 0.05 --topks 10,20,30,40,50,80,128 --policies
+current_radioml_native`, output `results/formal_phase4_expanded_smoke/`.
+
+**Dry-run**: 112 final rows (4 cells x 4 attack-instances/cell x 7 K),
+16 attack-instances.
+
+**Full-scale checks (112/112 rows)**:
+- `run_status`: 112/112 `ok`. `sensing_failed`: 0. `error`: 0.
+- Backends: 100% real on every row (same 3 strings as every prior
+  round). 0 fallback.
+- NaN/Inf: 0 anywhere (`clean_nan`/`attacked_nan`/`defended_nan`).
+- `eval_mode_restored`: `True` on 84 rows (fgsm/pgd/cw), blank on 28
+  `attack=none` rows (structurally expected -- the real `none` branch
+  never touches train/eval state, same finding as every prior round).
+- **Fairness across all 7 K**: 16/16 attack-instances show 0 violations
+  -- `attacked_iq_sha256`, `pred_clean`, `pred_attacked` identical across
+  every K within each instance; `pred_defended` confirmed to vary.
+- **K=128 no-defense baseline**: `attacked_iq_sha256 ==
+  defended_iq_sha256` does NOT hold exactly (expected -- FFT/IFFT
+  round-trip introduces float32-level noise even when nominally keeping
+  every bin); verified instead via numeric tolerance: max
+  `iq_linf_attacked_defended` = `2.79e-09` (16/16 rows), all well under a
+  `1e-5` tolerance, and `pred_defended == pred_attacked` on all 16 K=128
+  rows exactly. K=128 is never counted as a defense success in any
+  aggregate.
+- **`attack=none`**: `clean_iq_sha256 == attacked_iq_sha256` on all 28
+  rows (bit-identical no-op, confirmed via the new explicit hash column,
+  not just inferred); `clean_broken_by_defense` field present and
+  populated (14 clean-correct rows among the 28 `none` rows).
+- **WBFM**: 42 non-`none` rows, 100% `run_status=ok` -- negative results
+  recorded as ordinary data, never specially filtered or treated as a
+  test failure.
+- **CW parameters**: `attack_eps` is blank/`None` for all 28 `cw` rows
+  (confirmed N/A, never silently reused as a placeholder value) --
+  `cw_c`/`cw_steps`/`cw_lr` drive the attack exclusively, matching the
+  code-level confirmation from round 23's `_build_torchattacks` trace.
+- **CSV schema**: 46 columns (41 original + 5 new traceability hashes/
+  segment-position fields this round).
+
+### 18.2 Resume test
+
+Deliberately used a fresh `results/formal_phase4_expanded_smoke/`
+directory (not `expanded_k` or any prior phase's output):
+
+1. Partial run (`--max-combos 28`): stopped after exactly 1 of 4 cells
+   (28 rows written), confirmed via row count.
+2. `--resume`: completed the remaining 3 cells (84 more rows, 112
+   total, matching the dry-run count exactly). The original 28 rows were
+   verified byte-identical (all 45 comparable columns, excluding
+   `runtime_seconds`) before vs. after resume -- **not recomputed**, and
+   the attack instance for that cell was never regenerated (same
+   `attacked_iq_sha256` before and after).
+3. A SECOND `--resume` (with all 112 already done): `"112 combo_ids
+   already done, will be skipped"`, `0 combos attempted this run`, and
+   the output CSV was verified byte-for-byte identical before and after
+   -- confirmed safe no-op, no duplication, no data loss.
+
+### 18.3 Cross-process reproducibility
+
+Two required cases, each in a completely separate process/output
+directory, compared against the smoke set's own rows for the same
+`combo_id`s:
+
+- **QPSK / SNR=18 / CW** (7 rows, one per K): 0 mismatches across all
+  comparable columns, including the new hash chain
+  (`original_iq_sha256`, `clean_iq_sha256`, `attacked_iq_sha256`,
+  `defended_iq_sha256`) and `selected_segment_start`/`selected_segment_end`
+  (`3890`/`4018`).
+- **WBFM / SNR=0 / FGSM / eps=0.05** (7 rows): 0 mismatches, full hash
+  chain identical (`selected_segment_start`/`end` = `3889`/`4017`).
+
+Both cases: `pred_clean`, `pred_attacked` identical across the
+independent process; `pred_defended` identical per-K across the
+independent process. Original capture, sensing/segment selection, clean
+AWN input, attacked IQ, and defended IQ are ALL independently confirmed
+bit-identical via explicit hash columns, not merely inferred from
+matching predictions.
+
+### 18.4 No bugs found
+
+Smoke test passed every check on the first attempt (after adding the
+requested traceability hash columns, a diagnostic-only extension, not a
+bug fix). No blocking issue found; full formal execution may proceed
+whenever explicitly authorized (not this round).
+
+### 18.5 Formal execution readiness
+
+- **New formal Phase 4 command** (not run this round):
+  ```
+  python3 experiments/run_phase4_topk_ablation.py \
+    --mods QPSK,BPSK,QAM16,8PSK,QAM64,WBFM --snrs=-10,-4,0,6,12,18 \
+    --eps 0.01,0.03,0.05,0.1,0.3 --attacks fgsm,pgd,cw \
+    --sample-indices 0,1,2,3,4,5,6,7,8,9 \
+    --topks 10,20,30,40,50,80,128 --policies current_radioml_native \
+    --output-dir results/formal_phase4_expanded_full --resume
+  ```
+- **Output directory**: `results/formal_phase4_expanded_full/` (still
+  does not exist on disk as of this round).
+- **Re-estimated time**: this round's smoke test (112 rows) and the
+  round 25 confirmation run (14256 rows/248.3s) both ran faster than
+  naive per-combo extrapolation would suggest; the 15-45 minute estimate
+  from section 17.2 stands, unchanged by this round's additional
+  columns (hashing 3 extra arrays per row is computationally
+  negligible next to one AWN forward pass).
+
+### 18.6 Outputs
+
+```
+results/formal_phase4_expanded_smoke/ablation_summary.csv   (112 rows, 46 columns)
+results/formal_phase4_expanded_smoke/ablation_manifest.json
+results/formal_phase4_expanded_smoke/stdout_partial.log, stderr_partial.log
+results/formal_phase4_expanded_smoke/stdout_resume1.log, stderr_resume1.log
+results/formal_phase4_expanded_smoke/stdout_resume2.log, stderr_resume2.log
+```
+Not added to git, matching `.gitignore`'s existing `results/*` rule.
+`results/formal_phase4_expanded_k/` (round 25's 14256-row confirmation)
+was never touched.

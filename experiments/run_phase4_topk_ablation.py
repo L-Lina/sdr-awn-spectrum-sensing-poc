@@ -119,6 +119,13 @@ SUMMARY_FIELDS = [
     "attack_training_after", "eval_mode_restored",
     "runtime_seconds", "run_status", "failure_stage", "failure_reason", "output_dir",
     "attacked_iq_sha256", "policy_notes",
+    # Additional traceability hashes (round 25) -- not required for fairness
+    # (attacked_iq_sha256 alone already proves that), but needed to verify
+    # cross-process reproducibility explicitly at every pipeline stage
+    # (original capture -> sensing/segment selection -> clean AWN input ->
+    # attacked -> defended), not just via numeric column equality.
+    "original_iq_sha256", "clean_iq_sha256", "defended_iq_sha256",
+    "selected_segment_start", "selected_segment_end",
 ]
 
 
@@ -270,6 +277,7 @@ def run_sample(mod, snr, idx, output_base, awn_adapter, attack_adapter, topk_ada
         original_sample, n_samples=N_SAMPLES, embed_snr_margin=FIXED["embed_snr_margin"], seed=seed,
     )
     iq = validate_iq(iq)
+    original_iq_hash = sha256_array(iq)
     mask = energy_detect(iq, window=FIXED["sensing_window_size"], threshold_factor=FIXED["threshold_factor"])
     raw_regions = mask_to_regions(mask)
     merged_regions = merge_close_regions(raw_regions, merge_gap=FIXED["merge_gap"])
@@ -283,12 +291,15 @@ def run_sample(mod, snr, idx, output_base, awn_adapter, attack_adapter, topk_ada
 
     ground_truth = None
     x_clean = None
+    seg_start = seg_end = None
     if sensing_failure_stage is None:
         ground_truth = compute_sensing_ground_truth_metrics(embed_meta["true_start"], embed_meta["true_end"], regions)
         try:
-            segments, _ = select_aligned_segments(
+            segments, alignment_meta = select_aligned_segments(
                 iq, regions, seg_len=FIXED["window_size"], policy=FIXED["alignment_policy"], hop=FIXED["segment_hop"],
             )
+            seg_start = alignment_meta[0]["selected_segment_start"]
+            seg_end = alignment_meta[0]["selected_segment_end"]
             segments = apply_awn_preprocess(segments, policy=FIXED["awn_preprocess"])
             x_clean = to_awn_input(segments, seg_len=FIXED["window_size"])
         except RuntimeError as exc:
@@ -306,7 +317,7 @@ def run_sample(mod, snr, idx, output_base, awn_adapter, attack_adapter, topk_ada
                     row.update({
                         "run_status": "sensing_failed", "failure_stage": sensing_failure_stage,
                         "failure_reason": sensing_failure_reason, "runtime_seconds": runtime,
-                        "output_dir": str(output_dir),
+                        "output_dir": str(output_dir), "original_iq_sha256": original_iq_hash,
                     })
                     writer.write_row(row)
         return
@@ -314,6 +325,7 @@ def run_sample(mod, snr, idx, output_base, awn_adapter, attack_adapter, topk_ada
     logits_clean, awn_meta_clean = awn_adapter.infer(x_clean, seed=seed)
     pred_clean = int(np.argmax(logits_clean, axis=1)[0])
     clean_nan = not_finite(x_clean)
+    clean_iq_hash = sha256_array(x_clean)
 
     for attack, eps in instances:
         inst_ids = {_cid(attack, eps, k, p) for k in topks for p in policies}
@@ -355,6 +367,7 @@ def run_sample(mod, snr, idx, output_base, awn_adapter, attack_adapter, topk_ada
                     continue
 
                 x_defended, topk_meta, policy_notes = apply_policy(x_adv, topk, topk_adapter, policy)
+                defended_iq_hash = sha256_array(x_defended)
                 recheck_hash = sha256_array(x_adv)
                 assert recheck_hash == attacked_iq_hash, (
                     f"attacked IQ mutated for {attack} eps={eps}: {attacked_iq_hash} -> {recheck_hash}"
@@ -407,6 +420,9 @@ def run_sample(mod, snr, idx, output_base, awn_adapter, attack_adapter, topk_ada
                     "run_status": run_status, "failure_stage": None, "failure_reason": failure_reason,
                     "output_dir": str(output_dir), "attacked_iq_sha256": attacked_iq_hash,
                     "policy_notes": policy_notes,
+                    "original_iq_sha256": original_iq_hash, "clean_iq_sha256": clean_iq_hash,
+                    "defended_iq_sha256": defended_iq_hash,
+                    "selected_segment_start": seg_start, "selected_segment_end": seg_end,
                 })
                 writer.write_row(row)
 

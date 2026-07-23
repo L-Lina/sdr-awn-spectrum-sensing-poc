@@ -2529,3 +2529,181 @@ results/formal_phase4_expanded_smoke/stdout_resume2.log, stderr_resume2.log
 Not added to git, matching `.gitignore`'s existing `results/*` rule.
 `results/formal_phase4_expanded_k/` (round 25's 14256-row confirmation)
 was never touched.
+
+## 19. Formal Phase 4 execution (round 27) -- K-reduced {10,20,30,40,50,80,128}, full-N
+
+### 19.1 Pre-run verification and push
+
+All 7 pre-run checks passed: working tree clean, `HEAD=12e0870`, empty
+diff, `external/AWN`/`external/adversarial-rf` untouched, author/committer
+solely `Liu Lina <ji3g4lina@gmail.com>`, no AI attribution found, `results/`
+still `.gitignore`d. `git push origin main` succeeded
+(`8b164dd..12e0870 main -> main`); post-push, `origin/main` ==
+`HEAD` == `12e0870`, working tree clean.
+
+### 19.2 Output directory check
+
+`results/formal_phase4_expanded_full/` did not exist prior to this run
+(confirmed via `ls`) -- created fresh, no pre-existing manifest/partial
+data to reconcile, no collision with any other experiment directory.
+
+### 19.3 Dry-run confirmation (formal runner, no hand-guessed parameters)
+
+```
+python3 experiments/run_phase4_topk_ablation.py \
+  --mods QPSK,BPSK,QAM16,8PSK,QAM64,WBFM --snrs=-10,-4,0,6,12,18 \
+  --eps 0.01,0.03,0.05,0.1,0.3 --attacks fgsm,pgd,cw \
+  --sample-indices 0,1,2,3,4,5,6,7,8,9 \
+  --topks 10,20,30,40,50,80,128 --policies current_radioml_native \
+  --output-dir results/formal_phase4_expanded_full --resume --dry-run
+```
+Output: `attack-instances (pre-expansion): 3960`; `27720 final rows: 360
+cells x 11 attack-instances/cell x 7 topk x 1 policies`; per-attack row
+counts `{fgsm: 12600, pgd: 12600, cw: 2520}` -- exact match to the
+approved design (section 17). Execution proceeded.
+
+### 19.4 Formal execution
+
+Ran in the background (PID 1661990), stdout/stderr captured to
+`results/formal_phase4_expanded_full/{stdout,stderr}.log`,
+`run_meta.txt` recording start time (`2026-07-21T08:30:58Z`), the exact
+command, and PID. Monitored via periodic (~10 min) progress checks
+against the growing summary CSV plus a continuous grep filter for
+error/traceback/fallback/NaN/Inf/mismatch/non-real-backend signatures --
+none fired. Process exited on its own:
+```
+[ablation] done in 809.3s (27720 combos attempted this run)
+[ablation] 0 failures -- results/formal_phase4_expanded_full/ablation_failures.csv not written
+```
+End time `2026-07-21T08:52:05Z`. Runtime 809.3s (~13.5 min), inside the
+15-45 minute estimate.
+
+### 19.5 Post-run verification (21-item checklist)
+
+All 21 items confirmed directly from the raw CSV (never from a
+pre-aggregated summary):
+
+1. Attack instances: 3960/3960 (`groupby(modulation,snr,sample_index,attack,attack_eps).ngroups`)
+2. Final rows: 27720/27720
+3. FGSM rows: 12600
+4. PGD rows: 12600
+5. CW rows: 2520
+6. `run_status` value counts: `{ok: 27720}` -- 0 error
+7. 0 `sensing_failed` (would appear as `run_status=="sensing_failed"`; none present)
+8. 0 fallback mentions in any string column
+9. 0 NaN/Inf in numeric columns except the two structurally-expected
+   cases: `attack_eps` NaN for all 2520 CW rows (CW has no eps; matches
+   CW's own row count exactly, confirming `attack_eps` was never
+   mis-populated from CW's `c`/`steps`/`lr`), and
+   `failure_stage`/`failure_reason` NaN for all rows (0 failures)
+10. Backend strings, 100% of rows: `awn_backend=external/adversarial-rf/models/model.py:AWN`,
+    `attack_backend=external/adversarial-rf/util/adv_attack.py:Model01Wrapper + torchattacks`,
+    `topk_backend=external/adversarial-rf/util/defense.py:fft_topk_denoise`
+11. `eval_mode_restored`: `{True: 27720}` -- 100%; `attack_training_after`: `{False: 27720}`
+12. Every attack instance has exactly 7 distinct `topk` values, always `{10,20,30,40,50,80,128}`
+13. `attacked_iq_sha256` has exactly 1 distinct value per instance across all 7 K (0 violations)
+14. `pred_clean` has exactly 1 distinct value per instance across all 7 K (0 violations)
+15. `pred_attacked` has exactly 1 distinct value per instance across all 7 K (0 violations)
+    (also checked as a bonus: `original_iq_sha256` and `clean_iq_sha256` are likewise
+    single-valued per instance across K -- 0 violations)
+16. K=128: `pred_defended == pred_attacked` for all 3960 K=128 rows (100%)
+17. K=128: max `iq_linf_attacked_defended` = `1.86e-08`, well under the `1e-5`
+    tolerance established in the smoke test (float32 FFT/IFFT round-trip noise)
+18. `combo_id`: 27720 rows, 27720 unique values -- 0 duplicates, 0 gaps vs. dry-run enumeration
+19. `--resume` re-run: printed `[resume] 27720 combo_ids already done, will be skipped` /
+    `done in 0.0s (0 combos attempted this run)`; `ablation_summary.csv` md5sum identical
+    before and after (`836d2098463c8283a374b099be035393`) -- confirmed safe no-op, not merely inferred
+20. CSV schema: 46 columns, identical to the smoke test's validated schema
+21. All other experiment directories (`formal_pilot_phase0`, `formal_phase1_sensing_clean_amc`,
+    `formal_phase3_attack_{reduced,full}`, `formal_phase4_defense_reduced`,
+    `formal_phase4_topk_ablation`, `formal_phase4_expanded_k`, `formal_phase4_expanded_smoke`)
+    confirmed present with unchanged summary-file mtimes (all predate this run's 08:30 UTC start)
+    -- nothing overwritten
+
+No bug found. No stop-condition ever triggered.
+
+### 19.6 Aggregate analysis
+
+Built `experiments/analyze_phase4_expanded_full.py` (read-only analysis
+over the completed run's CSV; does not touch `fft_topk_denoise`,
+`TopKAdapter`, or any formal defense code). Produces three long-format
+CSVs under `results/formal_phase4_expanded_full/aggregates/`
+(`all_modulations.csv`, `excl_wbfm_sensitivity.csv`, `wbfm_only.csv`;
+not committed, `results/` remains gitignored), each stacking 8 groupings
+(`K_only`, `attack_x_K`, `modulation_x_K`, `snr_x_K`, `eps_x_K`,
+`attack_x_modulation_x_K`, `attack_x_snr_x_K`, `attack_x_eps_x_K`).
+Every rate metric carries an explicit numerator/denominator column pair
+(never a bare average); net accuracy gain
+(`mean(defended_correct) - mean(attacked_correct)`) carries a numpy
+bootstrap 95% CI (5000 resamples, seed 42, resampling row/instance
+indices within the group). K=128 rows are flagged `is_k128_baseline=True`
+and are never counted as a defense success in any of the text below.
+
+**Global fixed-K (`K_only`, `all_modulations` scope) -- the only
+directly-deployable view, WBFM retained:**
+
+| K | clean_acc | attacked_acc | defended_acc | net_gain | 95% CI | significant |
+|---|---|---|---|---|---|---|
+| 10 | 0.5889 | 0.2894 | 0.2222 | -0.0672 | [-0.0854, -0.0497] | **yes (harmful)** |
+| 20 | 0.5889 | 0.2894 | 0.2927 | +0.0033 | [-0.0114, +0.0187] | no |
+| 30 | 0.5889 | 0.2894 | 0.2773 | -0.0121 | [-0.0250, +0.0008] | no |
+| 40 | 0.5889 | 0.2894 | 0.2763 | -0.0131 | [-0.0245, -0.0018] | **yes (harmful)** |
+| 50 | 0.5889 | 0.2894 | 0.2778 | -0.0116 | [-0.0220, -0.0013] | **yes (harmful)** |
+| 80 | 0.5889 | 0.2894 | 0.2856 | -0.0038 | [-0.0114, +0.0035] | no |
+| 128 | 0.5889 | 0.2894 | 0.2894 | 0.0000 | (baseline) | -- |
+
+**Conclusion (deployable claim): at the global fixed-K level, with WBFM
+retained, no K in {10,...,80} shows a statistically significant net
+benefit; K=10/40/50 are significantly net-HARMFUL. This directly
+replicates and extends the earlier reduced-tier and Expanded-K
+Confirmation findings at full N (3960 attack instances vs. 792/2376):
+fixed-K Top-K filtering is not a viable deployable defense for this
+checkpoint when averaged fairly across all 6 modulations.**
+
+**Attack x K, oracle-analysis only (conditions on true attack identity):**
+excl-WBFM sensitivity view reproduces the Expanded-K Confirmation's
+central finding almost exactly: CW shows a significant, sizeable net
+gain at K=20 (+18.0pp, CI [+11.3,+24.7]), K=30 (+17.7pp), K=40 (+15.7pp),
+K=50 (+14.7pp), K=80 (+8.0pp) -- all CI-significant -- but is *not*
+significant (or even harmful) at K=10. PGD's only significant point is
+K=20 (+3.7pp, CI [+1.6,+5.9]) and K=80 (+0.9pp, barely significant);
+FGSM shows no significant positive K anywhere and is significantly
+harmful at K=10/30. With WBFM included, CW's effect direction stays
+similar but shrinks and becomes non-significant at every K except K=10
+(significantly harmful) -- WBFM's own strong negative effect (below)
+pulls the pooled CW numbers down. **All of this is oracle-analysis --
+"defend at K=20 iff the incoming signal is under CW attack" requires
+knowing the attack identity, which a real defender does not have.**
+
+**Modulation x K, oracle-analysis only (conditions on true modulation
+label -- a direct oracle leak since modulation ID is the pipeline's own
+output):** five of six modulations are net-neutral-to-harmful at every
+K (8PSK, BPSK, QAM16, QPSK, WBFM), but **QAM64 shows a large,
+CI-significant positive net gain at every K from 10 to 50**: +54.7pp at
+K=10, +32.9pp at K=20, +18.0pp at K=30, +12.4pp at K=40, +9.4pp at K=50
+(all CI-significant), fading to +2.0pp/non-significant at K=80. This
+single modulation's strong swing is what keeps the *global* K=20 net
+gain close to (barely above) zero despite most other modulations being
+flat-to-negative there -- **a Simpson's-paradox-style masking effect
+analogous to WBFM's role in the CW finding, just in the opposite
+direction.** Flagged as oracle-analysis only, not a deployable claim.
+
+**WBFM results (retained in the main analysis per instruction, not
+excluded):** WBFM is net-harmful at every single K (10 through 80), all
+7 comparisons CI-significant negative, ranging from -14.4pp (K=10) to
+-7.3pp (K=80). Recorded as a normal, valid research finding -- not
+treated as a failure or excluded from `results/formal_phase4_expanded_full/`.
+This reconfirms round 25's Expanded-K Confirmation finding at full N.
+
+**Is there a stable, deployable global fixed-K?** No. With WBFM
+retained (the approved, non-excluding design), no K value in the tested
+set shows a significant net accuracy improvement at the global level;
+several are significantly harmful. The only statistically strong
+positive effects found (CW at K=20-50, QAM64 at K=10-50) are both
+oracle-conditioned (on attack identity or modulation label
+respectively) and therefore **not directly deployable** under this
+session's deployment-fairness framing (section prior rounds). This is a
+paper-reportable negative/cautionary result for global fixed-K Top-K
+defense on this checkpoint; the oracle-conditioned sub-findings are
+reportable only as directions for future work (e.g., a non-oracle
+attack/modulation detector), explicitly out of this session's scope.

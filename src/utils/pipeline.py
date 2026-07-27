@@ -19,6 +19,7 @@ from src.adapters.attack_adapter import AttackAdapter, dummy_attack
 from src.adapters.awn_adapter import AWNModelAdapter, dummy_awn_inference
 from src.adapters.defense_adapter import dummy_topk_defense
 from src.adapters.topk_adapter import TopKAdapter
+from src.io.iq_file_source import load_iq_file
 from src.sensing.energy_detection import (
     energy_detect,
     filter_by_min_length,
@@ -207,6 +208,26 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             **embed_meta,
         }
         radioml_meta = gen_meta
+    elif cfg.iq_source == "cfile":
+        # Additive this round -- a real (or any raw binary) IQ file loaded
+        # via src/io/iq_file_source.py, feeding the SAME downstream
+        # sensing/AWN/attack/Top-K chain every other source uses. No
+        # synthetic stream is generated, no RadioML sample is read.
+        # radioml_meta is deliberately left None (not set to anything
+        # cfile-specific) -- every ground-truth-dependent code path below
+        # (compute_sensing_ground_truth_metrics, true_burst_start/end,
+        # detection_probability, captured_signal_ratio, boundary errors,
+        # oracle-style crops) already only runs `if radioml_meta is not
+        # None`, so it correctly stays unavailable/None throughout without
+        # any new conditional logic -- this is the EXISTING "no ground
+        # truth" code path, not a new one.
+        iq, iq_provenance = load_iq_file(
+            cfg.input_path, iq_format=cfg.iq_format, endianness=cfg.iq_endianness,
+            scale=cfg.iq_scale, sample_rate=cfg.iq_sample_rate,
+            offset_samples=cfg.iq_offset_samples, max_samples=cfg.iq_max_samples,
+            channel_count=cfg.iq_channel_count,
+        )
+        gen_meta = {"source_type": "cfile", "true_label_mod": cfg.true_label_mod, **iq_provenance}
     else:
         iq, gen_meta = generate_synthetic_iq(
             n_samples=cfg.n_samples,
@@ -390,6 +411,16 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "experiment_name": cfg.experiment_name,
             "dataset": cfg.dataset,
             "batch_size": cfg.batch_size,
+            "true_label_mod": cfg.true_label_mod if cfg.iq_source == "cfile" else None,
+            "cfile_input_path": gen_meta.get("input_path") if cfg.iq_source == "cfile" else None,
+            "cfile_file_size_bytes": gen_meta.get("file_size_bytes") if cfg.iq_source == "cfile" else None,
+            "cfile_file_sha256": gen_meta.get("file_sha256") if cfg.iq_source == "cfile" else None,
+            "cfile_iq_format": gen_meta.get("iq_format") if cfg.iq_source == "cfile" else None,
+            "cfile_endianness": gen_meta.get("endianness") if cfg.iq_source == "cfile" else None,
+            "cfile_scale": gen_meta.get("scale") if cfg.iq_source == "cfile" else None,
+            "cfile_sample_rate": gen_meta.get("sample_rate") if cfg.iq_source == "cfile" else None,
+            "cfile_offset_samples": gen_meta.get("offset_samples") if cfg.iq_source == "cfile" else None,
+            "cfile_loaded_sample_count": gen_meta.get("loaded_sample_count") if cfg.iq_source == "cfile" else None,
             "sensing_window_size": effective_sensing_window_size,
             "segment_length": cfg.window_size,
             "regions": regions,
@@ -569,6 +600,16 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "experiment_name": cfg.experiment_name,
             "dataset": cfg.dataset,
             "batch_size": cfg.batch_size,
+            "true_label_mod": cfg.true_label_mod if cfg.iq_source == "cfile" else None,
+            "cfile_input_path": gen_meta.get("input_path") if cfg.iq_source == "cfile" else None,
+            "cfile_file_size_bytes": gen_meta.get("file_size_bytes") if cfg.iq_source == "cfile" else None,
+            "cfile_file_sha256": gen_meta.get("file_sha256") if cfg.iq_source == "cfile" else None,
+            "cfile_iq_format": gen_meta.get("iq_format") if cfg.iq_source == "cfile" else None,
+            "cfile_endianness": gen_meta.get("endianness") if cfg.iq_source == "cfile" else None,
+            "cfile_scale": gen_meta.get("scale") if cfg.iq_source == "cfile" else None,
+            "cfile_sample_rate": gen_meta.get("sample_rate") if cfg.iq_source == "cfile" else None,
+            "cfile_offset_samples": gen_meta.get("offset_samples") if cfg.iq_source == "cfile" else None,
+            "cfile_loaded_sample_count": gen_meta.get("loaded_sample_count") if cfg.iq_source == "cfile" else None,
             # iq_source is the raw cfg/CLI value ("synthetic"/"radioml") that
             # drove effective_alignment_policy/effective_awn_preprocess's
             # source-aware resolution (docs/parameter_validation.md section
@@ -798,6 +839,16 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         "experiment_name": cfg.experiment_name,
         "dataset": cfg.dataset,
         "batch_size": cfg.batch_size,
+        "true_label_mod": cfg.true_label_mod if cfg.iq_source == "cfile" else None,
+        "cfile_input_path": gen_meta.get("input_path") if cfg.iq_source == "cfile" else None,
+        "cfile_file_size_bytes": gen_meta.get("file_size_bytes") if cfg.iq_source == "cfile" else None,
+        "cfile_file_sha256": gen_meta.get("file_sha256") if cfg.iq_source == "cfile" else None,
+        "cfile_iq_format": gen_meta.get("iq_format") if cfg.iq_source == "cfile" else None,
+        "cfile_endianness": gen_meta.get("endianness") if cfg.iq_source == "cfile" else None,
+        "cfile_scale": gen_meta.get("scale") if cfg.iq_source == "cfile" else None,
+        "cfile_sample_rate": gen_meta.get("sample_rate") if cfg.iq_source == "cfile" else None,
+        "cfile_offset_samples": gen_meta.get("offset_samples") if cfg.iq_source == "cfile" else None,
+        "cfile_loaded_sample_count": gen_meta.get("loaded_sample_count") if cfg.iq_source == "cfile" else None,
         "sensing_window_size": effective_sensing_window_size,
         "segment_length": cfg.window_size,
         "regions": regions,

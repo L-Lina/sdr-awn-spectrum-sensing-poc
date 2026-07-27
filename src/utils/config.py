@@ -251,6 +251,32 @@ class ExperimentConfig:
     # output_dir given, never anything else under results/.
     overwrite: bool = False
 
+    # --- Real IQ file input surface (this round, additive) ---
+    # iq_source's third legal value: "cfile" -- loads a real (or any raw
+    # binary) IQ file via src/io/iq_file_source.py:load_iq_file instead of
+    # generating synthetic noise or reading a RadioML dataset sample.
+    # "synthetic" and "radioml" are COMPLETELY UNCHANGED -- cfile mode
+    # never creates a synthetic long stream and never reads a RadioML
+    # sample; the reverse also holds (synthetic/radioml modes never touch
+    # input_path or any iq_* field below). No ground truth (true_start/
+    # true_end/oracle crop/detection_probability/captured_signal_ratio/
+    # boundary_error) is available in cfile mode -- these stay None
+    # throughout, exactly like the pre-existing "no radioml_meta" case
+    # already handled by run_dry_run_experiment's ground_truth branch, not
+    # a new code path. Optional true_label_mod lets a caller who DOES know
+    # the ground-truth modulation for a captured file supply it (for
+    # accuracy/attack-success metrics); omitting it leaves those metrics
+    # None/unavailable, never fabricated as "unknown"==0 or similar.
+    input_path: Optional[str] = None
+    iq_format: str = "complex64"
+    iq_endianness: str = "native"
+    iq_scale: Optional[float] = None
+    iq_sample_rate: Optional[float] = None
+    iq_offset_samples: int = 0
+    iq_max_samples: Optional[int] = None
+    iq_channel_count: int = 1
+    true_label_mod: Optional[str] = None
+
 
 def build_attack_params(cfg: "ExperimentConfig") -> Dict[str, object]:
     """Collects every non-None attack_* field on cfg into the flat dict
@@ -426,8 +452,26 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
     require_positive_finite_float("cw_c", cfg.cw_c)
     require_positive_int("cw_steps", cfg.cw_steps)
     require_positive_finite_float("cw_lr", cfg.cw_lr)
-    if cfg.iq_source not in ("synthetic", "radioml"):
-        raise ValueError(f"iq_source must be 'synthetic' or 'radioml', got {cfg.iq_source!r}")
+    if cfg.iq_source not in ("synthetic", "radioml", "cfile"):
+        raise ValueError(f"iq_source must be 'synthetic', 'radioml', or 'cfile', got {cfg.iq_source!r}")
+    if cfg.iq_source == "cfile":
+        # Additive this round -- entirely separate from the synthetic/
+        # radioml branches above/below, which never read any of these
+        # fields. See src/io/iq_file_source.py for the loader itself.
+        from src.io.iq_file_source import SUPPORTED_ENDIANNESS, SUPPORTED_IQ_FORMATS
+        if cfg.input_path is None:
+            raise ValueError("--iq-source cfile requires input_path to be set")
+        if cfg.iq_format not in SUPPORTED_IQ_FORMATS:
+            raise ValueError(f"iq_format must be one of {SUPPORTED_IQ_FORMATS}, got {cfg.iq_format!r}")
+        if cfg.iq_endianness not in SUPPORTED_ENDIANNESS:
+            raise ValueError(f"iq_endianness must be one of {SUPPORTED_ENDIANNESS}, got {cfg.iq_endianness!r}")
+        require_nonneg_int("iq_offset_samples", cfg.iq_offset_samples)
+        if cfg.iq_max_samples is not None:
+            require_positive_int("iq_max_samples", cfg.iq_max_samples)
+        if cfg.iq_channel_count != 1:
+            raise ValueError(f"iq_channel_count must be 1 (multi-channel IQ files are not supported), got {cfg.iq_channel_count!r}")
+        if cfg.true_label_mod is not None and cfg.true_label_mod not in RML2016_10A_MODULATIONS:
+            raise ValueError(f"true_label_mod {cfg.true_label_mod!r} is not one of {RML2016_10A_MODULATIONS}")
     if cfg.iq_source == "radioml" and cfg.num_bursts <= 1:
         # Single-burst radioml mode only -- num_bursts>1 uses
         # dataset_mod_list/dataset_snr_list/sample_index_list instead
@@ -719,12 +763,38 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument("--cw-lr", type=arg_positive_finite_float("cw_lr"), default=0.01,
                         help="CW-ONLY. torchattacks.CW's Adam learning rate. Ignored entirely by fgsm/pgd. "
                              "NOT the same knob as --attack-eps, which CW does not use at all.")
-    parser.add_argument("--iq-source", type=str, choices=["synthetic", "radioml"], default="synthetic",
+    parser.add_argument("--iq-source", "--input-source", dest="iq_source", type=str,
+                        choices=["synthetic", "radioml", "cfile"], default="synthetic",
                         help="'synthetic' (default): generate_synthetic_iq, --mod/--snr control it as before. "
                              "'radioml': load a real RML2016.10a sample (--dataset-path/--dataset-mod/"
                              "--dataset-snr/--sample-index, all required) and embed it in a synthetic noise "
                              "stream instead -- --mod/--snr are ignored in this mode, not reinterpreted as "
-                             "the RadioML ground truth.")
+                             "the RadioML ground truth. 'cfile': load a real IQ file via "
+                             "src/io/iq_file_source.py (--input-path/--iq-format required; see those flags) -- "
+                             "no synthetic stream, no RadioML sample, no ground truth. --input-source is an "
+                             "alias for this same flag (same underlying iq_source field).")
+    parser.add_argument("--input-path", dest="input_path", type=str, default=None,
+                        help="CFILE-ONLY, REQUIRED when --iq-source cfile. Path to the raw IQ file.")
+    parser.add_argument("--iq-format", type=str, choices=["complex64", "interleaved_float32", "interleaved_int16"],
+                        default="complex64", help="CFILE-ONLY. On-disk format -- see src/io/iq_file_source.py.")
+    parser.add_argument("--iq-endianness", type=str, choices=["little", "big", "native"], default="native",
+                        help="CFILE-ONLY. Byte order of the on-disk samples.")
+    parser.add_argument("--iq-scale", type=float, default=None,
+                        help="CFILE-ONLY. interleaved_int16 dequantization scale (complex_value = raw_int16 * scale). "
+                             "Default (unset): 1/32768, always recorded in the output provenance either way.")
+    parser.add_argument("--iq-sample-rate", type=float, default=None,
+                        help="CFILE-ONLY. Sample rate (Hz) of the capture, recorded as provenance metadata only "
+                             "(not used by any sensing/AWN computation).")
+    parser.add_argument("--iq-offset-samples", type=arg_nonneg_int("iq_offset_samples"), default=0,
+                        help="CFILE-ONLY. Skip this many samples from the start of the file before loading.")
+    parser.add_argument("--iq-max-samples", type=arg_positive_int("iq_max_samples"), default=None,
+                        help="CFILE-ONLY. Load at most this many samples (after --iq-offset-samples). Default: all.")
+    parser.add_argument("--iq-channel-count", type=int, default=1,
+                        help="CFILE-ONLY. Must be 1 -- multi-channel IQ files are not supported by this loader.")
+    parser.add_argument("--true-label-mod", type=str, default=None,
+                        help="CFILE-ONLY, OPTIONAL. If the true modulation of a captured file happens to be "
+                             "known, supply it here to enable accuracy/attack-success metrics; omitted (default) "
+                             "leaves those metrics unavailable (None), never fabricated.")
     parser.add_argument("--dataset-path", type=str, default=None,
                         help="RADIOML-ONLY, REQUIRED when --iq-source radioml. Absolute path to "
                              "RML2016.10a_dict.pkl (not part of this repo or its submodule).")
@@ -980,6 +1050,15 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         batch_size=args.batch_size,
         experiment_name=sanitize_experiment_name(args.experiment_name),
         overwrite=args.overwrite,
+        input_path=args.input_path,
+        iq_format=args.iq_format,
+        iq_endianness=args.iq_endianness,
+        iq_scale=args.iq_scale,
+        iq_sample_rate=args.iq_sample_rate,
+        iq_offset_samples=args.iq_offset_samples,
+        iq_max_samples=args.iq_max_samples,
+        iq_channel_count=args.iq_channel_count,
+        true_label_mod=args.true_label_mod,
     )
 
 

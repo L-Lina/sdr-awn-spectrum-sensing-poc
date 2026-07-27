@@ -140,6 +140,64 @@ def embed_sample_in_noise(
     return iq, meta
 
 
+def embed_sample_in_noise_at_position(
+    sample_2x128: np.ndarray,
+    n_samples: int,
+    embed_snr_margin: float,
+    seed: int,
+    position: int,
+) -> Tuple[np.ndarray, dict]:
+    """Same noise-floor/embedding math as embed_sample_in_noise() above
+    (kept byte-for-byte identical, not modified), but places the burst at
+    an EXPLICIT, caller-given `position` instead of drawing it from the
+    seeded RNG. Added this round to support --burst-insert-position
+    center/explicit (src/utils/config.py); embed_sample_in_noise() itself
+    is untouched, so --burst-insert-position=random (the default)
+    continues to produce byte-identical output to every prior round.
+
+    The noise stream itself still uses `seed` (so two calls with the same
+    seed produce the same noise realization, just with the burst placed
+    wherever `position` says rather than at a random offset) -- only the
+    RNG draw that would have picked true_start is skipped.
+    """
+    burst_len = sample_2x128.shape[1]
+    if burst_len >= n_samples:
+        raise ValueError(f"RadioML sample length ({burst_len}) must be < n_samples ({n_samples})")
+    if position < 0 or position + burst_len > n_samples:
+        raise ValueError(
+            f"position={position} + burst_len={burst_len} exceeds n_samples={n_samples} "
+            f"(valid range: 0..{n_samples - burst_len})"
+        )
+
+    burst_iq = radioml_sample_to_iq(sample_2x128)
+    burst_power = float(np.mean(np.abs(burst_iq) ** 2))
+    noise_power = burst_power / embed_snr_margin
+    noise_std = float(np.sqrt(noise_power / 2.0))
+
+    rng = np.random.default_rng(seed)
+    noise = rng.normal(0, noise_std, n_samples) + 1j * rng.normal(0, noise_std, n_samples)
+    iq = noise.astype(np.complex64)
+
+    true_start = position
+    true_end = true_start + burst_len
+    iq[true_start:true_end] += burst_iq
+
+    meta = {
+        "true_start": true_start,
+        "true_end": true_end,
+        "burst_len": burst_len,
+        "burst_power": burst_power,
+        "embed_noise_power": noise_power,
+        "embed_noise_std": noise_std,
+        "embed_snr_margin": embed_snr_margin,
+        "n_samples": n_samples,
+    }
+    print(f"[radioml] embedded {burst_len}-sample RadioML burst at EXPLICIT position [{true_start}:{true_end}] "
+          f"in {n_samples}-sample stream (burst_power={burst_power:.3e}, "
+          f"embed_noise_power={noise_power:.3e}, margin={embed_snr_margin})")
+    return iq, meta
+
+
 def embed_multiple_samples_in_noise(
     samples: List[np.ndarray],
     n_samples: int,

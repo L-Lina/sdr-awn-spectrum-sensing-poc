@@ -194,6 +194,63 @@ class ExperimentConfig:
     attack_abort_early: Optional[bool] = None  # ead
     attack_ead_variant: Optional[str] = None  # "eadl1" (default) or "eaden"
 
+    # --- Dataset / sample-selection surface (round: parameter acceptance
+    # fixes) ---
+    # Only one dataset is actually supported end-to-end (RML2016.10a, the
+    # pinned checkpoint's own training dataset) -- an explicit field so a
+    # typo'd/unsupported dataset name is rejected loudly instead of being
+    # silently ignored (dataset_path's own file content was previously the
+    # ONLY thing that mattered). "RML2016.10a" reproduces all prior
+    # behavior exactly.
+    dataset: str = "RML2016.10a"
+    # mod_filter/snr_filter: NOT a batch-iteration driver (this remains a
+    # single-combo tool -- see samples_per_cell below for why iterating
+    # multiple combos per invocation was deliberately NOT built this
+    # round) -- a WHITELIST/GUARD applied to the single selected
+    # dataset_mod/dataset_snr. None (default, both) reproduces prior
+    # behavior exactly (no filter applied). When set, dataset_mod must be
+    # a member of mod_filter (checked against RML2016_10A_CLASSES) and
+    # dataset_snr must be a member of snr_filter, or the run is rejected
+    # before any sensing/AWN work starts.
+    mod_filter: Optional[List[str]] = None
+    snr_filter: Optional[List[int]] = None
+    # samples_per_cell: distinct, deliberately NOT the same field as the
+    # pre-existing n_samples (which means long synthetic-stream length in
+    # samples, unrelated and unchanged) -- this is a per-(dataset_mod,
+    # dataset_snr) sample_index BUDGET: when set, sample_index must be <
+    # samples_per_cell, or the run is rejected. None (default) means no
+    # such bound is enforced (only RML2016.10a's own per-cell block size,
+    # 1000, bounds sample_index, exactly as before).
+    samples_per_cell: Optional[int] = None
+    # burst_insert_position: "random" (default, reproduces
+    # embed_sample_in_noise's existing seeded-random placement exactly),
+    # "center", or "explicit" (requires burst_insert_position_index).
+    # RadioML single-burst mode only. See
+    # src/sensing/radioml_source.py:embed_sample_in_noise_at_position.
+    burst_insert_position: str = "random"
+    burst_insert_position_index: Optional[int] = None
+    # batch_size: how many segments AWNModelAdapter.infer() processes in a
+    # single real forward-pass call, when the caller has more than one
+    # segment available (multi-region sensing, or a caller-driven
+    # multi-sample batch such as experiments/validate_pipeline_parameters.py's
+    # smoke test) -- chunks a larger segment array into sub-batches of
+    # this size rather than either one giant call or one-at-a-time calls.
+    # run_dry_run_experiment's own single-combo call sites are usually
+    # N=1 or N=(detected region count), both already <= any sane
+    # batch_size, so this has no effect on their existing behavior unless
+    # more segments are present than batch_size allows through at once.
+    batch_size: int = 1
+    # experiment_name: optional human-readable tag folded into the
+    # manifest/output; sanitized (path separators and other illegal
+    # filename characters stripped) since it is never used blindly as a
+    # raw path component.
+    experiment_name: Optional[str] = None
+    # overwrite: default False -- if output_dir already contains a
+    # summary.csv, run_dry_run_experiment now refuses to proceed unless
+    # overwrite=True is set explicitly. Only ever touches the exact
+    # output_dir given, never anything else under results/.
+    overwrite: bool = False
+
 
 def build_attack_params(cfg: "ExperimentConfig") -> Dict[str, object]:
     """Collects every non-None attack_* field on cfg into the flat dict
@@ -290,6 +347,69 @@ def require_valid_topk(name: str, value) -> int:
     return int(fvalue)
 
 
+# RML2016.10a's actual SNR label set (dB) -- matches ALL_SNRS already used
+# independently in every experiments/run_phase*.py script this session
+# (e.g. run_phase1_sensing_baseline.py) and RML2016_10A_CLASSES's own
+# 11-class ordering (src/sensing/radioml_source.py). Duplicated here as a
+# plain constant (not imported from radioml_source.py, which would need to
+# either open the dataset file or hardcode the same list itself) so
+# mod_filter/snr_filter/dataset validation never needs to touch disk.
+RML2016_10A_VALID_SNRS = list(range(-20, 20, 2))
+RML2016_10A_MODULATIONS = ["8PSK", "AM-DSB", "AM-SSB", "BPSK", "CPFSK", "GFSK",
+                            "PAM4", "QAM16", "QAM64", "QPSK", "WBFM"]
+SUPPORTED_DATASETS = ("RML2016.10a",)
+
+
+def require_valid_topk_strict(name: str, value: int) -> int:
+    """Strict [1, 128] Top-K range check -- deliberately SEPARATE from
+    require_valid_topk() above, which src/adapters/topk_adapter.py:
+    TopKAdapter.apply() (and src/adapters/defense_adapter.py) still call
+    unmodified, preserving their existing, documented bypass (topk<=0) /
+    clamp (topk>T) semantics for any direct-API caller. This function is
+    for the FORMAL CLI/config entry point only (called from
+    args_to_config(), not from validate_experiment_config() -- see that
+    function's own docstring for why the shared validator does not call
+    this): a formal, CLI-launched experiment must not silently accept an
+    out-of-range K and either no-op or clamp it without telling the
+    caller. 128 is the fixed upper bound because this pipeline's segment
+    length (window_size / AWN input T) is always 128 samples in every
+    formal round to date; this is not a general "must equal window_size"
+    rule, just this project's own fixed value."""
+    ivalue = require_valid_topk(name, value)
+    if not (1 <= ivalue <= 128):
+        raise ValueError(f"{name} must satisfy 1 <= {name} <= 128 for a formal CLI-launched run, got {ivalue}")
+    return ivalue
+
+
+def require_valid_min_region_len_strict(name: str, value: int) -> int:
+    """Strict min_region_len > 0 check -- deliberately SEPARATE from the
+    require_nonneg_int("min_region_len", ...) check inside
+    validate_experiment_config() below, which allows 0 (a real,
+    documented, deliberate value meaning "no minimum region-length
+    filter" -- used as the FIXED default in every formal round this
+    session: Phase 0-4, the four-path Spectrum Sensing Utility
+    Experiment, and attack-compatibility all use min_region_len=0, most
+    of them via DIRECT calls to filter_by_min_length/select_aligned_segments
+    that never go through this function at all, but
+    experiments/run_phase1_sensing_baseline.py specifically calls
+    run_dry_run_experiment(cfg) directly with min_region_len=0, which DOES
+    go through validate_experiment_config() -- changing that shared
+    function to reject 0 would make Phase 1's own formal run
+    unreproducible through this exact code path. This stricter function
+    is therefore called ONLY from args_to_config() (the CLI entry point),
+    not from validate_experiment_config(), so a NEW CLI-launched run must
+    supply a positive min_region_len while Phase 1's already-completed,
+    documented direct-API invocation remains exactly reproducible."""
+    ivalue = require_nonneg_int(name, value)
+    if ivalue <= 0:
+        raise ValueError(
+            f"{name} must be a positive integer for a formal CLI-launched run (got {ivalue}); "
+            f"0 ('no minimum length filter') is only accepted via direct ExperimentConfig/"
+            f"validate_experiment_config construction, matching Phase 1's existing formal usage."
+        )
+    return ivalue
+
+
 def validate_experiment_config(cfg: ExperimentConfig) -> None:
     """Boundary validation for direct-API callers of run_dry_run_experiment(cfg)
     that bypass argparse entirely. Covers exactly the parameters with a
@@ -368,6 +488,57 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
                 )
             for scale in cfg.burst_power_scale_list:
                 require_positive_finite_float("burst_power_scale_list entry", scale)
+
+    # --- new this round: dataset / mod_filter / snr_filter / samples_per_cell /
+    # batch_size / burst_insert_position / stream_length>=burst_len / strict
+    # topk range. All are additive/None-safe -- verified against every
+    # existing direct-API formal caller (run_phase1_sensing_baseline.py, the
+    # only formal script that calls run_dry_run_experiment/
+    # validate_experiment_config directly) before being added here; none of
+    # these reject Phase 1's actual fixed params (dataset="RML2016.10a" by
+    # construction, topk=50, mod_filter/snr_filter/samples_per_cell/
+    # experiment_name all left at their None/default). min_region_len's
+    # STRICT (>0) check is deliberately NOT here -- see
+    # require_valid_min_region_len_strict()'s own docstring for why.
+    if cfg.dataset not in SUPPORTED_DATASETS:
+        raise ValueError(f"dataset must be one of {SUPPORTED_DATASETS}, got {cfg.dataset!r}")
+    if cfg.mod_filter is not None:
+        unknown = [m for m in cfg.mod_filter if m not in RML2016_10A_MODULATIONS]
+        if unknown:
+            raise ValueError(f"mod_filter contains unknown modulation(s) {unknown}; valid: {RML2016_10A_MODULATIONS}")
+        if cfg.iq_source == "radioml" and cfg.dataset_mod is not None and cfg.dataset_mod not in cfg.mod_filter:
+            raise ValueError(f"dataset_mod={cfg.dataset_mod!r} is not in mod_filter={cfg.mod_filter}")
+    if cfg.snr_filter is not None:
+        unknown = [s for s in cfg.snr_filter if s not in RML2016_10A_VALID_SNRS]
+        if unknown:
+            raise ValueError(f"snr_filter contains SNR(s) not present in RML2016.10a {unknown}; valid: {RML2016_10A_VALID_SNRS}")
+        if cfg.iq_source == "radioml" and cfg.dataset_snr is not None and cfg.dataset_snr not in cfg.snr_filter:
+            raise ValueError(f"dataset_snr={cfg.dataset_snr!r} is not in snr_filter={cfg.snr_filter}")
+    if cfg.samples_per_cell is not None:
+        require_positive_int("samples_per_cell", cfg.samples_per_cell)
+        if cfg.iq_source == "radioml" and cfg.num_bursts <= 1 and cfg.sample_index >= cfg.samples_per_cell:
+            raise ValueError(f"sample_index={cfg.sample_index} must be < samples_per_cell={cfg.samples_per_cell}")
+    require_positive_int("batch_size", cfg.batch_size)
+    if cfg.burst_insert_position not in ("random", "center", "explicit"):
+        raise ValueError(f"burst_insert_position must be 'random', 'center', or 'explicit', got {cfg.burst_insert_position!r}")
+    if cfg.burst_insert_position == "explicit":
+        if cfg.burst_insert_position_index is None:
+            raise ValueError("burst_insert_position='explicit' requires burst_insert_position_index to be set")
+        require_nonneg_int("burst_insert_position_index", cfg.burst_insert_position_index)
+        if cfg.burst_insert_position_index + cfg.window_size > cfg.n_samples:
+            raise ValueError(
+                f"burst_insert_position_index={cfg.burst_insert_position_index} + burst length "
+                f"({cfg.window_size}) exceeds n_samples={cfg.n_samples} -- burst would not fit in the stream"
+            )
+    if cfg.n_samples < cfg.window_size:
+        raise ValueError(f"n_samples (stream_length) = {cfg.n_samples} must be >= burst length ({cfg.window_size})")
+    # Strict topk range -- SAFE to include in the shared validator (unlike
+    # min_region_len above): Phase 1, the only formal round whose direct-API
+    # call passes through this function, uses topk=50, well within [1,128];
+    # every other formal round bypasses this validator entirely (calls
+    # TopKAdapter.apply()/fft_topk_denoise directly, whose own bypass/clamp
+    # semantics are untouched -- see require_valid_topk_strict's docstring).
+    require_valid_topk_strict("topk", cfg.topk)
 
 
 def resolve_sensing_window_size(window_size: int, sensing_window_size: Optional[int]) -> int:
@@ -669,6 +840,41 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
     attack_abort_group.add_argument("--attack-abort-early", dest="attack_abort_early", action="store_true", default=None, help="ead: stop a binary-search step early once successful")
     attack_abort_group.add_argument("--attack-no-abort-early", dest="attack_abort_early", action="store_false", help="ead: always run the full iteration budget")
     parser.add_argument("--attack-ead-variant", type=str, choices=["eadl1", "eaden"], default=None, help="which torchattacks class 'ead' aliases (default eadl1)")
+
+    # Dataset / sample-selection / runtime-management surface (this round).
+    parser.add_argument("--dataset", type=str, choices=list(SUPPORTED_DATASETS), default="RML2016.10a",
+                         help="Only RML2016.10a is supported end-to-end; any other value is rejected before any work starts.")
+    parser.add_argument("--mod-filter", type=str, default=None,
+                         help="Comma-separated whitelist of modulations dataset_mod must belong to (e.g. QPSK,BPSK,QAM16). "
+                              "Not a batch-iteration driver -- a guard on the single selected --dataset-mod.")
+    parser.add_argument("--snr-filter", type=str, default=None,
+                         help="Comma-separated whitelist of SNRs (dB) dataset_snr must belong to. Same guard semantics as --mod-filter.")
+    parser.add_argument("--samples-per-cell", type=arg_positive_int("samples_per_cell"), default=None,
+                         help="Upper bound on --sample-index for the selected (dataset-mod, dataset-snr) cell "
+                              "(sample_index must be < this). Distinct from --stream-length (below), which is an "
+                              "unrelated pre-existing concept (long synthetic-stream sample count).")
+    parser.add_argument("--stream-length", dest="n_samples", type=arg_positive_int("n_samples"), default=8192,
+                         help="Long synthetic-noise-stream length in samples (the pre-existing n_samples field, "
+                              "now CLI-settable) -- must be >= the burst/segment length (--window-size, 128 by default).")
+    parser.add_argument("--burst-insert-position", type=str, choices=["random", "center", "explicit"], default="random",
+                         help="RadioML single-burst mode only. 'random' (default) reproduces the existing seeded-random "
+                              "placement exactly; 'center' places the burst at the stream's geometric center; 'explicit' "
+                              "requires --burst-insert-position-index.")
+    parser.add_argument("--burst-insert-position-index", type=arg_nonneg_int("burst_insert_position_index"), default=None,
+                         help="REQUIRED when --burst-insert-position explicit. Exact burst start sample index; "
+                              "index + burst length must not exceed --stream-length.")
+    parser.add_argument("--batch-size", type=arg_positive_int("batch_size"), default=1,
+                         help="How many segments AWNModelAdapter.infer() processes per real forward-pass call when "
+                              "more than one segment is available; chunks larger segment arrays into sub-batches of "
+                              "this size instead of one giant or one-at-a-time call.")
+    parser.add_argument("--experiment-name", type=str, default=None,
+                         help="Optional human-readable tag folded into the manifest/output (sanitized -- path "
+                              "separators and other illegal filename characters are stripped).")
+    overwrite_group = parser.add_mutually_exclusive_group()
+    overwrite_group.add_argument("--overwrite", dest="overwrite", action="store_true", default=False,
+                                  help="Allow writing into an --output-dir that already contains a summary.csv "
+                                       "(default: refuse). Only ever touches the exact output_dir given.")
+    overwrite_group.add_argument("--no-overwrite", dest="overwrite", action="store_false")
     return parser
 
 
@@ -698,7 +904,8 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         window_size=args.window_size,
         sensing_window_size=args.sensing_window_size,
         min_region_len=(
-            args.window_size if args.min_region_len is None else args.min_region_len
+            args.window_size if args.min_region_len is None
+            else require_valid_min_region_len_strict("min_region_len", args.min_region_len)
         ),
         merge_gap=args.merge_gap,
         burst_len=args.burst_len,
@@ -763,4 +970,27 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         attack_initial_const=args.attack_initial_const,
         attack_abort_early=args.attack_abort_early,
         attack_ead_variant=args.attack_ead_variant,
+        dataset=args.dataset,
+        mod_filter=_parse_comma_list(args.mod_filter, str, "mod_filter"),
+        snr_filter=_parse_comma_list(args.snr_filter, int, "snr_filter"),
+        samples_per_cell=args.samples_per_cell,
+        n_samples=args.n_samples,
+        burst_insert_position=args.burst_insert_position,
+        burst_insert_position_index=args.burst_insert_position_index,
+        batch_size=args.batch_size,
+        experiment_name=sanitize_experiment_name(args.experiment_name),
+        overwrite=args.overwrite,
     )
+
+
+def sanitize_experiment_name(name: Optional[str]) -> Optional[str]:
+    """Strips path separators and other characters illegal/dangerous in a
+    filename component -- experiment_name is folded into manifests/output
+    paths, never used blindly as a raw path fragment."""
+    if name is None:
+        return None
+    import re
+    cleaned = re.sub(r"[^A-Za-z0-9_.\-]", "_", name)
+    if not cleaned:
+        raise ValueError(f"experiment_name {name!r} sanitizes to an empty string")
+    return cleaned

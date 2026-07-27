@@ -35,6 +35,7 @@ from src.sensing.normalize import apply_awn_preprocess, to_awn_input
 from src.sensing.radioml_source import (
     embed_multiple_samples_in_noise,
     embed_sample_in_noise,
+    embed_sample_in_noise_at_position,
     load_radioml_sample,
 )
 from src.sensing.segmentation import select_aligned_segments
@@ -117,6 +118,18 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
 
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    # overwrite protection (this round): a pre-existing summary.csv in
+    # output_dir means a completed run already lives there -- refuse to
+    # silently clobber it unless the caller explicitly opts in via
+    # --overwrite/cfg.overwrite=True. Only ever inspects/touches this
+    # exact output_dir, never anything else under results/.
+    existing_summary = output_dir / "summary.csv"
+    if existing_summary.exists() and not cfg.overwrite:
+        raise FileExistsError(
+            f"{existing_summary} already exists -- refusing to overwrite without --overwrite/"
+            f"cfg.overwrite=True (this protection is new this round; omitting --overwrite "
+            f"reproduces a SAFE refusal, not prior silent-overwrite behavior)."
+        )
 
     radioml_meta = None
     multi_burst_truths = None  # list[dict], input to compute_multi_burst_sensing_metrics
@@ -161,9 +174,28 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         # require actually opening the dataset file.
         original_sample = load_radioml_sample(cfg.dataset_path, cfg.dataset_mod, cfg.dataset_snr, cfg.sample_index)
         original_sample_sha256 = hashlib.sha256(original_sample.tobytes()).hexdigest()
-        iq, embed_meta = embed_sample_in_noise(
-            original_sample, n_samples=cfg.n_samples, embed_snr_margin=cfg.embed_snr_margin, seed=cfg.seed,
-        )
+        # burst_insert_position (this round): "random" (default) calls the
+        # ORIGINAL, unmodified embed_sample_in_noise -- byte-identical to
+        # every prior round. "center"/"explicit" call the new, additive
+        # embed_sample_in_noise_at_position instead (embed_sample_in_noise
+        # itself is never touched). Neither the sensing stage nor any
+        # no_sensing-style fixed-crop concept elsewhere in this repo reads
+        # burst_insert_position or the resulting true_start -- only used
+        # here, at generation time, and later purely as ground-truth
+        # metadata for compute_sensing_ground_truth_metrics.
+        if cfg.burst_insert_position == "random":
+            iq, embed_meta = embed_sample_in_noise(
+                original_sample, n_samples=cfg.n_samples, embed_snr_margin=cfg.embed_snr_margin, seed=cfg.seed,
+            )
+        else:
+            if cfg.burst_insert_position == "center":
+                position = (cfg.n_samples - original_sample.shape[1]) // 2
+            else:  # "explicit" -- presence/bounds already checked in validate_experiment_config
+                position = cfg.burst_insert_position_index
+            iq, embed_meta = embed_sample_in_noise_at_position(
+                original_sample, n_samples=cfg.n_samples, embed_snr_margin=cfg.embed_snr_margin,
+                seed=cfg.seed, position=position,
+            )
         gen_meta = {
             "source_type": "radioml",
             "dataset_path": cfg.dataset_path,
@@ -171,6 +203,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "dataset_snr": cfg.dataset_snr,
             "sample_index": cfg.sample_index,
             "original_sample_sha256": original_sample_sha256,
+            "burst_insert_position": cfg.burst_insert_position,
             **embed_meta,
         }
         radioml_meta = gen_meta
@@ -354,6 +387,9 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "awn_input_has_inf": None,
             "n_segments": 0,
             "seed": cfg.seed,
+            "experiment_name": cfg.experiment_name,
+            "dataset": cfg.dataset,
+            "batch_size": cfg.batch_size,
             "sensing_window_size": effective_sensing_window_size,
             "segment_length": cfg.window_size,
             "regions": regions,
@@ -373,7 +409,33 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         awn_adapter = AWNModelAdapter(checkpoint_path=cfg.checkpoint, device=cfg.device)
 
         def run_awn(x):
-            return awn_adapter.infer(x, seed=cfg.seed)
+            # batch_size (this round): chunk x into sub-batches of at most
+            # cfg.batch_size segments per real AWNModelAdapter.infer() call,
+            # instead of one call covering all of x's segments at once.
+            # cfg.batch_size=1 (the default) makes every chunk a single
+            # segment; when x.shape[0] <= cfg.batch_size (the overwhelming
+            # majority of existing single-combo/single-region calls), this
+            # is exactly one call, byte-identical to before. Never silently
+            # drops or reorders segments -- logits are concatenated back in
+            # the original order.
+            n = x.shape[0]
+            if n <= cfg.batch_size:
+                return awn_adapter.infer(x, seed=cfg.seed)
+            all_logits = []
+            metas = []
+            for start in range(0, n, cfg.batch_size):
+                chunk = x[start:start + cfg.batch_size]
+                chunk_logits, chunk_meta = awn_adapter.infer(chunk, seed=cfg.seed)
+                all_logits.append(chunk_logits)
+                metas.append(chunk_meta)
+            for m in metas[1:]:
+                if m["awn_backend"] != metas[0]["awn_backend"] or m["awn_status"] != metas[0]["awn_status"]:
+                    raise RuntimeError(
+                        f"batch_size={cfg.batch_size} chunking produced inconsistent backend/status across "
+                        f"chunks: {metas[0]} vs {m} -- refusing to silently merge inconsistent results."
+                    )
+            logits = np.concatenate(all_logits, axis=0)
+            return logits, metas[0]
     else:
         def run_awn(x):
             logits = dummy_awn_inference(x, seed=cfg.seed)
@@ -504,6 +566,9 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         rows.append({
             "segment_id": i,
             "seed": cfg.seed,
+            "experiment_name": cfg.experiment_name,
+            "dataset": cfg.dataset,
+            "batch_size": cfg.batch_size,
             # iq_source is the raw cfg/CLI value ("synthetic"/"radioml") that
             # drove effective_alignment_policy/effective_awn_preprocess's
             # source-aware resolution (docs/parameter_validation.md section
@@ -730,6 +795,9 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         "awn_input_has_inf": any(r["awn_input_has_inf"] for r in rows),
         "n_segments": x_clean.shape[0],
         "seed": cfg.seed,
+        "experiment_name": cfg.experiment_name,
+        "dataset": cfg.dataset,
+        "batch_size": cfg.batch_size,
         "sensing_window_size": effective_sensing_window_size,
         "segment_length": cfg.window_size,
         "regions": regions,

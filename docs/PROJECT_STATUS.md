@@ -294,6 +294,56 @@ per-parameter detail.)
   for legal/boundary/negative/zero/NaN/Inf/non-numeric inputs: implemented
   in `src/utils/config.py`, documented in `docs/parameter_validation.csv`.
 
+### 3.1 Update (post-round-27 work): full attack registry + core-parameter acceptance
+
+Three subsequent rounds (not yet reflected in the phase history above,
+which predates them) extended `src/adapters/attack_adapter.py` from the
+original fgsm/pgd/cw set to **17 attacks** (bim, mifgsm, difgsm, vmifgsm,
+vnifgsm, rfgsm, tpgd, deepfool, fab, square, apgd, apgdt, autoattack, ead,
+plus the original three), each smoke-tested against the real AWN
+checkpoint (`experiments/run_attack_compatibility_smoke.py`,
+`docs/ATTACK_NAME_MAPPING.md`, `docs/ATTACK_COMPATIBILITY_WORKLIST.md`).
+`difgsm` required a custom, IQ-native reimplementation
+(`src/adapters/iq_difgsm.py:IQDIFGSM`) since `torchattacks.DIFGSM`'s own
+input-diversity transform assumes a 2D image and crashes on this repo's
+`[N,2,T,1]` tensor layout -- installed torchattacks itself was never
+modified. `experiments/test_iq_difgsm.py` covers it with 6 dedicated unit
+tests (shape, I/Q-channel consistency, gradient, determinism, Linf/NaN/Inf
+constraints, no-diversity equivalence).
+
+A further round (`experiments/validate_pipeline_parameters.py`) added and
+verified, end-to-end through the real CLI/pipeline: `--dataset` (fixed to
+`RML2016.10a`), `--mod-filter`/`--snr-filter` (whitelist guards on the
+single selected modulation/SNR, not a batch-iteration driver),
+`--samples-per-cell` (a per-cell `sample_index` bound, deliberately a
+separate concept from the pre-existing `n_samples`/stream-length field),
+`--stream-length` (CLI-facing alias for that pre-existing field),
+`--burst-insert-position {random,center,explicit}` (via the new, additive
+`src/sensing/radioml_source.py:embed_sample_in_noise_at_position` --
+`embed_sample_in_noise` itself untouched), `--batch-size` (real
+`AWNModelAdapter.infer()` chunking, verified bit-identical predictions
+across batch sizes), `--experiment-name` (sanitized, written to
+`summary.csv`), and `--overwrite` (refuses to clobber an existing
+`summary.csv` by default). Also fixed this round: `--topk` is now
+strictly rejected outside `[1,128]` at the formal CLI/config boundary
+(`require_valid_topk_strict`), and `--min-region-len<=0` is rejected at
+the CLI boundary specifically (`require_valid_min_region_len_strict`,
+called only from `args_to_config`) -- **neither change touches
+`TopKAdapter`/`fft_topk_denoise`'s own existing bypass/clamp semantics,
+nor the shared `validate_experiment_config` Phase 1's own formal script
+depends on (`min_region_len=0`)**, preserving Phase 1's exact
+reproducibility. `resume` was deliberately left `DEFERRED_WITH_REASON` --
+`mod_filter`/`snr_filter`/`samples_per_cell` are guards/bounds, not batch
+iterators, so a single CLI invocation still never produces more than one
+row; real multi-combo resume continues to live at the batch-script layer
+(each `experiments/run_phase*.py`'s own `--resume`). Final parameter
+classification: 71 `IMPLEMENTED_AND_VALIDATED`, 1
+`NOT_APPLICABLE_FIXED_BY_BACKEND` (`apgdt.loss` -- the real installed
+`torchattacks.APGDT` has no such constructor parameter at all, always
+DLR-targeted internally), 1 `NOT_IMPLEMENTED` (`progress_logging` -- no
+verbosity flag exists), 1 `DEFERRED_WITH_REASON` (`resume`), 0
+`INVALID_OR_BROKEN` (`results/parameter_validation_20260727T054218Z/`).
+
 ---
 
 ## 4. Not yet done / not yet verified

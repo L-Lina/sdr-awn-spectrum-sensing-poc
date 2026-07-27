@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import math
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -152,6 +152,72 @@ class ExperimentConfig:
     # boundary in src/utils/pipeline.py -- never inside
     # segmentation.py/energy_detection.py.
     awn_preprocess: Optional[str] = None
+    # Extended attack parameter surface (this round) -- covers every
+    # attack beyond the original fgsm/pgd/cw set (see
+    # src/adapters/attack_adapter.py:_ATTACK_ACCEPTED_PARAMS,
+    # docs/ATTACK_NAME_MAPPING.md). Every field here defaults to None,
+    # meaning "not explicitly set" -- AttackAdapter.apply()'s attack_params
+    # dict only ever contains the non-None entries, so an attack whose
+    # constructor doesn't accept a given field simply never sees it, and an
+    # omitted field lets torchattacks' OWN installed default apply (never
+    # duplicated/hardcoded here). fgsm/pgd/cw's pre-existing hardcoded
+    # defaults (pgd alpha=eps/4 steps=10; cw from cw_c/cw_steps/cw_lr) are
+    # completely unaffected when these are all left at None.
+    attack_alpha: Optional[float] = None
+    attack_steps: Optional[int] = None
+    attack_random_start: Optional[bool] = None
+    attack_decay: Optional[float] = None
+    attack_resize_rate: Optional[float] = None
+    attack_diversity_prob: Optional[float] = None
+    attack_momentum_n: Optional[int] = None  # torchattacks' "N" kwarg (vmifgsm/vnifgsm)
+    attack_beta: Optional[float] = None  # fab's step-size beta OR ead's L1-weight beta (mutually exclusive per attack)
+    attack_overshoot: Optional[float] = None  # deepfool
+    attack_kappa: Optional[float] = None  # cw/ead confidence margin
+    attack_lr: Optional[float] = None  # ead's Adam learning rate (distinct from --cw-lr)
+    attack_norm: Optional[str] = None  # fab/square/apgd/apgdt/autoattack
+    attack_n_restarts: Optional[int] = None
+    attack_loss: Optional[str] = None  # apgd
+    attack_eot_iter: Optional[int] = None  # apgd/apgdt
+    attack_rho: Optional[float] = None  # apgd/apgdt
+    attack_alpha_max: Optional[float] = None  # fab
+    attack_eta: Optional[float] = None  # fab
+    attack_multi_targeted: Optional[bool] = None  # fab
+    attack_n_classes: Optional[int] = None  # fab/apgdt/autoattack (default 11, AWN's real class count, if unset)
+    attack_internal_seed: Optional[int] = None  # fab/square/apgd/apgdt/autoattack's own internal seed= kwarg
+    attack_n_queries: Optional[int] = None  # square
+    attack_p_init: Optional[float] = None  # square
+    attack_resc_schedule: Optional[bool] = None  # square
+    attack_version: Optional[str] = None  # autoattack
+    attack_binary_search_steps: Optional[int] = None  # ead
+    attack_max_iterations: Optional[int] = None  # ead
+    attack_initial_const: Optional[float] = None  # ead
+    attack_abort_early: Optional[bool] = None  # ead
+    attack_ead_variant: Optional[str] = None  # "eadl1" (default) or "eaden"
+
+
+def build_attack_params(cfg: "ExperimentConfig") -> Dict[str, object]:
+    """Collects every non-None attack_* field on cfg into the flat dict
+    AttackAdapter.apply(attack_params=...) expects, translating this
+    config's CLI-facing names to the exact torchattacks constructor kwarg
+    names (e.g. attack_momentum_n -> "N", attack_ead_variant ->
+    "_ead_variant"). Only called from src/utils/pipeline.py; the many
+    direct-API runner scripts (experiments/run_phase*.py) call
+    AttackAdapter.apply() themselves and build their own (usually empty)
+    attack_params dict, unaffected by this function."""
+    mapping = {
+        "attack_alpha": "alpha", "attack_steps": "steps", "attack_random_start": "random_start",
+        "attack_decay": "decay", "attack_resize_rate": "resize_rate", "attack_diversity_prob": "diversity_prob",
+        "attack_momentum_n": "N", "attack_beta": "beta", "attack_overshoot": "overshoot",
+        "attack_kappa": "kappa", "attack_lr": "lr", "attack_norm": "norm", "attack_n_restarts": "n_restarts",
+        "attack_loss": "loss", "attack_eot_iter": "eot_iter", "attack_rho": "rho",
+        "attack_alpha_max": "alpha_max", "attack_eta": "eta", "attack_multi_targeted": "multi_targeted",
+        "attack_n_classes": "n_classes", "attack_internal_seed": "seed", "attack_n_queries": "n_queries",
+        "attack_p_init": "p_init", "attack_resc_schedule": "resc_schedule", "attack_version": "version",
+        "attack_binary_search_steps": "binary_search_steps", "attack_max_iterations": "max_iterations",
+        "attack_initial_const": "initial_const", "attack_abort_early": "abort_early",
+        "attack_ead_variant": "_ead_variant",
+    }
+    return {tk: getattr(cfg, cf) for cf, tk in mapping.items() if getattr(cfg, cf) is not None}
 
 
 # ---------------------------------------------------------------------------
@@ -557,6 +623,52 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
                              "'legacy-unit-power': normalize_segments()'s unit-average-power rescale. "
                              "'radioml-native': no rescaling at all, matching traced evidence that "
                              "external/adversarial-rf never normalizes before AWN.forward(). See section 19.")
+
+    # Extended attack parameter surface (this round) -- see ExperimentConfig's
+    # attack_* fields and build_attack_params() above for how these feed
+    # AttackAdapter.apply(attack_params=...). Every one defaults to None
+    # (unset): omitting a flag never changes fgsm/pgd/cw's existing behavior,
+    # and for every other attack lets torchattacks' own installed default
+    # apply. docs/ATTACK_NAME_MAPPING.md documents which flags apply to
+    # which attack name.
+    parser.add_argument("--attack-alpha", type=float, default=None, help="pgd/bim/mifgsm/difgsm/vmifgsm/vnifgsm/rfgsm/tpgd step size")
+    parser.add_argument("--attack-steps", type=arg_positive_int("attack_steps"), default=None, help="iterative attacks' step count (most families)")
+    attack_random_start_group = parser.add_mutually_exclusive_group()
+    attack_random_start_group.add_argument("--attack-random-start", dest="attack_random_start", action="store_true", default=None, help="pgd/difgsm: randomize the starting point before the first step")
+    attack_random_start_group.add_argument("--attack-no-random-start", dest="attack_random_start", action="store_false", help="pgd/difgsm: disable random start")
+    parser.add_argument("--attack-decay", type=float, default=None, help="mifgsm/difgsm/vmifgsm/vnifgsm momentum decay")
+    parser.add_argument("--attack-resize-rate", type=float, default=None, help="difgsm input-diversity resize rate")
+    parser.add_argument("--attack-diversity-prob", type=float, default=None, help="difgsm input-diversity probability")
+    parser.add_argument("--attack-momentum-n", type=arg_positive_int("attack_momentum_n"), default=None, help="vmifgsm/vnifgsm neighborhood sample count (torchattacks' N)")
+    parser.add_argument("--attack-beta", type=float, default=None, help="fab step-size beta OR ead L1-regularization beta (mutually exclusive per attack, see docs/ATTACK_NAME_MAPPING.md)")
+    parser.add_argument("--attack-overshoot", type=arg_positive_finite_float("attack_overshoot"), default=None, help="deepfool overshoot")
+    parser.add_argument("--attack-kappa", type=float, default=None, help="cw/ead confidence margin kappa")
+    parser.add_argument("--attack-lr", type=arg_positive_finite_float("attack_lr"), default=None, help="ead Adam learning rate (distinct from --cw-lr)")
+    parser.add_argument("--attack-norm", type=str, choices=["Linf", "L2", "L1"], default=None, help="fab/square/apgd/apgdt/autoattack distance norm")
+    parser.add_argument("--attack-n-restarts", type=arg_positive_int("attack_n_restarts"), default=None, help="fab/square/apgd/apgdt restart count")
+    parser.add_argument("--attack-loss", type=str, choices=["ce", "dlr"], default=None, help="apgd loss function")
+    parser.add_argument("--attack-eot-iter", type=arg_positive_int("attack_eot_iter"), default=None, help="apgd/apgdt EOT iteration count")
+    parser.add_argument("--attack-rho", type=arg_positive_finite_float("attack_rho"), default=None, help="apgd/apgdt step-size-reduction parameter")
+    parser.add_argument("--attack-alpha-max", type=arg_positive_finite_float("attack_alpha_max"), default=None, help="fab max step size")
+    parser.add_argument("--attack-eta", type=arg_positive_finite_float("attack_eta"), default=None, help="fab step-size growth factor")
+    attack_multi_targeted_group = parser.add_mutually_exclusive_group()
+    attack_multi_targeted_group.add_argument("--attack-multi-targeted", dest="attack_multi_targeted", action="store_true", default=None, help="fab: attack every other class as a target and keep the best")
+    attack_multi_targeted_group.add_argument("--attack-no-multi-targeted", dest="attack_multi_targeted", action="store_false", help="fab: disable multi-targeted mode")
+    parser.add_argument("--attack-n-classes", type=arg_positive_int("attack_n_classes"), default=None, help="fab/apgdt/autoattack class count (default: AWN's real 11 if unset, NOT torchattacks' CIFAR-10-oriented default of 10)")
+    parser.add_argument("--attack-internal-seed", type=int, default=None, help="fab/square/apgd/apgdt/autoattack's own internal RNG seed (distinct from --seed)")
+    parser.add_argument("--attack-n-queries", type=arg_positive_int("attack_n_queries"), default=None, help="square query budget")
+    parser.add_argument("--attack-p-init", type=arg_positive_finite_float("attack_p_init"), default=None, help="square initial perturbation fraction")
+    attack_resc_group = parser.add_mutually_exclusive_group()
+    attack_resc_group.add_argument("--attack-resc-schedule", dest="attack_resc_schedule", action="store_true", default=None, help="square: rescale the query budget schedule")
+    attack_resc_group.add_argument("--attack-no-resc-schedule", dest="attack_resc_schedule", action="store_false", help="square: disable query budget rescaling")
+    parser.add_argument("--attack-version", type=str, choices=["standard", "plus", "rand"], default=None, help="autoattack ensemble version")
+    parser.add_argument("--attack-binary-search-steps", type=arg_positive_int("attack_binary_search_steps"), default=None, help="ead binary search step count")
+    parser.add_argument("--attack-max-iterations", type=arg_positive_int("attack_max_iterations"), default=None, help="ead max optimization iterations")
+    parser.add_argument("--attack-initial-const", type=arg_positive_finite_float("attack_initial_const"), default=None, help="ead initial trade-off constant")
+    attack_abort_group = parser.add_mutually_exclusive_group()
+    attack_abort_group.add_argument("--attack-abort-early", dest="attack_abort_early", action="store_true", default=None, help="ead: stop a binary-search step early once successful")
+    attack_abort_group.add_argument("--attack-no-abort-early", dest="attack_abort_early", action="store_false", help="ead: always run the full iteration budget")
+    parser.add_argument("--attack-ead-variant", type=str, choices=["eadl1", "eaden"], default=None, help="which torchattacks class 'ead' aliases (default eadl1)")
     return parser
 
 
@@ -621,4 +733,34 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         alignment_policy=args.alignment_policy,
         segment_hop=args.segment_hop,
         awn_preprocess=args.awn_preprocess,
+        attack_alpha=args.attack_alpha,
+        attack_steps=args.attack_steps,
+        attack_random_start=args.attack_random_start,
+        attack_decay=args.attack_decay,
+        attack_resize_rate=args.attack_resize_rate,
+        attack_diversity_prob=args.attack_diversity_prob,
+        attack_momentum_n=args.attack_momentum_n,
+        attack_beta=args.attack_beta,
+        attack_overshoot=args.attack_overshoot,
+        attack_kappa=args.attack_kappa,
+        attack_lr=args.attack_lr,
+        attack_norm=args.attack_norm,
+        attack_n_restarts=args.attack_n_restarts,
+        attack_loss=args.attack_loss,
+        attack_eot_iter=args.attack_eot_iter,
+        attack_rho=args.attack_rho,
+        attack_alpha_max=args.attack_alpha_max,
+        attack_eta=args.attack_eta,
+        attack_multi_targeted=args.attack_multi_targeted,
+        attack_n_classes=args.attack_n_classes,
+        attack_internal_seed=args.attack_internal_seed,
+        attack_n_queries=args.attack_n_queries,
+        attack_p_init=args.attack_p_init,
+        attack_resc_schedule=args.attack_resc_schedule,
+        attack_version=args.attack_version,
+        attack_binary_search_steps=args.attack_binary_search_steps,
+        attack_max_iterations=args.attack_max_iterations,
+        attack_initial_const=args.attack_initial_const,
+        attack_abort_early=args.attack_abort_early,
+        attack_ead_variant=args.attack_ead_variant,
     )

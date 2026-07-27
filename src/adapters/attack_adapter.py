@@ -7,11 +7,7 @@ the fallback target for AttackAdapter below).
 AttackAdapter wraps the real attack path: Model01Wrapper from
 external/adversarial-rf/util/adv_attack.py plus the third-party torchattacks
 library, mirroring the construction pattern in
-external/adversarial-rf/util/multi_attack_eval.py, e.g.:
-    torchattacks.FGSM(wrapped_model, eps=eps)
-    torchattacks.PGD(wrapped_model, eps=eps, alpha=eps/4, steps=steps)
-    torchattacks.CW(wrapped_model, c=c, steps=steps, lr=lr)
-per docs/integration_plan.md section 2.
+external/adversarial-rf/util/multi_attack_eval.py.
 
 A real gradient-based attack additionally needs a *real* (differentiable)
 AWN model -- if AWNModelAdapter fell back to the numpy dummy (e.g. because
@@ -19,15 +15,22 @@ torch isn't installed), there is nothing to backprop through, so this
 adapter also falls back in that case regardless of whether torchattacks
 itself is importable.
 
-Neither torch nor the third-party torchattacks package is installed in this
-phase (packages are not to be installed) -- so real-attack construction is
-expected to fail and fall back to dummy_attack, exactly like
-topk_adapter.py / awn_adapter.py. This module never modifies external/AWN or
-external/adversarial-rf; it only reads from the latter (adds its path to
-sys.path for the duration of the import attempt).
+This module never modifies external/AWN or external/adversarial-rf; it only
+reads from the latter (adds its path to sys.path for the duration of the
+import attempt).
 
-Supported attack names (first version, per docs/integration_plan.md): none,
-fgsm, pgd, cw.
+Supported attack names: none, fgsm, pgd, cw (original, backward-compatible
+set -- every prior formal round, docs/formal_experiment_plan.md phases 0-4,
+depends on these three's exact existing default parameter values, which are
+UNCHANGED below), plus (this round) bim, mifgsm, difgsm, vmifgsm, vnifgsm,
+rfgsm, tpgd, deepfool, fab, square, apgd, apgdt, autoattack, ead (=
+torchattacks.EADL1, see _ATTACK_CLASS_MAP). Every constructor kwarg name and
+default below was read directly from the INSTALLED torchattacks==3.5.1
+package via inspect.signature(), not assumed from memory or from
+external/adversarial-rf's own (sometimes older-version-targeting) call
+sites -- see docs/ATTACK_NAME_MAPPING.md for the full per-attack
+parameter/targeted-mode/input-constraint table and the introspection
+transcript it was built from.
 
 x_clean is only unit-average-power normalized (src/sensing/normalize.py), not
 clamped to [-1,1] -- roughly 12% of samples fall outside that range in
@@ -39,7 +42,10 @@ adapter uses the existing per-segment min-max mapping already provided by
 external/adversarial-rf/util/adv_attack.py (iq_to_ta_input_minmax /
 ta_output_to_iq_minmax / Model01Wrapper.set_minmax) instead of the fixed-range
 iq_to_ta_input / ta_output_to_iq, so every sample round-trips losslessly
-through the [0,1] domain regardless of its original magnitude.
+through the [0,1] domain regardless of its original magnitude. This mapping
+is shared by ALL attacks below (not just fgsm/pgd/cw) -- every torchattacks
+class ultimately calls the wrapped model's forward() on whatever tensor it
+is given, and the mapping/wrapper boundary is identical for all of them.
 
 This checkpoint's raw logits are large enough (top1-top2 margins in the
 hundreds) that float32 softmax saturates exactly, making CrossEntropyLoss's
@@ -57,6 +63,7 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
+from src.adapters.iq_difgsm import IQDIFGSM
 from src.utils.config import (
     require_nonneg_finite_float,
     require_positive_finite_float,
@@ -67,7 +74,78 @@ _ADVERSARIAL_RF_ROOT = Path(__file__).resolve().parents[2] / "external" / "adver
 _REAL_ATTACK_SOURCE = "external/adversarial-rf/util/adv_attack.py:Model01Wrapper + torchattacks"
 
 _NO_OP_ATTACKS = {"", "none"}
-_SUPPORTED_ATTACKS = {"none", "fgsm", "pgd", "cw"}
+
+# AWN's real class count (external/adversarial-rf/models/model.py:AWN,
+# num_classes=11 in src/adapters/awn_adapter.py:_AWN_2016_10A_CFG) -- FAB/
+# APGDT/AutoAttack default to torchattacks' own n_classes=10 (a CIFAR-10
+# convention) if not told otherwise, which would be silently wrong for this
+# 11-class problem. Used as the default (not hardcoded-forced) below --
+# still overridable via an explicit n_classes in attack_params, e.g. for a
+# deliberate mismatch test.
+_AWN_N_CLASSES = 11
+
+# Every constructor kwarg name below, per attack, verified this round via
+# inspect.signature(torchattacks.<Class>.__init__) against the INSTALLED
+# torchattacks==3.5.1 -- see docs/ATTACK_NAME_MAPPING.md for the raw
+# introspection transcript. "eps" is included only for attacks whose real
+# signature has it (deepfool/cw/ead do not).
+_ATTACK_ACCEPTED_PARAMS: Dict[str, set] = {
+    "fgsm": {"eps"},
+    "bim": {"eps", "alpha", "steps"},
+    "pgd": {"eps", "alpha", "steps", "random_start"},
+    "mifgsm": {"eps", "alpha", "steps", "decay"},
+    # difgsm uses the IQ-native src/adapters/iq_difgsm.py:IQDIFGSM, not
+    # torchattacks.DIFGSM (see _ATTACK_CLASS_MAP and docs/ATTACK_NAME_MAPPING.md
+    # for why) -- "seed" is IQDIFGSM-only (no torchattacks attack accepts it
+    # as a constructor kwarg; reuses the same CLI flag/config field --attack-
+    # internal-seed already defined for fab/square/apgd/apgdt/autoattack).
+    "difgsm": {"eps", "alpha", "steps", "decay", "resize_rate", "diversity_prob", "random_start", "seed"},
+    "vmifgsm": {"eps", "alpha", "steps", "decay", "N", "beta"},
+    "vnifgsm": {"eps", "alpha", "steps", "decay", "N", "beta"},
+    "rfgsm": {"eps", "alpha", "steps"},
+    "tpgd": {"eps", "alpha", "steps"},
+    "cw": {"c", "kappa", "steps", "lr"},
+    "deepfool": {"steps", "overshoot"},
+    "fab": {"norm", "eps", "steps", "n_restarts", "alpha_max", "eta", "beta", "seed", "multi_targeted", "n_classes"},
+    "square": {"norm", "eps", "n_queries", "n_restarts", "p_init", "loss", "resc_schedule", "seed"},
+    "apgd": {"norm", "eps", "steps", "n_restarts", "seed", "loss", "eot_iter", "rho"},
+    "apgdt": {"norm", "eps", "steps", "n_restarts", "seed", "eot_iter", "rho", "n_classes"},
+    "autoattack": {"norm", "eps", "version", "n_classes", "seed"},
+    "ead": {"kappa", "lr", "binary_search_steps", "max_iterations", "abort_early", "initial_const", "beta"},
+}
+_SUPPORTED_ATTACKS = {"none"} | set(_ATTACK_ACCEPTED_PARAMS)
+
+# forward(images, labels) -- confirmed this round via inspect.getsource() on
+# every class's .forward(): every attack except tpgd requires real labels
+# (this adapter always passes the model's OWN clean prediction, y_pred, as
+# an untargeted "move away from this" label -- the same convention the
+# pre-existing fgsm/pgd/cw branches already used). tpgd's forward signature
+# is (images, labels=None) and never references labels internally (pure
+# KL-divergence between clean and perturbed output distributions) -- passing
+# y_pred to it is harmless (accepted positionally, then ignored), so no
+# special-casing is needed at the call site.
+_ATTACK_NEEDS_LABELS = {name: (name != "tpgd") for name in _SUPPORTED_ATTACKS if name != "none"}
+
+# Empirically verified this round via atk.supported_mode on a constructed
+# instance of each class (torchattacks==3.5.1) -- not assumed from
+# documentation. 'targeted' present means .set_mode_targeted_by_label()
+# etc. work; this adapter only ever uses 'default' (untargeted) mode this
+# round (matches every prior formal experiment's convention) -- this table
+# is for docs/ATTACK_NAME_MAPPING.md's record, not exercised by targeted
+# calls here.
+_ATTACK_TARGETED_SUPPORT: Dict[str, list] = {
+    "fgsm": ["default", "targeted"], "bim": ["default", "targeted"], "pgd": ["default", "targeted"],
+    "mifgsm": ["default", "targeted"],
+    # difgsm: IQDIFGSM (src/adapters/iq_difgsm.py, IQ-native reimplementation,
+    # NOT torchattacks.DIFGSM -- see docs/ATTACK_NAME_MAPPING.md) only
+    # implements untargeted mode; no set_mode_targeted_* method exists on it.
+    "difgsm": ["default"],
+    "vmifgsm": ["default", "targeted"],
+    "vnifgsm": ["default", "targeted"], "rfgsm": ["default", "targeted"], "tpgd": ["default"],
+    "cw": ["default", "targeted"], "deepfool": ["default"], "fab": ["default", "targeted"],
+    "square": ["default", "targeted"], "apgd": ["default"], "apgdt": ["default (inherently targeted internally)"],
+    "autoattack": ["default"], "ead": ["default", "targeted"],
+}
 
 _Model01Wrapper = None
 _iq_to_ta_input_minmax = None
@@ -88,6 +166,20 @@ try:
 except Exception as exc:  # noqa: BLE001 - torch/torchattacks missing, or any other import-time failure
     _import_error = exc
 
+_ATTACK_CLASS_MAP: Dict[str, object] = {}
+if _torchattacks is not None:
+    _ATTACK_CLASS_MAP = {
+        "fgsm": _torchattacks.FGSM, "bim": _torchattacks.BIM, "pgd": _torchattacks.PGD,
+        "mifgsm": _torchattacks.MIFGSM, "difgsm": IQDIFGSM, "vmifgsm": _torchattacks.VMIFGSM,
+        "vnifgsm": _torchattacks.VNIFGSM, "rfgsm": _torchattacks.RFGSM, "tpgd": _torchattacks.TPGD,
+        "cw": _torchattacks.CW, "deepfool": _torchattacks.DeepFool, "fab": _torchattacks.FAB,
+        "square": _torchattacks.Square, "apgd": _torchattacks.APGD, "apgdt": _torchattacks.APGDT,
+        "autoattack": _torchattacks.AutoAttack,
+        "ead": _torchattacks.EADL1,  # this repo's "ead" name aliases EADL1 (the old project's adv_train.py
+                                      # treats 'eadl1'/'eaden' as two separate names; EADEN is reachable
+                                      # here via attack_params={"_ead_variant": "eaden"}, see _build_torchattacks).
+    }
+
 
 if _nn is not None:
     class TemperatureLogitsWrapper(_nn.Module):
@@ -95,7 +187,7 @@ if _nn is not None:
         Divides the wrapped model's logits by a fixed positive temperature.
 
         Used ONLY inside AttackAdapter.apply()'s internal attack-loss
-        computation (constructing the torchattacks FGSM/PGD object) -- never
+        computation (constructing the torchattacks attack object) -- never
         for clean/attacked/defended AWN inference, which always calls
         self.wrapped_model / the real AWN model directly. Does not copy the
         wrapped model, does not detach, does not use no_grad -- the gradient
@@ -125,9 +217,9 @@ def _validate_attack_name(attack: str) -> str:
 def dummy_attack(x: np.ndarray, attack: str, epsilon: float = 0.02, seed: Optional[int] = 0) -> np.ndarray:
     """
     Apply a deterministic sign-noise perturbation as a stand-in for a real
-    gradient-based attack. Restricted to the first-version attack list
-    (none, fgsm, pgd, cw) -- the name only affects logging/eps in this
-    placeholder, not a real attack algorithm.
+    gradient-based attack. The perturbation itself is identical regardless
+    of which supported attack name was requested (the name only affects
+    logging/eps in this placeholder, never a real attack-specific algorithm).
     """
     attack_name = _validate_attack_name(attack)
     if attack_name in _NO_OP_ATTACKS:
@@ -144,21 +236,60 @@ def dummy_attack(x: np.ndarray, attack: str, epsilon: float = 0.02, seed: Option
 def _build_torchattacks(
     attack_name: str, wrapped_model, eps: float,
     cw_c: float = 1.0, cw_steps: int = 20, cw_lr: float = 0.01,
+    attack_params: Optional[Dict[str, object]] = None,
 ):
-    """cw_c/cw_steps/cw_lr are CW-only knobs -- the fgsm/pgd branches below
-    never read them, and eps (attack-eps) is likewise never read by the cw
-    branch: CW has no eps concept (confirmed empirically, no `eps` attribute
-    exists on a constructed torchattacks.CW object -- see
-    docs/parameter_validation.md section 10.2/11.4). Defaults match the
-    previously hardcoded values, so an omitted --cw-c/--cw-steps/--cw-lr
-    reproduces prior CW behavior exactly."""
+    """
+    fgsm/pgd/cw: EXACT pre-existing hardcoded defaults, unchanged, so every
+    prior formal round's behavior is bit-for-bit reproduced when
+    attack_params is None/empty (pgd: alpha=eps/4, steps=10; cw: c/steps/lr
+    from cw_c/cw_steps/cw_lr) -- attack_params may still override individual
+    values for these three (e.g. an explicit {"steps": 20} for pgd), but an
+    omitted attack_params changes nothing about their behavior.
+
+    All other attacks (bim, mifgsm, difgsm, vmifgsm, vnifgsm, rfgsm, tpgd,
+    deepfool, fab, square, apgd, apgdt, autoattack, ead): generic dispatch
+    via _ATTACK_ACCEPTED_PARAMS -- only keys that class's real constructor
+    accepts are passed; a key absent from attack_params (or explicitly None)
+    is simply never passed, letting torchattacks' OWN installed default
+    apply (verified via inspect.signature this round, not duplicated/
+    hardcoded here, so it can never drift from the installed version).
+    fab/apgdt/autoattack default n_classes to _AWN_N_CLASSES (11) unless
+    attack_params explicitly overrides it -- torchattacks' own default of 10
+    is a CIFAR-10 convention and would be silently wrong for this 11-class
+    problem.
+    """
+    params = dict(attack_params or {})
+    ead_variant = params.pop("_ead_variant", "eadl1")
+
     if attack_name == "fgsm":
-        return _torchattacks.FGSM(wrapped_model, eps=eps)
+        return _torchattacks.FGSM(wrapped_model, eps=params.get("eps", eps))
     if attack_name == "pgd":
-        return _torchattacks.PGD(wrapped_model, eps=eps, alpha=eps / 4, steps=10)
+        return _torchattacks.PGD(
+            wrapped_model, eps=params.get("eps", eps),
+            alpha=params.get("alpha", eps / 4), steps=params.get("steps", 10),
+            **({"random_start": params["random_start"]} if params.get("random_start") is not None else {}),
+        )
     if attack_name == "cw":
-        return _torchattacks.CW(wrapped_model, c=cw_c, steps=cw_steps, lr=cw_lr)
-    raise ValueError(f"No real-attack builder for '{attack_name}'")
+        return _torchattacks.CW(
+            wrapped_model, c=params.get("c", cw_c), kappa=params.get("kappa", 0),
+            steps=params.get("steps", cw_steps), lr=params.get("lr", cw_lr),
+        )
+
+    if attack_name not in _ATTACK_CLASS_MAP:
+        raise ValueError(f"No real-attack builder for '{attack_name}'")
+
+    accepted = _ATTACK_ACCEPTED_PARAMS[attack_name]
+    kwargs = {}
+    if "eps" in accepted:
+        kwargs["eps"] = params.get("eps", eps)
+    for key, value in params.items():
+        if key in accepted and key != "eps" and value is not None:
+            kwargs[key] = value
+    if attack_name in ("fab", "apgdt", "autoattack") and "n_classes" not in kwargs:
+        kwargs["n_classes"] = _AWN_N_CLASSES
+
+    cls = _torchattacks.EADEN if (attack_name == "ead" and ead_variant == "eaden") else _ATTACK_CLASS_MAP[attack_name]
+    return cls(wrapped_model, **kwargs)
 
 
 class AttackAdapter:
@@ -167,7 +298,9 @@ class AttackAdapter:
 
     Falls back to dummy_attack when torch/torchattacks aren't both
     importable, when no real (differentiable) AWN model is supplied, or on
-    any runtime failure while constructing/running the real attack.
+    any runtime failure while constructing/running the real attack. Never
+    reports a fallback as a success -- attack_status/attack_backend in the
+    returned meta always reflect what actually ran.
     """
 
     def __init__(self, awn_model=None, device: str = "cpu") -> None:
@@ -216,6 +349,7 @@ class AttackAdapter:
         cw_c: float = 1.0,
         cw_steps: int = 20,
         cw_lr: float = 0.01,
+        attack_params: Optional[Dict[str, object]] = None,
     ) -> Tuple[np.ndarray, Dict[str, str]]:
         """x: [N, 2, T] float32. Returns (x_adv, meta) with x_adv of the same shape.
 
@@ -228,19 +362,13 @@ class AttackAdapter:
         model, same clean-prediction label) purely to report gradient
         nonzero-count/maxabs in the returned meta; never affects x_adv.
 
-        cw_c/cw_steps/cw_lr: CW-only strength knobs, passed to
-        _build_torchattacks only when attack=='cw'; fgsm/pgd ignore them
-        entirely. eps (attack-eps) is NOT applicable to cw -- it is never
-        read by the cw branch of _build_torchattacks, and cw_c/cw_steps/
-        cw_lr are never silently mapped from eps. Validated unconditionally
-        below (regardless of the requested attack) so a boundary violation
-        is caught at the same call site as attack_eps/attack_temperature,
-        not only when attack=='cw'.
+        cw_c/cw_steps/cw_lr: CW-only strength knobs (unchanged from prior
+        rounds). attack_params: generic dict of extra per-attack kwargs (see
+        _ATTACK_ACCEPTED_PARAMS / docs/ATTACK_NAME_MAPPING.md) for every
+        attack beyond fgsm/pgd/cw's original three-attack surface; also
+        usable to override individual fgsm/pgd/cw defaults if explicitly
+        needed (never changes their default behavior when omitted).
         """
-        # NaN/Inf both fail a plain "<= 0" check (any comparison with NaN is
-        # False, and Inf > 0 is True), so a bare "if temperature <= 0" lets
-        # both silently through. require_positive_finite_float() checks
-        # math.isfinite() first, closing that gap.
         require_positive_finite_float("attack_temperature", temperature)
         require_nonneg_finite_float("attack_eps", eps)
         require_positive_finite_float("cw_c", cw_c)
@@ -250,13 +378,11 @@ class AttackAdapter:
             raise ValueError(f"AttackAdapter expects input [N, 2, T], got {x.shape}")
         attack_name = _validate_attack_name(attack)
         input_shape = x.shape
+        input_dtype = x.dtype
         attack_input_min = float(np.min(x))
         attack_input_max = float(np.max(x))
 
         if attack_name in _NO_OP_ATTACKS:
-            # Bypass the min-max mapping AND the temperature wrapper
-            # entirely so attack='none' returns the exact same array
-            # bit-for-bit, regardless of what temperature was requested.
             print(f"[attack_adapter] attack='none' -> no-op (backend={self.backend_name})")
             return x, {
                 "attack_backend": self.backend_name,
@@ -275,9 +401,7 @@ class AttackAdapter:
                 "attack_gradient_nonzero_count": None,
                 "attack_gradient_total_count": None,
                 "attack_gradient_maxabs": None,
-                "cw_c": cw_c,
-                "cw_steps": cw_steps,
-                "cw_lr": cw_lr,
+                "cw_c": cw_c, "cw_steps": cw_steps, "cw_lr": cw_lr,
             }
 
         normalized_min = None
@@ -288,42 +412,24 @@ class AttackAdapter:
         gradient_maxabs = None
 
         if self.wrapped_model is not None:
-            # Model01Wrapper is a fresh nn.Module and defaults to train mode
-            # regardless of the real AWN submodule's eval() state, so
-            # torchattacks' internal restore-previous-mode logic (which reads
-            # this flag) leaves the wrapper -- and the real AWN model it
-            # wraps -- in train mode after the attack call. Record the
-            # pre-attack state, let torchattacks switch modes freely while it
-            # computes the attack, then force eval mode back unconditionally
-            # in `finally` so later attacked/defended AWN inference in this
-            # process is never corrupted by train-mode dropout/batchnorm
-            # behavior.
             training_before = self.wrapped_model.training
+            orig_requires_grad = [p.requires_grad for p in self.wrapped_model.parameters()]
+            orig_param_devices = [p.device for p in self.wrapped_model.parameters()]
             try:
                 import torch
 
                 x_t = torch.from_numpy(x).to(self.device)
-                # Per-segment min-max mapping (not the fixed (x+1)/2 range
-                # assumption) -- see module docstring. a/b are [N,1,1] and
-                # broadcast over the channel + time dims of each segment.
                 x_ta, a, b = _iq_to_ta_input_minmax(x_t)
                 normalized_min = float(x_ta.min().item())
                 normalized_max = float(x_ta.max().item())
-                # Model01Wrapper.forward() must invert x01 -> IQ using these
-                # same a/b before handing off to the real AWN model, or the
-                # wrapped model would see the wrong scale entirely.
                 self.wrapped_model.set_minmax(a, b)
                 with torch.no_grad():
                     y_pred = self.wrapped_model(x_ta).argmax(dim=1)
 
-                # Temperature scaling applies ONLY to the model torchattacks
-                # sees for its internal loss -- self.wrapped_model itself
-                # (and therefore clean/attacked/defended AWN inference
-                # elsewhere in the pipeline) is never touched by this.
                 attack_model = TemperatureLogitsWrapper(self.wrapped_model, temperature)
                 atk = _build_torchattacks(
                     attack_name, attack_model, eps,
-                    cw_c=cw_c, cw_steps=cw_steps, cw_lr=cw_lr,
+                    cw_c=cw_c, cw_steps=cw_steps, cw_lr=cw_lr, attack_params=attack_params,
                 )
                 x_ta_adv = atk(x_ta, y_pred)
                 iq_linf_normalized = (
@@ -337,12 +443,6 @@ class AttackAdapter:
                     try:
                         import torch.nn as nn
 
-                        # torchattacks' own mode bookkeeping can leave the
-                        # model in train mode right here (same mechanism the
-                        # finally block below corrects) -- force eval first
-                        # so this diagnostic gradient reflects the same
-                        # eval-mode conditions the real attack computed
-                        # under, not train-mode noise.
                         self.wrapped_model.eval()
                         x_ta_grad = x_ta.clone().detach().requires_grad_(True)
                         diag_out = attack_model(x_ta_grad)
@@ -373,10 +473,19 @@ class AttackAdapter:
                 status = "fallback"
                 notes = f"Real attack call failed at runtime ({type(exc).__name__}: {exc}); used numpy fallback."
             finally:
+                # Full state restoration (item 6 of this round's instruction):
+                # model.eval(), original train/eval flag (recorded, not
+                # silently kept), requires_grad per-parameter, and device --
+                # unconditionally, whether the attack succeeded or the
+                # except branch above already ran.
                 if training_before:
                     print("[attack_adapter] warning: wrapped model was already in train mode before this call")
                 self.wrapped_model.eval()
                 self.wrapped_model.clear_minmax()
+                for p, req_grad, dev in zip(self.wrapped_model.parameters(), orig_requires_grad, orig_param_devices):
+                    p.requires_grad_(req_grad)
+                    if p.device != dev:
+                        p.data = p.data.to(dev)
             training_after = self.wrapped_model.training
         else:
             x_adv = dummy_attack(x, attack=attack_name, epsilon=eps, seed=seed)
@@ -386,6 +495,8 @@ class AttackAdapter:
 
         if x_adv.shape != input_shape:
             raise RuntimeError(f"AttackAdapter output shape {x_adv.shape} != input shape {input_shape}")
+        if x_adv.dtype != input_dtype:
+            raise RuntimeError(f"AttackAdapter output dtype {x_adv.dtype} != input dtype {input_dtype}")
 
         print(f"[attack_adapter] backend={backend} status={status} input={input_shape} output={x_adv.shape}")
         return x_adv, {
@@ -405,7 +516,5 @@ class AttackAdapter:
             "attack_gradient_nonzero_count": gradient_nonzero_count,
             "attack_gradient_total_count": gradient_total_count,
             "attack_gradient_maxabs": gradient_maxabs,
-            "cw_c": cw_c,
-            "cw_steps": cw_steps,
-            "cw_lr": cw_lr,
+            "cw_c": cw_c, "cw_steps": cw_steps, "cw_lr": cw_lr,
         }

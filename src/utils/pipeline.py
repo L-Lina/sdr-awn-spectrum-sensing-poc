@@ -40,6 +40,7 @@ from src.sensing.radioml_source import (
 from src.sensing.segmentation import select_aligned_segments
 from src.utils.config import (
     ExperimentConfig,
+    build_attack_params,
     resolve_alignment_policy,
     resolve_awn_preprocess,
     resolve_sensing_window_size,
@@ -392,6 +393,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             x_clean, attack=cfg.attack, eps=cfg.attack_eps, temperature=cfg.attack_temperature,
             seed=cfg.seed, diagnostics=cfg.attack_diagnostics,
             cw_c=cfg.cw_c, cw_steps=cfg.cw_steps, cw_lr=cfg.cw_lr,
+            attack_params=build_attack_params(cfg),
         )
     else:
         x_adv = dummy_attack(x_clean, attack=cfg.attack, epsilon=cfg.attack_eps, seed=cfg.seed)

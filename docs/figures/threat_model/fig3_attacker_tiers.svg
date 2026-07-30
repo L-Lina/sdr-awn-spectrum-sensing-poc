@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="850" viewBox="0 0 1400 850" role="img" aria-labelledby="title desc">
+<title id="title">Attacker tiers and capability boundaries</title>
+<desc id="desc">A0 digital, A1 controlled RF, and A2 query-based RF attackers have different access and evidence roles.</desc>
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/>
+  </marker>
+  <marker id="arrow-red" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L10,4 L0,8 z" fill="#C62828"/>
+  </marker>
+  <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="8" height="8" fill="#fff5ef"/>
+    <line x1="0" y1="0" x2="0" y2="8" stroke="#D55E00" stroke-width="2"/>
+  </pattern>
+  <style>
+    text { font-family: Arial, Helvetica, sans-serif; fill: #1f2937; }
+    .title { font-size: 26px; font-weight: 700; }
+    .subtitle { font-size: 14px; fill: #667085; }
+    .section { font-size: 14px; font-weight: 700; letter-spacing: .7px; }
+    .head { font-size: 14px; font-weight: 700; }
+    .body { font-size: 12px; }
+    .small { font-size: 10.5px; }
+    .tiny { font-size: 9px; }
+    .italic { font-style: italic; }
+  </style>
+</defs>
+<rect x="0" y="0" width="1400" height="850" fill="white"/>
+<text x="45" y="43" class="title" text-anchor="start"><tspan x="45" dy="0">Attacker Tiers and Capability Boundaries</tspan></text>
+<text x="45" y="67" class="subtitle" text-anchor="start"><tspan x="45" dy="0">Tiers distinguish access modality and knowledge—not a monotonic strength ranking.</tspan></text>
+<rect x="345" y="92" width="1020" height="120" rx="10" fill="#ffffff" stroke="#1f2937" stroke-width="1.7" stroke-dasharray="7 5"/>
+<rect x="370" y="80" width="245" height="24" fill="white"/>
+<text x="380" y="98" class="section" text-anchor="start"><tspan x="380" dy="0">DEFENDER-CONTROLLED BOUNDARY</tspan></text>
+<rect x="40" y="115" width="125" height="50" rx="5" fill="#f8fafc" stroke="#1f2937" stroke-width="1.2"/>
+<text x="102.5" y="145" class="small" text-anchor="middle" font-weight="700"><tspan x="102.5" dy="0">Untrusted RF</tspan></text>
+<rect x="205" y="115" width="125" height="50" rx="5" fill="#f8fafc" stroke="#1f2937" stroke-width="1.2"/>
+<text x="267.5" y="145" class="small" text-anchor="middle" font-weight="700"><tspan x="267.5" dy="0">Antenna / RF</tspan></text>
+<rect x="370" y="115" width="125" height="50" rx="5" fill="#f8fafc" stroke="#1f2937" stroke-width="1.2"/>
+<text x="432.5" y="145" class="small" text-anchor="middle" font-weight="700"><tspan x="432.5" dy="0">Trusted receiver</tspan></text>
+<rect x="535" y="115" width="125" height="50" rx="5" fill="#f8fafc" stroke="#1f2937" stroke-width="1.2"/>
+<text x="597.5" y="145" class="small" text-anchor="middle" font-weight="700"><tspan x="597.5" dy="0">Energy detection</tspan></text>
+<rect x="700" y="115" width="125" height="50" rx="5" fill="#f8fafc" stroke="#1f2937" stroke-width="1.2"/>
+<text x="762.5" y="145" class="small" text-anchor="middle" font-weight="700"><tspan x="762.5" dy="0">Segmentation</tspan></text>
+<rect x="865" y="115" width="125" height="50" rx="5" fill="#f8fafc" stroke="#1f2937" stroke-width="1.2"/>
+<text x="927.5" y="145" class="small" text-anchor="middle" font-weight="700"><tspan x="927.5" dy="0">Window selection</tspan></text>
+<rect x="1030" y="115" width="125" height="50" rx="5" fill="#f8fafc" stroke="#1f2937" stroke-width="1.2"/>
+<text x="1092.5" y="145" class="small" text-anchor="middle" font-weight="700"><tspan x="1092.5" dy="0">AMC / defense</tspan></text>
+<rect x="1195" y="115" width="155" height="50" rx="5" fill="#f8fafc" stroke="#1f2937" stroke-width="1.2"/>
+<text x="1272.5" y="145" class="small" text-anchor="middle" font-weight="700"><tspan x="1272.5" dy="0">Event record</tspan></text>
+<line x1="165" y1="140" x2="205" y2="140" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="330" y1="140" x2="370" y2="140" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="495" y1="140" x2="535" y2="140" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="660" y1="140" x2="700" y2="140" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="825" y1="140" x2="865" y2="140" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="990" y1="140" x2="1030" y2="140" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="1155" y1="140" x2="1195" y2="140" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="65" y="235" width="210" height="54" rx="8" fill="#eef8fc" stroke="#0072B2" stroke-width="2"/>
+<text x="170" y="257" class="head" text-anchor="middle" fill="#0072B2"><tspan x="170" dy="0">A1  CONTROLLED RF</tspan></text>
+<text x="170" y="276" class="tiny" text-anchor="middle"><tspan x="170" dy="0">primary practical model</tspan></text>
+<path d="M170 235 C170 205 115 205 105 166" fill="none" stroke="#0072B2" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="285" y="235" width="210" height="54" rx="8" fill="#fff5ef" stroke="#D55E00" stroke-width="2" stroke-dasharray="7 4"/>
+<text x="390" y="257" class="head" text-anchor="middle" fill="#D55E00"><tspan x="390" dy="0">A2  QUERY-BASED RF</tspan></text>
+<text x="390" y="276" class="tiny" text-anchor="middle"><tspan x="390" dy="0">black-box deployment model</tspan></text>
+<path d="M390 235 C390 205 180 205 165 166" fill="none" stroke="#D55E00" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M1270 166 C1270 315 500 315 500 262" fill="none" stroke="#D55E00" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<text x="875" y="309" class="tiny" text-anchor="middle" fill="#D55E00"><tspan x="875" dy="0">limited observable feedback</tspan></text>
+<rect x="780" y="235" width="240" height="54" rx="8" fill="#f2f4f7" stroke="#1f2937" stroke-width="1.5"/>
+<text x="900" y="257" class="head" text-anchor="middle"><tspan x="900" dy="0">A0  DIGITAL INJECTION</tspan></text>
+<text x="900" y="276" class="tiny" text-anchor="middle"><tspan x="900" dy="0">algorithmic upper bound</tspan></text>
+<path d="M900 235 V193 H598 V166" fill="none" stroke="#1f2937" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="750" y="224" class="tiny" text-anchor="middle"><tspan x="750" dy="0">offline benchmark access only</tspan></text>
+<rect x="40" y="350" width="1320" height="384" rx="4" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<rect x="40" y="350" width="260" height="48" fill="#f2f4f7" stroke="#d0d5dd" stroke-width="1"/>
+<text x="170.0" y="379" class="small" text-anchor="middle" font-weight="700"><tspan x="170.0" dy="0">ATTRIBUTE</tspan></text>
+<rect x="300" y="350" width="353" height="48" fill="#f7f7f7" stroke="#d0d5dd" stroke-width="1"/>
+<text x="476.5" y="379" class="small" text-anchor="middle" font-weight="700"><tspan x="476.5" dy="0">A0 — DIGITAL INJECTION</tspan></text>
+<rect x="653" y="350" width="353" height="48" fill="#eef8fc" stroke="#d0d5dd" stroke-width="1"/>
+<text x="829.5" y="379" class="small" text-anchor="middle" font-weight="700"><tspan x="829.5" dy="0">A1 — CONTROLLED RF</tspan></text>
+<rect x="1006" y="350" width="354" height="48" fill="#fff5ef" stroke="#d0d5dd" stroke-width="1"/>
+<text x="1183.0" y="379" class="small" text-anchor="middle" font-weight="700"><tspan x="1183.0" dy="0">A2 — QUERY-BASED RF</tspan></text>
+<line x1="40" y1="398" x2="40" y2="454" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="50" y="430" class="small" text-anchor="start" font-weight="700"><tspan x="50" dy="0">Injection interface</tspan></text>
+<line x1="300" y1="398" x2="300" y2="454" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="310" y="430" class="small" text-anchor="start"><tspan x="310" dy="0">Direct offline IQ edit</tspan></text>
+<line x1="653" y1="398" x2="653" y2="454" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="663" y="430" class="small" text-anchor="start"><tspan x="663" dy="0">Independent SDR through RF</tspan></text>
+<line x1="1006" y1="398" x2="1006" y2="454" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="1016" y="430" class="small" text-anchor="start"><tspan x="1016" dy="0">Independent SDR through RF</tspan></text>
+<line x1="40" y1="398" x2="1360" y2="398" stroke="#d0d5dd" stroke-width="0.8"/>
+<rect x="40" y="454" width="1320" height="56" fill="#f8fafc"/>
+<line x1="40" y1="454" x2="40" y2="510" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="50" y="486" class="small" text-anchor="start" font-weight="700"><tspan x="50" dy="0">Knowledge</tspan></text>
+<line x1="300" y1="454" x2="300" y2="510" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="310" y="486" class="small" text-anchor="start"><tspan x="310" dy="0">Full pipeline + weights</tspan></text>
+<line x1="653" y1="454" x2="653" y2="510" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="663" y="486" class="small" text-anchor="start"><tspan x="663" dy="0">Known design; same/surrogate model</tspan></text>
+<line x1="1006" y1="454" x2="1006" y2="510" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="1016" y="486" class="small" text-anchor="start"><tspan x="1016" dy="0">Approximate architecture only</tspan></text>
+<line x1="40" y1="454" x2="1360" y2="454" stroke="#d0d5dd" stroke-width="0.8"/>
+<line x1="40" y1="510" x2="40" y2="566" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="50" y="542" class="small" text-anchor="start" font-weight="700"><tspan x="50" dy="0">Optimization signal</tspan></text>
+<line x1="300" y1="510" x2="300" y2="566" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="310" y="542" class="small" text-anchor="start"><tspan x="310" dy="0">Exact gradients + logits</tspan></text>
+<line x1="653" y1="510" x2="653" y2="566" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="663" y="542" class="small" text-anchor="start"><tspan x="663" dy="0">Channel-aware white/gray box</tspan></text>
+<line x1="1006" y1="510" x2="1006" y2="566" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="1016" y="542" class="small" text-anchor="start"><tspan x="1016" dy="0">Transfer or zeroth-order queries</tspan></text>
+<line x1="40" y1="510" x2="1360" y2="510" stroke="#d0d5dd" stroke-width="0.8"/>
+<rect x="40" y="566" width="1320" height="56" fill="#f8fafc"/>
+<line x1="40" y1="566" x2="40" y2="622" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="50" y="598" class="small" text-anchor="start" font-weight="700"><tspan x="50" dy="0">Timing / channel</tspan></text>
+<line x1="300" y1="566" x2="300" y2="622" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="310" y="598" class="small" text-anchor="start"><tspan x="310" dy="0">Exact; no RF channel</tspan></text>
+<line x1="653" y1="566" x2="653" y2="622" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="663" y="598" class="small" text-anchor="start"><tspan x="663" dy="0">Finite delay; own channel estimate</tspan></text>
+<line x1="1006" y1="566" x2="1006" y2="622" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="1016" y="598" class="small" text-anchor="start"><tspan x="1016" dy="0">Coarse timing; uncertain channel</tspan></text>
+<line x1="40" y1="566" x2="1360" y2="566" stroke="#d0d5dd" stroke-width="0.8"/>
+<line x1="40" y1="622" x2="40" y2="678" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="50" y="654" class="small" text-anchor="start" font-weight="700"><tspan x="50" dy="0">Resource limits</tspan></text>
+<line x1="300" y1="622" x2="300" y2="678" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="310" y="654" class="small" text-anchor="start"><tspan x="310" dy="0">Digital perturbation budget</tspan></text>
+<line x1="653" y1="622" x2="653" y2="678" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="663" y="654" class="small" text-anchor="start"><tspan x="663" dy="0">Power, BW, duty, CFO, duration</tspan></text>
+<line x1="1006" y1="622" x2="1006" y2="678" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="1016" y="654" class="small" text-anchor="start"><tspan x="1016" dy="0">RF limits + query/airtime budget</tspan></text>
+<line x1="40" y1="622" x2="1360" y2="622" stroke="#d0d5dd" stroke-width="0.8"/>
+<rect x="40" y="678" width="1320" height="56" fill="#f8fafc"/>
+<line x1="40" y1="678" x2="40" y2="734" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="50" y="710" class="small" text-anchor="start" font-weight="700"><tspan x="50" dy="0">Evidence role</tspan></text>
+<line x1="300" y1="678" x2="300" y2="734" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="310" y="710" class="small" text-anchor="start"><tspan x="310" dy="0">Debugging / worst-case bound</tspan></text>
+<line x1="653" y1="678" x2="653" y2="734" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="663" y="710" class="small" text-anchor="start"><tspan x="663" dy="0">Primary practical RF claims</tspan></text>
+<line x1="1006" y1="678" x2="1006" y2="734" stroke="#d0d5dd" stroke-width="0.8"/>
+<text x="1016" y="710" class="small" text-anchor="start"><tspan x="1016" dy="0">Information-limited deployment risk</tspan></text>
+<line x1="40" y1="678" x2="1360" y2="678" stroke="#d0d5dd" stroke-width="0.8"/>
+<rect x="40" y="752" width="1320" height="44" rx="4" fill="#f8fafc" stroke="#1f2937" stroke-width="1.2"/>
+<text x="700" y="779" class="small" text-anchor="middle" font-weight="700"><tspan x="700" dy="0">Excluded for all tiers: host compromise, checkpoint replacement, evidence-store modification, and metadata tampering.</tspan></text>
+<text x="700" y="816" class="small italic" text-anchor="middle" fill="#667085"><tspan x="700" dy="0">A1/A2 are additive asynchronous transmitters; they are not assumed to cancel legitimate RF energy on demand.</tspan></text>
+</svg>

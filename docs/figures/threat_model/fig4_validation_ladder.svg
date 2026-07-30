@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="820" viewBox="0 0 1600 820" role="img" aria-labelledby="title desc">
+<title id="title">Validation ladder and claim boundaries</title>
+<desc id="desc">Five stages distinguish algorithmic, software, physical, OTA, and operational evidence.</desc>
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/>
+  </marker>
+  <marker id="arrow-red" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L10,4 L0,8 z" fill="#C62828"/>
+  </marker>
+  <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="8" height="8" fill="#fff5ef"/>
+    <line x1="0" y1="0" x2="0" y2="8" stroke="#D55E00" stroke-width="2"/>
+  </pattern>
+  <style>
+    text { font-family: Arial, Helvetica, sans-serif; fill: #1f2937; }
+    .title { font-size: 26px; font-weight: 700; }
+    .subtitle { font-size: 14px; fill: #667085; }
+    .section { font-size: 14px; font-weight: 700; letter-spacing: .7px; }
+    .head { font-size: 14px; font-weight: 700; }
+    .body { font-size: 12px; }
+    .small { font-size: 10.5px; }
+    .tiny { font-size: 9px; }
+    .italic { font-style: italic; }
+  </style>
+</defs>
+<rect x="0" y="0" width="1600" height="820" fill="white"/>
+<text x="45" y="43" class="title" text-anchor="start"><tspan x="45" dy="0">Validation Ladder and Claim Boundaries</tspan></text>
+<text x="45" y="67" class="subtitle" text-anchor="start"><tspan x="45" dy="0">Evidence becomes more physical through shielded OTA; advisory shadow deployment changes the evidence type rather than proving a stronger attack.</tspan></text>
+<line x1="55" y1="100" x2="1545" y2="100" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="55" y="91" class="small" text-anchor="start" font-weight="700"><tspan x="55" dy="0">CONTROL / REPRODUCIBILITY</tspan></text>
+<text x="1545" y="91" class="small" text-anchor="end" font-weight="700"><tspan x="1545" dy="0">PHYSICAL + OPERATIONAL REALISM</tspan></text>
+<rect x="35" y="135" width="280" height="565" rx="7" fill="#ffffff" stroke="#1f2937" stroke-width="1.4"/>
+<path d="M42 135 H308 Q315 135 315 142 V187 H35 V142 Q35 135 42 135" fill="#1f2937"/>
+<text x="50" y="167" class="title" text-anchor="start" fill="#ffffff"><tspan x="50" dy="0">1</tspan></text>
+<text x="89" y="164" class="head" text-anchor="start" fill="#ffffff"><tspan x="89" dy="0">DIGITAL TENSOR</tspan></text>
+<text x="175.0" y="215" class="small" text-anchor="middle" font-weight="700"><tspan x="175.0" dy="0">IQ tensor + delta</tspan></text>
+<text x="175.0" y="231" class="small" text-anchor="middle" font-weight="700"><tspan x="175.0" dy="0">=&gt; full pipeline</tspan></text>
+<rect x="36" y="263" width="278" height="150" fill="#f2f4f7"/>
+<text x="47" y="285" class="small" text-anchor="start" fill="#009E73" font-weight="700"><tspan x="47" dy="0">SUPPORTS</tspan></text>
+<text x="49" y="308" class="small" text-anchor="start"><tspan x="49" dy="0">+  Algorithmic upper bound</tspan></text>
+<text x="49" y="330" class="small" text-anchor="start"><tspan x="49" dy="0">+  Adaptive-objective correctness</tspan></text>
+<text x="49" y="352" class="small" text-anchor="start"><tspan x="49" dy="0">+  White-box comparisons</tspan></text>
+<line x1="43" y1="413" x2="307" y2="413" stroke="#1f2937" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="47" y="436" class="small" text-anchor="start" fill="#C62828" font-weight="700"><tspan x="47" dy="0">DOES NOT SUPPORT</tspan></text>
+<text x="49" y="459" class="small" text-anchor="start"><tspan x="49" dy="0">-  RF realizability</tspan></text>
+<text x="49" y="481" class="small" text-anchor="start"><tspan x="49" dy="0">-  Causality / synchronization</tspan></text>
+<text x="49" y="503" class="small" text-anchor="start"><tspan x="49" dy="0">-  Channel / ADC effects</tspan></text>
+<text x="49" y="525" class="small" text-anchor="start"><tspan x="49" dy="0">-  OTA feasibility</tspan></text>
+<line x1="319" y1="417.5" x2="338" y2="417.5" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="343" y="135" width="280" height="565" rx="7" fill="#ffffff" stroke="#1f2937" stroke-width="1.4"/>
+<path d="M350 135 H616 Q623 135 623 142 V187 H343 V142 Q343 135 350 135" fill="#1f2937"/>
+<text x="358" y="167" class="title" text-anchor="start" fill="#ffffff"><tspan x="358" dy="0">2</tspan></text>
+<text x="397" y="164" class="head" text-anchor="start" fill="#ffffff"><tspan x="397" dy="0">CFILE REPLAY</tspan></text>
+<text x="483.0" y="215" class="small" text-anchor="middle" font-weight="700"><tspan x="483.0" dy="0">complex64 file</tspan></text>
+<text x="483.0" y="231" class="small" text-anchor="middle" font-weight="700"><tspan x="483.0" dy="0">=&gt; event pipeline</tspan></text>
+<rect x="344" y="263" width="278" height="150" fill="#f2f4f7"/>
+<text x="355" y="285" class="small" text-anchor="start" fill="#009E73" font-weight="700"><tspan x="355" dy="0">SUPPORTS</tspan></text>
+<text x="357" y="308" class="small" text-anchor="start"><tspan x="357" dy="0">+  End-to-end software</tspan></text>
+<text x="357" y="330" class="small" text-anchor="start"><tspan x="357" dy="0">+  Detection / event semantics</tspan></text>
+<text x="357" y="352" class="small" text-anchor="start"><tspan x="357" dy="0">+  Chunk + metadata handling</tspan></text>
+<text x="357" y="374" class="small" text-anchor="start"><tspan x="357" dy="0">+  Artifact replayability</tspan></text>
+<line x1="351" y1="413" x2="615" y2="413" stroke="#1f2937" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="355" y="436" class="small" text-anchor="start" fill="#C62828" font-weight="700"><tspan x="355" dy="0">DOES NOT SUPPORT</tspan></text>
+<text x="357" y="459" class="small" text-anchor="start"><tspan x="357" dy="0">-  Live RF injection</tspan></text>
+<text x="357" y="481" class="small" text-anchor="start"><tspan x="357" dy="0">-  Receiver front-end effects</tspan></text>
+<text x="357" y="503" class="small" text-anchor="start"><tspan x="357" dy="0">-  Independent-source timing</tspan></text>
+<text x="357" y="525" class="small" text-anchor="start"><tspan x="357" dy="0">-  Physical transfer</tspan></text>
+<line x1="627" y1="417.5" x2="646" y2="417.5" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="651" y="135" width="280" height="565" rx="7" fill="#ffffff" stroke="#1f2937" stroke-width="2.8"/>
+<path d="M658 135 H924 Q931 135 931 142 V187 H651 V142 Q651 135 658 135" fill="#1f2937"/>
+<text x="666" y="167" class="title" text-anchor="start" fill="#ffffff"><tspan x="666" dy="0">3</tspan></text>
+<text x="705" y="164" class="head" text-anchor="start" fill="#ffffff"><tspan x="705" dy="0">CABLED DUAL-SDR</tspan></text>
+<text x="791.0" y="215" class="small" text-anchor="middle" font-weight="700"><tspan x="791.0" dy="0">Legit TX + Attack TX</tspan></text>
+<text x="791.0" y="231" class="small" text-anchor="middle" font-weight="700"><tspan x="791.0" dy="0">atten. + combiner =&gt; RX</tspan></text>
+<rect x="652" y="263" width="278" height="150" fill="#f2f4f7"/>
+<text x="663" y="285" class="small" text-anchor="start" fill="#009E73" font-weight="700"><tspan x="663" dy="0">SUPPORTS</tspan></text>
+<text x="665" y="308" class="small" text-anchor="start"><tspan x="665" dy="0">+  Independent additive RF</tspan></text>
+<text x="665" y="330" class="small" text-anchor="start"><tspan x="665" dy="0">+  Controlled SNR / SJR / PSR</tspan></text>
+<text x="665" y="352" class="small" text-anchor="start"><tspan x="665" dy="0">+  CFO, delay, gain, ADC</tspan></text>
+<text x="665" y="374" class="small" text-anchor="start"><tspan x="665" dy="0">+  Cabled feasibility</tspan></text>
+<line x1="659" y1="413" x2="923" y2="413" stroke="#1f2937" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="663" y="436" class="small" text-anchor="start" fill="#C62828" font-weight="700"><tspan x="663" dy="0">DOES NOT SUPPORT</tspan></text>
+<text x="665" y="459" class="small" text-anchor="start"><tspan x="665" dy="0">-  Antenna propagation</tspan></text>
+<text x="665" y="481" class="small" text-anchor="start"><tspan x="665" dy="0">-  Multipath / mobility</tspan></text>
+<text x="665" y="503" class="small" text-anchor="start"><tspan x="665" dy="0">-  Radiated compliance</tspan></text>
+<text x="665" y="525" class="small" text-anchor="start"><tspan x="665" dy="0">-  Field generalization</tspan></text>
+<line x1="935" y1="417.5" x2="954" y2="417.5" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="959" y="135" width="280" height="565" rx="7" fill="#ffffff" stroke="#1f2937" stroke-width="1.4"/>
+<path d="M966 135 H1232 Q1239 135 1239 142 V187 H959 V142 Q959 135 966 135" fill="#1f2937"/>
+<text x="974" y="167" class="title" text-anchor="start" fill="#ffffff"><tspan x="974" dy="0">4</tspan></text>
+<text x="1013" y="164" class="head" text-anchor="start" fill="#ffffff"><tspan x="1013" dy="0">SHIELDED OTA</tspan></text>
+<text x="1099.0" y="215" class="small" text-anchor="middle" font-weight="700"><tspan x="1099.0" dy="0">Legit + attack antennas</tspan></text>
+<text x="1099.0" y="231" class="small" text-anchor="middle" font-weight="700"><tspan x="1099.0" dy="0">=&gt; shielded RX</tspan></text>
+<rect x="960" y="263" width="278" height="150" fill="#f2f4f7"/>
+<text x="971" y="285" class="small" text-anchor="start" fill="#009E73" font-weight="700"><tspan x="971" dy="0">SUPPORTS</tspan></text>
+<text x="973" y="308" class="small" text-anchor="start"><tspan x="973" dy="0">+  Radiated feasibility</tspan></text>
+<text x="973" y="330" class="small" text-anchor="start"><tspan x="973" dy="0">+  Antenna + channel effects</tspan></text>
+<text x="973" y="352" class="small" text-anchor="start"><tspan x="973" dy="0">+  Channel variability</tspan></text>
+<text x="973" y="374" class="small" text-anchor="start"><tspan x="973" dy="0">+  Controlled OTA repeatability</tspan></text>
+<line x1="967" y1="413" x2="1231" y2="413" stroke="#1f2937" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="971" y="436" class="small" text-anchor="start" fill="#C62828" font-weight="700"><tspan x="971" dy="0">DOES NOT SUPPORT</tspan></text>
+<text x="973" y="459" class="small" text-anchor="start"><tspan x="973" dy="0">-  Public operation</tspan></text>
+<text x="973" y="481" class="small" text-anchor="start"><tspan x="973" dy="0">-  Arbitrary range / environment</tspan></text>
+<text x="973" y="503" class="small" text-anchor="start"><tspan x="973" dy="0">-  Universal channel claims</tspan></text>
+<text x="973" y="525" class="small" text-anchor="start"><tspan x="973" dy="0">-  Perfect cancellation</tspan></text>
+<line x1="1243" y1="417.5" x2="1262" y2="417.5" stroke="#1f2937" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="1267" y="135" width="280" height="565" rx="7" fill="#ffffff" stroke="#1f2937" stroke-width="1.4" stroke-dasharray="8 5"/>
+<path d="M1274 135 H1540 Q1547 135 1547 142 V187 H1267 V142 Q1267 135 1274 135" fill="#1f2937"/>
+<text x="1282" y="167" class="title" text-anchor="start" fill="#ffffff"><tspan x="1282" dy="0">5</tspan></text>
+<text x="1321" y="164" class="head" text-anchor="start" fill="#ffffff"><tspan x="1321" dy="0">ADVISORY SHADOW*</tspan></text>
+<text x="1407.0" y="215" class="small" text-anchor="middle" font-weight="700"><tspan x="1407.0" dy="0">Live RX =&gt; monitor</tspan></text>
+<text x="1407.0" y="231" class="small" text-anchor="middle" font-weight="700"><tspan x="1407.0" dy="0">=&gt; log / analyst only</tspan></text>
+<rect x="1268" y="263" width="278" height="150" fill="#f2f4f7"/>
+<text x="1279" y="285" class="small" text-anchor="start" fill="#009E73" font-weight="700"><tspan x="1279" dy="0">SUPPORTS</tspan></text>
+<text x="1281" y="308" class="small" text-anchor="start"><tspan x="1281" dy="0">+  Receive-only operation</tspan></text>
+<text x="1281" y="330" class="small" text-anchor="start"><tspan x="1281" dy="0">+  Natural workload exposure</tspan></text>
+<text x="1281" y="352" class="small" text-anchor="start"><tspan x="1281" dy="0">+  Latency / drops / alerts</tspan></text>
+<text x="1281" y="374" class="small" text-anchor="start"><tspan x="1281" dy="0">+  Analyst-facing utility</tspan></text>
+<line x1="1275" y1="413" x2="1539" y2="413" stroke="#1f2937" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="1279" y="436" class="small" text-anchor="start" fill="#C62828" font-weight="700"><tspan x="1279" dy="0">DOES NOT SUPPORT</tspan></text>
+<text x="1281" y="459" class="small" text-anchor="start"><tspan x="1281" dy="0">-  Causal attack effectiveness</tspan></text>
+<text x="1281" y="481" class="small" text-anchor="start"><tspan x="1281" dy="0">-  Autonomous-control safety</tspan></text>
+<text x="1281" y="503" class="small" text-anchor="start"><tspan x="1281" dy="0">-  Mitigation efficacy</tspan></text>
+<text x="1281" y="525" class="small" text-anchor="start"><tspan x="1281" dy="0">-  All-adversary coverage</tspan></text>
+<text x="791.0" y="121" class="small" text-anchor="middle" fill="#0072B2" font-weight="700"><tspan x="791.0" dy="0">FIRST PHYSICAL-ATTACK EVIDENCE</tspan></text>
+<text x="800" y="738" class="small" text-anchor="middle" font-weight="700"><tspan x="800" dy="0">Claims accumulate only when the same end-to-end outcome, power constraints, and uncertainty model are evaluated at each stage.</tspan></text>
+<text x="800" y="765" class="small italic" text-anchor="middle" fill="#667085"><tspan x="800" dy="0">* Shadow deployment provides operational evidence, not a stronger active-attack tier. No automated action is taken.</tspan></text>
+</svg>

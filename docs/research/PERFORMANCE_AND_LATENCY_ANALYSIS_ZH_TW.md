@@ -268,8 +268,132 @@ CW 沒有 `random_start` 機制，天生決定性，因此 batch_size=1 與 batc
 
 因此，「AWN 推論是瓶頸」這句話在平均與尾端情況下成立，但在典型（中位數）情況下並非單方面成立；後續若要優化端到端延遲，需視優化目標是「降低典型延遲」（此時感測前端與 AWN 推論同等重要）還是「降低尾端延遲／提升穩定性」（此時應優先處理 15.4 節發現的執行緒設定問題）分別決定策略。
 
+## 十六、End-to-End Latency Matrix 與 Before/After Optimization Comparison
+
+第五節至第十五節分別量測了 clean pipeline（Phase A，2200 筆）與攻擊生成本身（Phase B，330 筆／攻擊），但這兩個 benchmark 是**兩次獨立執行**，從未在同一次連續量測中把「感測 → 分段 → AWN 推論 → 攻擊生成 → 受攻擊推論 → Top-K」串成一條真正的端到端序列。本節補上這個缺口，回答「整條 pipeline 從 IQ input 到最終 prediction 總共多少時間」「加速前後整條 pipeline 實際快多少」這兩個問題。
+
+**方法**：固定 24 筆樣本（BPSK／QPSK／QAM16／WBFM × 訊噪比 -10／0／18 dB × 2 個樣本索引），與第五節至第十五節使用完全相同的常數（`N_SAMPLES=8192`、`EMBED_SNR_MARGIN=20.0`、`THRESHOLD_FACTOR=5.0`、`SENSING_WINDOW_SIZE=128`、`AWN_PREPROCESS=radioml-native`、`SEED=0`）與真實後端（真實 AWN、真實 `AttackAdapter`、真實 `TopKAdapter`），對每一筆樣本在**同一次連續呼叫**中逐階段計時，不重跑既有的 2200 筆／330 筆大型 benchmark。量測程式為 `experiments/end_to_end_latency_matrix.py`，圖表產生程式為 `experiments/generate_end_to_end_charts.py`，結果目錄為 `results/end_to_end_latency_20260818T062625Z/`。
+
+### 16.1　五個正式 Scenario 定義
+
+Top-K 在正式流程（`src/utils/pipeline.py`）中的實際順序是 `AttackAdapter` 先執行、`TopKAdapter` 之後才處理攻擊後的輸出（`x_adv` → Top-K → 受防禦推論），Scenario E 依此實際順序定義，而非文字直覺順序。
+
+| Scenario | 定義 |
+|---|---|
+| **A**（Clean AMC） | IQ input → embedding → energy detection → region postprocess → segmentation／max-energy selection → AWN preprocessing → AWN clean inference |
+| **B**（Clean AMC + Top-K） | Scenario A → Top-K（作用於 x_clean）→ AWN defended inference |
+| **C**（AMC + FGSM） | Scenario A → FGSM attack generation → AWN attacked inference |
+| **D**（AMC + PGD） | Scenario A → PGD attack generation → AWN attacked inference（`random_start=False` 記為 **D_det**，決定性；`random_start=True` 記為 **D_stoch**，隨機性，兩者分開陳述，不得混併） |
+| **E**（AMC + FGSM + Top-K） | Scenario C（FGSM）→ Top-K（作用於 x_adv）→ AWN defended inference |
+
+CW 不放入本節的正式 Before/After 加速表（見 16.3 節），僅以獨立補充表呈現（`cw_end_to_end_supplement.csv`）。
+
+### 16.2　各 Scenario 端到端延遲（mean／median／p95，n=24，baseline 設定：執行緒數預設、攻擊 batch_size=1）
+
+| Scenario | mean (ms) | median (ms) | p95 (ms) | samples/sec (mean) |
+|---|---|---|---|---|
+| A | 4.074 | 2.843 | 7.528 | 245.5 |
+| B | 9.284 | 6.184 | 23.466 | 107.7 |
+| C（FGSM） | 12.128 | 9.542 | 22.909 | 82.5 |
+| D_det（PGD, random_start=False） | 57.690 | 43.009 | 123.562 | 17.3 |
+| D_stoch（PGD, random_start=True） | 42.448 | 39.052 | 59.883 | 23.6 |
+| E（FGSM + Top-K） | 20.772 | 14.700 | 49.844 | 48.1 |
+
+**D_stoch 一列的數字本質上會隨執行而變動**：`experiments/end_to_end_latency_matrix.py` 未對 torch 全域 RNG 顯式設定種子，`random_start=True` 每次執行消耗的隨機數不同，因此 D_stoch 的 mean／median／p95 是這次執行的真實測量值，不是可逐位元重現的常數，與第十五節第一小節「PGD random_start=True 屬於隨機性表現，不得視為決定性數字」的定性一致；A／B／C／D_det／E 皆為確定性路徑（FGSM 無隨機性、PGD `random_start=False` 已驗證決定性、感測與 Top-K 皆為確定性運算），數字在重複執行間應高度穩定。
+
+**Stage 層級 mean／median／p95**（節錄 Scenario A，完整逐 scenario／逐 stage 資料見 `stage_latency_summary.csv`）：
+
+| stage | mean (ms) | median (ms) | p95 (ms) |
+|---|---|---|---|
+| embedding_ms | 0.491 | 0.475 | 0.564 |
+| energy_detection_ms | 0.372 | 0.328 | 0.509 |
+| region_postprocess_ms | 0.051 | 0.050 | 0.054 |
+| segmentation_ms | 0.715 | 0.696 | 0.891 |
+| awn_preprocess_ms | 0.054 | 0.041 | 0.053 |
+| awn_clean_inference_ms | 1.357 | 1.097 | 2.436 |
+
+這組 24 筆小樣本的 Scenario A 數字與第五節 2200 筆的全量結果（mean 11.460ms／median 2.819ms／p95 55.094ms，含 Top-K 相關欄位）量級一致但不完全相同——差異來自樣本數（24 vs 2200）與調變子集（4 種 vs 全部 11 種），第五節的 2200 筆結果仍是 clean pipeline 的正式權威數據，本節數字僅用於與 C／D／E 等新測得的攻擊情境做同條件（同樣本、同後端、同次執行）比較。
+
+### 16.3　FGSM／PGD Before vs After（整條 pipeline，不只 attack_generation）
+
+**FGSM**（Scenario C，優化方案：batch_size 16 + `torch.set_num_threads(1)`，與第九節相同的已驗證 `implementation_optimization`）：
+
+| 指標 | baseline | optimized | speedup |
+|---|---|---|---|
+| attack_generation_ms（mean） | 5.876 | 1.391 | **4.22x** |
+| end_to_end_total_ms（mean） | 12.128 | 3.803 | **3.19x** |
+| end_to_end_total_ms（median） | 9.542 | 3.813 | **2.50x** |
+| end_to_end_total_ms（p95） | 22.909 | 4.192 | **5.46x** |
+| 絕對節省延遲（mean） | — | — | 8.325 ms |
+| attack_generation 占 total 比例 | 48.4% | 36.6% | — |
+
+**PGD（`random_start=False`，決定性等價）**（Scenario D_det）：
+
+| 指標 | baseline | optimized | speedup |
+|---|---|---|---|
+| attack_generation_ms（mean） | 51.314 | 5.382 | **9.53x** |
+| end_to_end_total_ms（mean） | 57.690 | 7.844 | **7.35x** |
+| end_to_end_total_ms（median） | 43.009 | 7.725 | **5.57x** |
+| end_to_end_total_ms（p95） | 123.562 | 8.664 | **14.26x** |
+| 絕對節省延遲（mean） | — | — | 49.846 ms |
+| attack_generation 占 total 比例 | 88.9% | 68.6% | — |
+
+**PGD（`random_start=True`，隨機性表現，另外呈現，不與上表決定性結果混併）**（Scenario D_stoch）：attack_generation_ms 由 36.254ms 降到 5.488ms（6.61x），end-to-end 由 42.448ms 降到 7.944ms（5.34x）。這組數字反映的是「批次化 + 執行緒優化」在 PGD 預設隨機起點下的**吞吐量表現**，不是逐筆等價性證明——逐筆決定性等價的正式證據仍以第十五節第一小節（`random_start=False`，60 筆配對測試，0.0 差異）為準。
+
+**與 Phase E（第九節，330 筆規模、全部 11 種調變）的數字差異說明**：Phase E 量測到的是攻擊生成本身的 speedup（FGSM 16.10x、PGD 14.61x），本節在 24 筆樣本、4 種調變、且串接了完整感測與推論階段的條件下重新量測，得到較低的 attack_generation speedup（FGSM 4.22x、PGD 9.53x）。這個差異主要來自樣本數與調變子集不同，兩組數字不互相矛盾，也不取代彼此——Phase E 是攻擊生成的大樣本專項基準，本節是端到端情境下的小樣本驗證。**兩者一致指向的結論是**：不論以哪一組數字為準，端到端 speedup 都低於 attack_generation-only 的 speedup，原因是感測與 AWN 推論階段本身不受攻擊批次化影響，稀釋了整條 pipeline 的加速效果——這正是本節要回答的、Phase E 未涵蓋的問題。
+
+**CW 補充表**（`cw_end_to_end_supplement.csv`，batch_size=1 baseline vs batch_size=16 **`batched_algorithmic_variant`**，不與上述 FGSM／PGD 的 `implementation_optimization` 加速表同列比較）：batch_size=1 時 end-to-end 平均約 60ms 量級，batch_size=16 時降到個位數 ms，但如第十五節第二小節所述，這個下降**同時反映了批次化本身改變 CW 最佳化軌跡的效果**，不能單純解讀為速度提升，數值僅供參考，不計入本文件任何「加速倍數」結論。
+
+### 16.4　Top-K Latency Overhead
+
+| 比較 | 不含 Top-K | 含 Top-K | topk_ms 本身 | defended_inference_ms | overhead |
+|---|---|---|---|---|---|
+| Clean，baseline 執行緒 | mean 4.074ms | mean 9.284ms | mean 0.371ms | mean 4.840ms | +127.9% |
+| Clean，優化執行緒（threads=1） | mean 1.798ms | mean 2.513ms | mean 0.126ms | mean 0.589ms | +39.8% |
+| FGSM，baseline 執行緒 | mean 12.128ms | mean 20.772ms | mean 0.305ms | mean 8.339ms | +71.3% |
+| FGSM，優化執行緒 | mean 3.803ms | mean 4.564ms | mean 0.138ms | mean 0.623ms | +20.0% |
+
+**Top-K 前處理本身（`topk_ms`）耗時很小（0.1–0.4ms），Top-K 造成的多數額外延遲來自它必須再跑一次完整 AWN 推論（`defended_inference_ms`）**，等於把 AWN 推論的成本計算兩次（clean + defended）。在預設執行緒設定下，這第二次推論同樣受第十五節第四小節發現的執行緒尾端延遲問題影響，使 Top-K 的額外開銷在 baseline 設定下相對顯著（+71–128%）；優化執行緒設定後，這個開銷大幅縮小（+20–40%），因為兩次 AWN 推論都變快、變穩定。
+
+### 16.5　Bottleneck 分析與遷移
+
+| Scenario／變體 | mean 瓶頸 | median 瓶頸 | p95 瓶頸 |
+|---|---|---|---|
+| A（clean，baseline） | awn_clean_inference_ms（53.8%） | awn_clean_inference_ms（42.3%） | awn_clean_inference_ms（66.1%） |
+| B（clean+TopK） | defended_inference_ms（52.1%） | defended_inference_ms（42.4%） | defended_inference_ms（24.4%） |
+| C（FGSM，baseline） | attack_generation_ms（48.4%） | attack_generation_ms（50.1%） | attack_generation_ms（61.5%） |
+| C（FGSM，optimized） | attack_generation_ms（36.6%） | attack_generation_ms（33.0%） | attack_generation_ms（39.6%） |
+| D_det（PGD，baseline） | attack_generation_ms（88.9%） | attack_generation_ms（84.5%） | attack_generation_ms（96.0%） |
+| D_det（PGD，optimized） | attack_generation_ms（68.6%） | attack_generation_ms（65.1%） | attack_generation_ms（70.2%） |
+
+**完整逐 scenario／逐統計量瓶頸資料見 `bottleneck_by_scenario.csv`。**
+
+**Bottleneck migration 的答案是「沒有完全轉移」**：無論 FGSM 或 PGD，優化後 `attack_generation_ms` 仍是端到端延遲中最大的單一階段（FGSM 36.6%、PGD 68.6%，以 mean 為準），只是其**絕對耗時**與**占比**都明顯下降，感測與 AWN 推論階段的占比因此相對提高，但尚未超過攻擊生成本身。若要讓瓶頸真正轉移到 AWN／sensing，需要更大幅度的攻擊加速（例如更大批次或更快的攻擊演算法變體），本輪未進一步嘗試。Top-K 分支（Scenario B）的瓶頸則自始至終是 `defended_inference_ms`（AWN 推論本身），與第十五節「AWN 推論是 clean pipeline 主要瓶頸」的結論一致。
+
+### 16.6　Mean／Median／P95 是否給出不同結論
+
+**是，且差異在攻擊情境下比 clean pipeline 更顯著**。以 PGD（D_det）為例：baseline 的 p95/median 比值高達 2.87（123.562 / 43.009），代表尾端延遲遠高於典型延遲；優化後這個比值降到 1.12（8.664 / 7.725），代表優化後的延遲分布明顯更集中、更可預期。這與第十五節第四小節「執行緒數是尾端延遲主要成因」的發現一致——優化設定（threads=1）不只降低平均延遲，也大幅壓縮了延遲的變異程度。因此，任何只引用單一統計量（尤其是只引用 mean）的加速結論都可能誤導：**mean 加速倍數往往被 baseline 的尾端延遲拉高**（PGD 的 mean speedup 7.35x 低於 p95 speedup 14.26x，也低於部分場景下 median 反映的中段表現），必須三者並陳才能完整回答「加速了多少」。
+
+### 16.7　Processing Budget 對照（新 Scenario，測得 median／p95）
+
+| Scenario | 變體 | median_total_ms | p95_total_ms | fits 10ms (median) | fits 10ms (p95) | fits 35ms (median) | fits 35ms (p95) |
+|---|---|---|---|---|---|---|---|
+| A | baseline | 2.84 | 7.53 | ✓ | ✓ | ✓ | ✓ |
+| C（FGSM） | baseline | 9.54 | 22.91 | ✓ | ✗ | ✓ | ✓ |
+| C（FGSM） | optimized | 3.81 | 4.19 | ✓ | ✓ | ✓ | ✓ |
+| D_det（PGD） | baseline | 43.01 | 123.56 | ✗ | ✗ | ✗ | ✗ |
+| D_det（PGD） | optimized | 7.72 | 8.66 | ✓ | ✓ | ✓ | ✓ |
+| E（FGSM+TopK） | baseline | 14.70 | 49.84 | ✗ | ✗ | ✓ | ✗ |
+| E（FGSM+TopK） | optimized | 4.50 | 5.28 | ✓ | ✓ | ✓ | ✓ |
+
+完整對照（含全部 8 個 budget：5／10／20／35／50／100／250／1000ms，全部 scenario／variant）見 `processing_budget_table.csv`。**再次強調：這裡的 budget 數字僅是效能量級的參照點，不代表任何特定應用場景（例如 Wi-Fi 或衛星通訊）的實際 deadline**，除非未來有外部文獻或系統規格佐證，本文件不將其與任何具體應用場景綁定。
+
+### 16.8　本節限制
+
+本節的 24 筆樣本集僅涵蓋 4 種調變（BPSK／QPSK／QAM16／WBFM）與 3 個訊噪比，不是第五、六節 2200／330 筆全量調變矩陣的替代品，僅用於同條件端到端比較。所有端到端數字皆為單一次執行、單一機器的結果，未做跨次重複測量與信賴區間估計。優化路徑（batch_size=16 + threads=1）僅涵蓋 `attack_generation_ms`；`awn_clean_inference_ms`、`awn_attacked_inference_ms`、`topk_ms`、`defended_inference_ms` 在 baseline 與 optimized 兩次量測中皆維持逐筆（batch_size=1）呼叫，若這些階段未來也批次化，端到端數字需要重新量測，不得沿用本節結果推論。CW 的批次化端到端數字僅供參考，其批次化本身改變演算法軌跡的問題（`batched_algorithmic_variant`）尚未解決，見第十五節第二小節。
+
 ---
 
 ## 可重現性資訊
 
-本文件記錄的全部數據對應目前主分支程式狀態，量測程式為 `experiments/benchmark_pipeline_latency.py`（Phase A／B）、`experiments/profile_attacks.py`（Phase C）、`experiments/acceleration_pilot.py`（Phase D）、`experiments/acceleration_before_after.py`（Phase E）、`experiments/test_streaming_sensing.py`（Phase G，搭配 `src/sensing/streaming_detector.py`），彙整程式為 `experiments/finalize_performance_results.py`。第十五節的追加驗證輪對應的量測程式為 `experiments/batch_equivalence_audit.py`（15.1／15.2，PGD／CW 批次化等價性與語意稽核，輸出 `pgd_batch_equivalence_deterministic.csv`、`pgd_batch_stochastic_comparison.csv`、`cw_batch_equivalence.csv`）、`experiments/analyze_awn_latency_outliers.py`（15.3，輸出 `awn_latency_outliers.csv`，讀取既有 `pipeline_latency_raw.csv`，未重跑 2200 筆基準）、`experiments/awn_thread_microbenchmark.py`（15.4，輸出 `awn_thread_microbenchmark_summary.csv`、`awn_thread_microbenchmark_by_group.csv`、`awn_thread_microbenchmark_raw.csv`）、一段即時計算 `bottleneck_by_percentile.csv` 的腳本（15.5）、`experiments/diagnose_streaming_failure.py`（第十一節失敗機制診斷，輸出 `streaming_failure_diagnosis.csv`）。逐筆原始資料、彙整統計、Profiler 輸出、圖表與完整環境資訊（CPU 型號、核心／執行緒數、記憶體、作業系統、Python／PyTorch／torchattacks 版本、checkpoint 雜湊、資料集路徑、種子、暖身與正式樣本數）保存於對應的本機結果目錄之 `manifest.json`，未納入版本控制。上游 AWN 與對抗式攻擊實作（包含 CW 提前停止邏輯所在的 torchattacks 套件）為固定版本的外部程式庫，本輪工作（含追加驗證輪）未對其進行修改；15.2 節提到的 runtime monkeypatch 僅在單一診斷腳本的記憶體中執行，未寫回任何檔案，且不影響同一腳本內用於產生 `cw_batch_equivalence.csv` 的實際等價測試呼叫路徑（等價測試呼叫的是未經 monkeypatch 的 `AttackAdapter.apply()`）。
+本文件記錄的全部數據對應目前主分支程式狀態，量測程式為 `experiments/benchmark_pipeline_latency.py`（Phase A／B）、`experiments/profile_attacks.py`（Phase C）、`experiments/acceleration_pilot.py`（Phase D）、`experiments/acceleration_before_after.py`（Phase E）、`experiments/test_streaming_sensing.py`（Phase G，搭配 `src/sensing/streaming_detector.py`），彙整程式為 `experiments/finalize_performance_results.py`。第十五節的追加驗證輪對應的量測程式為 `experiments/batch_equivalence_audit.py`（15.1／15.2，PGD／CW 批次化等價性與語意稽核，輸出 `pgd_batch_equivalence_deterministic.csv`、`pgd_batch_stochastic_comparison.csv`、`cw_batch_equivalence.csv`）、`experiments/analyze_awn_latency_outliers.py`（15.3，輸出 `awn_latency_outliers.csv`，讀取既有 `pipeline_latency_raw.csv`，未重跑 2200 筆基準）、`experiments/awn_thread_microbenchmark.py`（15.4，輸出 `awn_thread_microbenchmark_summary.csv`、`awn_thread_microbenchmark_by_group.csv`、`awn_thread_microbenchmark_raw.csv`）、一段即時計算 `bottleneck_by_percentile.csv` 的腳本（15.5）、`experiments/diagnose_streaming_failure.py`（第十一節失敗機制診斷，輸出 `streaming_failure_diagnosis.csv`）。逐筆原始資料、彙整統計、Profiler 輸出、圖表與完整環境資訊（CPU 型號、核心／執行緒數、記憶體、作業系統、Python／PyTorch／torchattacks 版本、checkpoint 雜湊、資料集路徑、種子、暖身與正式樣本數）保存於對應的本機結果目錄之 `manifest.json`，未納入版本控制。上游 AWN 與對抗式攻擊實作（包含 CW 提前停止邏輯所在的 torchattacks 套件）為固定版本的外部程式庫，本輪工作（含追加驗證輪）未對其進行修改；15.2 節提到的 runtime monkeypatch 僅在單一診斷腳本的記憶體中執行，未寫回任何檔案，且不影響同一腳本內用於產生 `cw_batch_equivalence.csv` 的實際等價測試呼叫路徑（等價測試呼叫的是未經 monkeypatch 的 `AttackAdapter.apply()`）。第十六節（End-to-End Latency Matrix）對應的量測程式為 `experiments/end_to_end_latency_matrix.py`，圖表程式為 `experiments/generate_end_to_end_charts.py`，結果目錄為 `results/end_to_end_latency_20260818T062625Z/`（與第五至十五節使用的 `results/performance_latency_20260818T010552Z/` 是不同的獨立結果目錄，兩者皆保留、互不覆寫），輸出 `end_to_end_latency_raw.csv`、`end_to_end_latency_summary.csv`、`stage_latency_summary.csv`、`before_after_end_to_end.csv`、`bottleneck_by_scenario.csv`、`topk_overhead_summary.csv`、`processing_budget_table.csv`、`cw_end_to_end_supplement.csv` 與 `manifest.json`。

@@ -277,6 +277,20 @@ class ExperimentConfig:
     iq_channel_count: int = 1
     true_label_mod: Optional[str] = None
 
+    # --- CPU thread configuration (this round, additive) ---
+    # torch_num_threads: None (default) means "leave torch's own/environment
+    # default thread count untouched" -- byte-for-byte the prior behavior,
+    # since no code path called torch.set_num_threads() before this round
+    # outside of standalone experiments/ benchmark scripts (which set and
+    # restore it locally, never touching this config). A positive int calls
+    # torch.set_num_threads(value) once, near the top of run_dry_run_experiment
+    # (src/utils/pipeline.py), before any AWN/attack backend is constructed.
+    # 0 and negative values are rejected in validate_experiment_config --
+    # torch.set_num_threads(0) does not mean "unbounded", it is simply not a
+    # meaningful thread count. This does not change Phase 0-4 default
+    # behavior (all of them omit --torch-threads, which stays None).
+    torch_num_threads: Optional[int] = None
+
 
 def build_attack_params(cfg: "ExperimentConfig") -> Dict[str, object]:
     """Collects every non-None attack_* field on cfg into the flat dict
@@ -583,6 +597,11 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
     # TopKAdapter.apply()/fft_topk_denoise directly, whose own bypass/clamp
     # semantics are untouched -- see require_valid_topk_strict's docstring).
     require_valid_topk_strict("topk", cfg.topk)
+    # torch_num_threads: None is valid (means "leave default untouched");
+    # an explicitly-set value must be a positive int -- 0 or negative is
+    # never meaningful for torch.set_num_threads().
+    if cfg.torch_num_threads is not None:
+        require_positive_int("torch_num_threads", cfg.torch_num_threads)
 
 
 def resolve_sensing_window_size(window_size: int, sensing_window_size: Optional[int]) -> int:
@@ -937,6 +956,11 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
                          help="How many segments AWNModelAdapter.infer() processes per real forward-pass call when "
                               "more than one segment is available; chunks larger segment arrays into sub-batches of "
                               "this size instead of one giant or one-at-a-time call.")
+    parser.add_argument("--torch-threads", dest="torch_num_threads", type=arg_positive_int("torch_num_threads"), default=None,
+                         help="If set, calls torch.set_num_threads(value) once near the top of the run, before any "
+                              "AWN/attack backend is constructed. Default: None, leaves torch's own/environment "
+                              "default thread count untouched (prior behavior, unchanged). Must be a positive "
+                              "integer; 0 or negative is rejected.")
     parser.add_argument("--experiment-name", type=str, default=None,
                          help="Optional human-readable tag folded into the manifest/output (sanitized -- path "
                               "separators and other illegal filename characters are stripped).")
@@ -1048,6 +1072,7 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         burst_insert_position=args.burst_insert_position,
         burst_insert_position_index=args.burst_insert_position_index,
         batch_size=args.batch_size,
+        torch_num_threads=args.torch_num_threads,
         experiment_name=sanitize_experiment_name(args.experiment_name),
         overwrite=args.overwrite,
         input_path=args.input_path,

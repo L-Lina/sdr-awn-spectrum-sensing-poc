@@ -368,6 +368,42 @@ class AttackAdapter:
         attack beyond fgsm/pgd/cw's original three-attack surface; also
         usable to override individual fgsm/pgd/cw defaults if explicitly
         needed (never changes their default behavior when omitted).
+
+        Batching (N>1) safety classification -- verified this round for
+        fgsm/pgd/cw only via a 60-sample paired batch_size=1 vs batch_size=16
+        test (docs/research/PERFORMANCE_AND_LATENCY_ANALYSIS_ZH_TW.md
+        section 15.1/15.2); the other 14 supported attacks (bim, mifgsm,
+        difgsm, vmifgsm, vnifgsm, rfgsm, tpgd, deepfool, fab, square, apgd,
+        apgdt, autoattack, ead) have NOT been individually verified and MUST
+        NOT be assumed batch-size-invariant just because this method accepts
+        N>1 for them without raising:
+          - fgsm: confirmed implementation_optimization -- batch_size=1 and
+            N>1 produce bit-identical output per sample.
+          - pgd: implementation_optimization ONLY when attack_params
+            explicitly sets random_start=False (confirmed bit-identical,
+            0.0 max diff over 60 samples). With random_start left at
+            torchattacks' own default (True, the case if attack_params
+            omits random_start entirely), batch_size changes how many times
+            PGD's internal RNG is drawn between calls, so per-sample output
+            differs run-to-run REGARDLESS of batch_size -- this is PGD's own
+            stochastic behavior, not something apply() controls, and must
+            not be read as a batching bug.
+          - cw: NOT an implementation_optimization at N>1. torchattacks.CW's
+            early-stop check (`if cost.item() > prev_cost: return
+            best_adv_images`) compares the whole-batch-summed cost, so a
+            batch of N samples stops together rather than each sample
+            stopping at its own optimum -- confirmed to change the
+            optimization trajectory (60-sample paired test: 95.0% prediction
+            match, tensor max diff 0.00138, batch_size=1 vs 16). Any caller
+            batching CW must label the result batched_algorithmic_variant,
+            never implementation_optimization, and should default to
+            batch_size=1 for results meant to be compared against
+            single-sample CW baselines.
+        No code path in this repo currently defaults every attack to a
+        specific batch size -- N is always whatever the caller's x already
+        is; batch_size=1 callers (including src/utils/pipeline.py's formal
+        run_dry_run_experiment, whose x_clean is normally N=1 or N=(detected
+        region count)) are completely unaffected by this note.
         """
         require_positive_finite_float("attack_temperature", temperature)
         require_nonneg_finite_float("attack_eps", eps)

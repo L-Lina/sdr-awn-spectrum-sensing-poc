@@ -98,6 +98,18 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     # standalone run_full_experiment.py call gets, regardless of combo order.
     _seed_everything(cfg.seed)
 
+    # torch_num_threads (this round, additive): None (default) leaves
+    # torch's own/environment default thread count untouched -- byte-for-
+    # byte prior behavior. A positive int calls torch.set_num_threads()
+    # once, here, before any AWN/attack backend is constructed below.
+    # torch_actual_num_threads is recorded into the summary dicts further
+    # down regardless of whether cfg.torch_num_threads was set, so every
+    # run's manifest/summary always shows the thread count actually in
+    # effect, not just what was requested.
+    if cfg.torch_num_threads is not None and _torch is not None:
+        _torch.set_num_threads(cfg.torch_num_threads)
+    torch_actual_num_threads = _torch.get_num_threads() if _torch is not None else None
+
     # sensing_window_size (energy_detect's smoothing window) and window_size
     # (segment_regions'/to_awn_input's seg_len == AWN input temporal length)
     # are deliberately decoupled here -- window_size is the legacy name and
@@ -411,6 +423,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "experiment_name": cfg.experiment_name,
             "dataset": cfg.dataset,
             "batch_size": cfg.batch_size,
+            "torch_num_threads": cfg.torch_num_threads,
+            "torch_actual_num_threads": torch_actual_num_threads,
             "true_label_mod": cfg.true_label_mod if cfg.iq_source == "cfile" else None,
             "cfile_input_path": gen_meta.get("input_path") if cfg.iq_source == "cfile" else None,
             "cfile_file_size_bytes": gen_meta.get("file_size_bytes") if cfg.iq_source == "cfile" else None,
@@ -600,6 +614,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "experiment_name": cfg.experiment_name,
             "dataset": cfg.dataset,
             "batch_size": cfg.batch_size,
+            "torch_num_threads": cfg.torch_num_threads,
+            "torch_actual_num_threads": torch_actual_num_threads,
             "true_label_mod": cfg.true_label_mod if cfg.iq_source == "cfile" else None,
             "cfile_input_path": gen_meta.get("input_path") if cfg.iq_source == "cfile" else None,
             "cfile_file_size_bytes": gen_meta.get("file_size_bytes") if cfg.iq_source == "cfile" else None,
@@ -839,6 +855,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         "experiment_name": cfg.experiment_name,
         "dataset": cfg.dataset,
         "batch_size": cfg.batch_size,
+        "torch_num_threads": cfg.torch_num_threads,
+        "torch_actual_num_threads": torch_actual_num_threads,
         "true_label_mod": cfg.true_label_mod if cfg.iq_source == "cfile" else None,
         "cfile_input_path": gen_meta.get("input_path") if cfg.iq_source == "cfile" else None,
         "cfile_file_size_bytes": gen_meta.get("file_size_bytes") if cfg.iq_source == "cfile" else None,

@@ -50,8 +50,9 @@ from src.adapters.attack_adapter import (  # noqa: E402
 from src.adapters.awn_adapter import AWNModelAdapter, _REAL_MODEL_SOURCE  # noqa: E402
 from src.sensing.normalize import apply_awn_preprocess, to_awn_input  # noqa: E402
 from src.sensing.radioml_source import RML2016_10A_CLASSES, load_radioml_dict, radioml_sample_to_iq  # noqa: E402
+from src.utils.dataset_path import resolve_dataset_path  # noqa: E402
 
-DATASET_PATH = "/home/xiaomi/adversarial-rf/data/RML2016.10a_dict.pkl"
+DATASET_PATH = resolve_dataset_path()  # priority: env $SDR_AWN_DATASET_PATH > legacy default
 CHECKPOINT = "external/adversarial-rf/2016.10a_AWN.pkl"
 DEVICE = "cpu"
 AWN_PREPROCESS = "radioml-native"

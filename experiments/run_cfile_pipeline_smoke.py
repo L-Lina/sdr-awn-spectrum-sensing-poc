@@ -56,9 +56,16 @@ sys.path.insert(0, str(REPO_ROOT))
 from src.io.iq_file_source import write_iq_file  # noqa: E402
 from src.sensing.radioml_source import load_radioml_sample, embed_multiple_samples_in_noise  # noqa: E402
 from experiments.run_cfile_pipeline import build_arg_parser as build_cfile_args, run_cfile_pipeline  # noqa: E402
+from src.utils.dataset_path import resolve_dataset_path  # noqa: E402
+from src.utils.python_executable import require_python_executable_exists, resolve_python_executable  # noqa: E402
 
-DATASET_PATH = "/home/xiaomi/adversarial-rf/data/RML2016.10a_dict.pkl"
-VENV_PYTHON = "/home/xiaomi/adversarial-rf/.venv/bin/python"
+DATASET_PATH = resolve_dataset_path()  # priority: env $SDR_AWN_DATASET_PATH > legacy default
+# priority: --python-executable (set in main()) > env $SDR_AWN_PYTHON > sys.executable (the
+# interpreter this script itself is running under -- the portable default) > legacy fallback.
+# Subprocess calls below (run_full_experiment_cli, the four-path fairness-test call) use whichever
+# interpreter actually invoked THIS script by default; run this script itself via a torch-capable
+# interpreter (as every formal round already does) for the real backend to be used downstream.
+VENV_PYTHON = resolve_python_executable(legacy_default="/home/xiaomi/adversarial-rf/.venv/bin/python")
 
 
 def log(msg: str) -> None:
@@ -96,9 +103,17 @@ def run_full_experiment_cli(argv: list, cwd: Path) -> subprocess.CompletedProces
 
 
 def main() -> None:
+    global VENV_PYTHON
     ap = argparse.ArgumentParser()
     ap.add_argument("--output-dir", required=True)
+    ap.add_argument("--python-executable", default=None,
+                     help="Interpreter used for this script's subprocess calls (run_full_experiment.py, "
+                          "run_spectrum_sensing_utility.py). Default: env $SDR_AWN_PYTHON, else sys.executable.")
     args = ap.parse_args()
+    if args.python_executable:
+        VENV_PYTHON = resolve_python_executable(cli_value=args.python_executable)
+    require_python_executable_exists(VENV_PYTHON)
+    log(f"subprocess interpreter resolved to: {VENV_PYTHON}")
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=False)  # new timestamped dir -- must not already exist
 

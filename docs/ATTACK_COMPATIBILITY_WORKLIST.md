@@ -22,6 +22,17 @@ targeted-mode/input-constraint table. `difgsm` constructs but fails at
 `forward()` for an architectural reason (see its own status below), and
 everything not in the user's 17-item request list remains unported.
 
+**Update (later round, project-close status)**: `difgsm`'s
+`NEEDS_CUSTOM_IMPLEMENTATION` status above is superseded -- a custom
+`src/adapters/iq_difgsm.py:IQDIFGSM` implementation was added and wired
+into `_ATTACK_CLASS_MAP["difgsm"]`, and a later smoke run
+(`results/attack_compatibility_smoke_20260727T030223Z/`) shows `difgsm` at
+**已移植且smoke test通過**, bringing the registry to **17/17 PASS**. See
+`docs/ATTACK_NAME_MAPPING.md`'s `difgsm` section for the corresponding
+update note. The root-cause diagnosis in this document's `difgsm` section
+below remains accurate as the record of why a straight port was not
+possible.
+
 ## Status categories
 
 - **已移植且smoke test通過**: wired into `src/adapters/attack_adapter.py`
@@ -30,8 +41,12 @@ everything not in the user's 17-item request list remains unported.
   logits reproducible, correct shape, genuinely nonzero perturbation).
 - **已移植但NEEDS_CUSTOM_IMPLEMENTATION**: wired in, constructs
   successfully, but fails at `forward()` for a verified architectural
-  reason (not a parameter or environment issue) -- see
-  `docs/ATTACK_NAME_MAPPING.md`'s `difgsm` section.
+  reason (not a parameter or environment issue). **No attack currently
+  holds this status** -- `difgsm` was the only attack ever classified this
+  way, and it was resolved by routing to a custom `IQDIFGSM`
+  implementation (see the "Update" note at the top of this document and
+  its row in the Worklist table below). Kept as a category definition for
+  historical traceability, not because it currently applies to anything.
 - **已移植但未測**: wired into the adapter but never run with the real
   backend. (Empty today.)
 - **尚未移植**: a valid, installed `torchattacks` class the old project
@@ -80,7 +95,7 @@ everything not in the user's 17-item request list remains unported.
 | Square | `torchattacks.Square` | no (`adv_eval.py` only) | yes | **已移植且smoke test通過** |
 | TIFGSM | `torchattacks.TIFGSM` | no (`adv_eval.py` only) | yes | 尚未移植 |
 | TPGD | `torchattacks.TPGD` | no (`adv_eval.py` only) | yes | **已移植且smoke test通過** (untargeted-only, no label used internally -- see mapping doc) |
-| DIFGSM | `torchattacks.DIFGSM` | no (found via `dir(torchattacks)` only, not referenced by name in any `.py` grepped this round) | yes | **已移植但NEEDS_CUSTOM_IMPLEMENTATION** -- constructs fine, crashes in `forward()` for every parameter combination (architectural: `input_diversity()` resizes the tensor's last dim, which is a singleton in this repo's `[N,2,T,1]` layout; see `docs/ATTACK_NAME_MAPPING.md`) |
+| DIFGSM | `torchattacks.DIFGSM` originally (no (found via `dir(torchattacks)` only, not referenced by name in any `.py` grepped this round) | yes for `torchattacks.DIFGSM` itself, but this repo now dispatches `difgsm` to a custom `src/adapters/iq_difgsm.py:IQDIFGSM` class instead | **已移植且smoke test通過（IQ-compatible custom implementation，見下方 Update）** -- the original `torchattacks.DIFGSM` crashed in `forward()` for every parameter combination (architectural: `input_diversity()` resizes the tensor's last dim, which is a singleton in this repo's `[N,2,T,1]` layout); this was fixed by routing `difgsm` to `IQDIFGSM` (`_ATTACK_CLASS_MAP["difgsm"]`), confirmed `PASS` in `results/attack_compatibility_smoke_20260727T030223Z/`, not `torchattacks.DIFGSM` directly -- see `docs/ATTACK_NAME_MAPPING.md` |
 
 **Verification method for the "exists in installed torchattacks" column**:
 `/home/xiaomi/adversarial-rf/.venv/bin/python3 -c "import torchattacks;
@@ -101,11 +116,12 @@ documented as an Linf budget) before porting. `OnePixel`/`Pixle`/`JSMA`/
 black-box attacks whose applicability to a `[2,128]` IQ tensor (not a 2D
 image) has not been assessed in either project.
 
-**`DIFGSM` needs custom work, not a straight port**: see its
-`NEEDS_CUSTOM_IMPLEMENTATION` row above and
-`docs/ATTACK_NAME_MAPPING.md` for the exact architectural blocker
-(`input_diversity()`'s resize targets a singleton dimension in this
-repo's tensor layout) and what a fix would require.
+**`DIFGSM` needed custom work, not a straight port** (historical note --
+the fix has since landed, see the row above and the "Update" note at the
+top of this document): the blocker was `input_diversity()`'s resize
+targeting a singleton dimension in this repo's tensor layout
+(`docs/ATTACK_NAME_MAPPING.md`); the fix is `src/adapters/iq_difgsm.py:IQDIFGSM`,
+now the live implementation behind the `difgsm` attack name.
 
 **Reuse, do not reimplement**: every ported attack above uses the exact
 constructor kwarg names/defaults verified via `inspect.signature` against

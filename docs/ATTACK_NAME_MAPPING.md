@@ -77,7 +77,7 @@ and validated (`require_nonneg_finite_float`) but never forwarded to the
 constructed attack object, exactly like the pre-existing `cw` behavior
 from prior rounds.
 
-## `difgsm`: NEEDS_CUSTOM_IMPLEMENTATION (found via smoke test, not fixable by parameter tuning)
+## `difgsm`: original `torchattacks.DIFGSM` needed a custom reimplementation (historical finding, now fixed -- see "Update" below for current status: IQ-compatible custom implementation, validated in the current formal pipeline, 17/17 PASS)
 
 `torchattacks.DIFGSM.input_diversity()` unconditionally computes
 `img_resize = int(x.shape[-1] * resize_rate)` on the tensor's **last**
@@ -91,13 +91,32 @@ layout), so `x.shape[-1] == 1` always. `int(1 * resize_rate) == 0` for any
 input (H: 128, W: 1) output (H: 0, W: 0)`). **This is true for every
 `resize_rate`/`diversity_prob` combination** -- confirmed by reading
 `input_diversity`'s source directly, not inferred from one failing config.
-Fixing this needs a custom `input_diversity()` override that only resizes
+Fixing this needed a custom `input_diversity()` override that only resizes
 the `T=128` axis (leaving the trailing singleton dimension alone), or a
-different tensor layout specifically for this attack -- not attempted this
-round. `experiments/run_attack_compatibility_smoke.py` reports `difgsm` as
+different tensor layout specifically for this attack -- **this diagnosis
+round did not attempt the fix**; at that point in time,
+`experiments/run_attack_compatibility_smoke.py` reported `difgsm` as
 `NEEDS_CUSTOM_IMPLEMENTATION`, not `PASS` or a plain `FAIL`, since the
-class instantiates fine and the failure is architectural, not a bad
-parameter choice or a missing dependency.
+class instantiated fine and the failure was architectural, not a bad
+parameter choice or a missing dependency. **This has since been fixed --
+see the "Update" note immediately below; do not read this section as
+describing the current state of `difgsm`.**
+
+**Update (later round, project-close status)**: the custom override
+described above was subsequently implemented as
+`src/adapters/iq_difgsm.py:IQDIFGSM` (resizes only the `T=128` axis,
+leaves the trailing singleton dimension untouched) and wired into
+`attack_adapter.py`'s `_ATTACK_CLASS_MAP["difgsm"]` in place of
+`torchattacks.DIFGSM`. Re-run of `experiments/run_attack_compatibility_smoke.py`
+(`results/attack_compatibility_smoke_20260727T030223Z/`) shows `difgsm` as
+`PASS` (4/4 samples, mean Linf≈0.00117), making the attack registry
+**17/17 PASS**. `IQDIFGSM` has its own 6-test unit suite
+(`experiments/test_iq_difgsm.py`) but has **not** been proven formally
+equivalent to `torchattacks.DIFGSM`'s original image-domain behavior in
+every respect -- see `docs/research/CURRENT_SYSTEM_AND_COMPONENT_STATUS_ZH_TW.md`
+section 5.5. The diagnosis above (why the original `torchattacks.DIFGSM`
+crashes on this repo's tensor layout) remains accurate and is kept as the
+record of why a custom implementation was necessary.
 
 ## Backward compatibility
 

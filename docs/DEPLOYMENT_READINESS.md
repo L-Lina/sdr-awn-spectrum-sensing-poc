@@ -6,6 +6,25 @@ result modified, no core-pipeline code changed, `external/AWN`/
 specific file/line read during this audit, not to any prior conversation
 summary.
 
+> **Update (later round, project-close status)**: this document's `.cfile`
+> findings below (marked **可重用但未接線**, "wire the existing `.cfile`
+> loader" in section 7, and `iq_source restricted to {"synthetic","radioml"}`
+> in section 6's blocker table) are **stale** -- a subsequent round (commit
+> `cc50bb0`, "Add cfile input to formal SDR pipeline") wired a new
+> `src/io/iq_file_source.py` loader into `ExperimentConfig`/
+> `run_dry_run_experiment` (`--iq-source cfile`) and also added a standalone
+> `experiments/run_cfile_pipeline.py` entry point, both reaching the real
+> AWN/attack/Top-K backends. This was verified only against internally
+> generated equivalence/regression fixtures
+> (`experiments/run_cfile_pipeline_smoke.py`,
+> `results/cfile_pipeline_smoke_20260727T082623Z/`), **not against a real
+> SDR/GNU-Radio capture file** -- this document's core "no real capture has
+> ever gone through this pipeline" claim (line 9-13) therefore still holds.
+> See `docs/research/CURRENT_SYSTEM_AND_COMPONENT_STATUS_ZH_TW.md` section
+> 5.3 for the current authoritative cfile status. The rest of this
+> document's analysis (loader internals, blockers, integration checklist)
+> remains accurate as historical record of what the wiring needed to do.
+
 > **This repo cannot currently be claimed "ready to run directly on an SDR
 > or a board."** No real captured IQ signal (file or live) has ever been
 > run through the real AWN/attack/Top-K pipeline, end-to-end, even once.

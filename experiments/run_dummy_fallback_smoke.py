@@ -36,9 +36,10 @@ from src.adapters.awn_adapter import dummy_awn_inference  # noqa: E402
 from src.adapters.defense_adapter import dummy_topk_defense  # noqa: E402
 from src.utils.batch_aggregation import run_batch_combos  # noqa: E402
 from src.utils.config import ExperimentConfig  # noqa: E402
+from src.utils.dataset_path import resolve_dataset_path  # noqa: E402
 
 SEED = 42
-DATASET_PATH = "/home/xiaomi/adversarial-rf/data/RML2016.10a_dict.pkl"
+DATASET_PATH = resolve_dataset_path()  # priority: env $SDR_AWN_DATASET_PATH > legacy default
 BASE_OUTPUT = Path("results/dummy_fallback_smoke")
 
 FIXED = dict(threshold_factor=1.5, sensing_window_size=128, min_region_len=0, merge_gap=0)

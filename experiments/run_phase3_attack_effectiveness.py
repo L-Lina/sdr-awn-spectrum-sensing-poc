@@ -49,8 +49,9 @@ from src.adapters.awn_adapter import _REAL_MODEL_SOURCE  # noqa: E402
 from src.sensing.radioml_source import RML2016_10A_CLASSES  # noqa: E402
 from src.utils.config import ExperimentConfig  # noqa: E402
 from src.utils.pipeline import run_dry_run_experiment  # noqa: E402
+from src.utils.dataset_path import resolve_dataset_path  # noqa: E402
 
-DATASET_PATH = "/home/xiaomi/adversarial-rf/data/RML2016.10a_dict.pkl"
+DATASET_PATH = resolve_dataset_path()  # priority: env $SDR_AWN_DATASET_PATH > legacy default
 CHECKPOINT = "external/adversarial-rf/2016.10a_AWN.pkl"
 DEVICE = "cpu"
 

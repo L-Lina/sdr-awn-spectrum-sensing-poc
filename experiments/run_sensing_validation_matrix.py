@@ -50,9 +50,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.utils.batch_aggregation import run_batch_combos  # noqa: E402
 from src.utils.config import ExperimentConfig  # noqa: E402
+from src.utils.dataset_path import resolve_dataset_path  # noqa: E402
 
 SEED = 42
-DATASET_PATH = "/home/xiaomi/adversarial-rf/data/RML2016.10a_dict.pkl"
+DATASET_PATH = resolve_dataset_path()  # priority: env $SDR_AWN_DATASET_PATH > legacy default
 CHECKPOINT = "external/adversarial-rf/2016.10a_AWN.pkl"
 BASE_OUTPUT = Path("results/sensing_validation_matrix")
 

@@ -79,8 +79,9 @@ from src.sensing.radioml_source import (  # noqa: E402
 )
 from src.sensing.segmentation import select_aligned_segments  # noqa: E402
 from src.utils.pipeline import _seed_everything  # noqa: E402
+from src.utils.dataset_path import resolve_dataset_path  # noqa: E402
 
-DATASET_PATH = "/home/xiaomi/adversarial-rf/data/RML2016.10a_dict.pkl"
+DATASET_PATH = resolve_dataset_path()  # priority: env $SDR_AWN_DATASET_PATH > legacy default
 CHECKPOINT = "external/adversarial-rf/2016.10a_AWN.pkl"
 DEVICE = "cpu"
 N_SAMPLES = 8192

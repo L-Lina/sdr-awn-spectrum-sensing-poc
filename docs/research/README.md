@@ -42,6 +42,12 @@ order:
    tuning、batching 可行性與正確性驗證、batching classification（A/B/C/D）、
    end-to-end 驗證與 processing-class 分類，回答「Attack 怎麼讓它變快」。
 
+9. **[FINAL_EXPERIMENT_EVIDENCE_INDEX_ZH_TW.md](FINAL_EXPERIMENT_EVIDENCE_INDEX_ZH_TW.md)**
+   -- 正式實驗結果、CSV、manifest、correctness validation、latency evidence
+   的總索引：逐一列出目前所有 FINAL 結果目錄、每個 CSV 的欄位與統計、依問題
+   分類（sensing/AMC/attack/Top-K/latency/acceleration/correctness）的證據
+   對照表，用於快速定位任一項結果的來源檔案。
+
 ## Not a research document
 
 - `docs/PROJECT_STATUS.md` -- English-language engineering/handoff status

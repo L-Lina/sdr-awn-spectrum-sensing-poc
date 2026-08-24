@@ -37,6 +37,11 @@ order:
    FGSM／PGD(det)／Top-K 在四級 channel condition 下的完整結果，含事後 final
    result audit（metric 定義、denominator 修正、pseudo-replication 澄清）。
 
+8. **[ALL_ATTACK_ACCELERATION_ANALYSIS_ZH_TW.md](ALL_ATTACK_ACCELERATION_ANALYSIS_ZH_TW.md)**
+   -- 17 種攻擊加速可行性與最佳化實驗：逐攻擊 baseline latency、CPU thread
+   tuning、batching 可行性與正確性驗證、batching classification（A/B/C/D）、
+   end-to-end 驗證與 processing-class 分類，回答「Attack 怎麼讓它變快」。
+
 ## Not a research document
 
 - `docs/PROJECT_STATUS.md` -- English-language engineering/handoff status

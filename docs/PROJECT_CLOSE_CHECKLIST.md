@@ -14,8 +14,8 @@ PASS on the basis of this checklist's own say-so.
 | Spectrum sensing (energy detect -> region -> segmentation) | PASS | `docs/research/CURRENT_SYSTEM_AND_COMPONENT_STATUS_ZH_TW.md` §5.1; `results/spectrum_sensing_utility_formal_20260727T021248Z/` |
 | Streaming/stateful sensing | LIMITATION (prototype) | `src/sensing/streaming_detector.py`; fails at chunk_size 256/512, `results/performance_latency_20260818T010552Z/streaming_sensing_validation.csv` |
 | AWN real-checkpoint inference | PASS | `src/adapters/awn_adapter.py`; used in every formal round |
-| 17-attack registry (formal compatibility) | PASS | `results/attack_compatibility_smoke_20260727T030223Z/` (17/17 PASS); `docs/ATTACK_NAME_MAPPING.md`/`docs/ATTACK_COMPATIBILITY_WORKLIST.md` stale-status wording fixed this round |
-| Dataset-path portability (no unoverridable single-VM absolute path in formal executable code) | PASS | `src/utils/dataset_path.py`; all ~31 `experiments/*.py` batch scripts + `docs/PROJECT_STATUS.md` §8; path-level regression (valid/default/invalid-path, fail-fast) this round |
+| 17-attack registry (formal compatibility) | PASS | `results/attack_compatibility_smoke_20260727T030223Z/` (17/17 PASS); `docs/ATTACK_NAME_MAPPING.md`/`docs/ATTACK_COMPATIBILITY_WORKLIST.md` stale-status wording corrected in this revision |
+| Dataset-path portability (no unoverridable single-VM absolute path in formal executable code) | PASS | `src/utils/dataset_path.py`; all ~31 `experiments/*.py` batch scripts + `docs/PROJECT_STATUS.md` §8; path-level regression (valid/default/invalid-path, fail-fast) verified in this revision |
 | Top-K FFT defense (function) | PASS | `src/adapters/topk_adapter.py`; independent load/shape test |
 | Live SDR / USRP / GNU Radio ingestion | NOT_IMPLEMENTED | `docs/DEPLOYMENT_READINESS.md`; 0 `gnuradio`/`uhd`/`zmq` imports repo-wide |
 | Adaptive/routed Top-K selection | NOT_IMPLEMENTED | `external/adversarial-rf/util/defense.py`'s `adaptive_k*` never wired into `TopKAdapter` |
@@ -37,10 +37,10 @@ PASS on the basis of this checklist's own say-so.
 | Item | Status | Evidence |
 |---|---|---|
 | Deterministic seeding (channel, attack, sensing) | PASS | `docs/PROJECT_STATUS.md` Part 1 §14 |
-| `raw_results.csv` byte-identical across two independent audit rounds | PASS | SHA256 cross-check against `manifest_analysis.json`, this round |
+| `raw_results.csv` byte-identical across two independent audit rounds | PASS | SHA256 cross-check against `manifest_analysis.json`, this validation pass |
 | `--resume` / incremental CSV safety | PASS | Phase 4 round-27 byte-identical no-op re-run |
 | Independent-process bit-identical spot-check | PASS | Phase 1, 16-combo spot-check |
-| Timestamped result directories + manifest/provenance hashes | PASS | every `results/<name>_<timestamp>/` directory this round and prior |
+| Timestamped result directories + manifest/provenance hashes | PASS | every `results/<name>_<timestamp>/` directory, current and historical |
 
 ## D. Performance
 
@@ -59,7 +59,7 @@ PASS on the basis of this checklist's own say-so.
 | Channel model (MUST: AWGN/amplitude/propagation-delay metadata; SHOULD: CFO/Doppler/timing-offset) | PASS | `src/channel/satellite_like.py`; 29/29 unit tests |
 | 576-combination final experiment | PASS | `results/satellite_like_final_20260821T021117Z/` |
 | GIGO validation (sensing quality vs. AMC accuracy disambiguation) | PASS (observational, not causal) | `docs/research/SATELLITE_LIKE_FINAL_EXPERIMENT_ZH_TW.md` §18/22.2 |
-| Real OTA / live satellite validation | NOT_IMPLEMENTED | explicitly out of scope this project-close round; A0 digital threat model only |
+| Real OTA / live satellite validation | NOT_IMPLEMENTED | explicitly out of scope for this project-close phase; A0 digital threat model only |
 | Standards-compliant DVB-S2/S2X modem | NOT_IMPLEMENTED | no frame/FEC/modem layer exists in this repo |
 | RadioML2018.01A / APSK migration | NOT_IMPLEMENTED (future extension) | unverified `2018.01a_AWN.pkl` checkpoint noted as a starting point only |
 
@@ -67,11 +67,11 @@ PASS on the basis of this checklist's own say-so.
 
 | Item | Status | Evidence |
 |---|---|---|
-| `docs/research/*.md` Traditional Chinese, formal register, evidence-traced | PASS | this round's terminology/AI-attribution/simplified-char sweep, 0 hits |
-| Stale cross-references fixed (difgsm status, cfile wiring status) | PASS | `docs/ATTACK_NAME_MAPPING.md`, `docs/ATTACK_COMPATIBILITY_WORKLIST.md`, `docs/DEPLOYMENT_READINESS.md` update notes added this round |
-| `docs/research/README.md` reading-order index | PASS | created this round |
-| `docs/PROJECT_STATUS.md` project-close handoff rewrite | PASS | this round |
-| PROJECT_STATUS.md language convention (English, not Traditional Chinese) | LIMITATION (deliberate, disclosed) | pre-existing convention (matches `README.md`); not translated this round -- see PROJECT_STATUS.md's own header note |
+| `docs/research/*.md` Traditional Chinese, formal register, evidence-traced | PASS | terminology/AI-attribution/simplified-char sweep for this revision, 0 hits |
+| Stale cross-references fixed (difgsm status, cfile wiring status) | PASS | `docs/ATTACK_NAME_MAPPING.md`, `docs/ATTACK_COMPATIBILITY_WORKLIST.md`, `docs/DEPLOYMENT_READINESS.md` update notes added in this revision |
+| `docs/research/README.md` reading-order index | PASS | created in this revision |
+| `docs/PROJECT_STATUS.md` project-close handoff rewrite | PASS | this revision |
+| PROJECT_STATUS.md language convention (English, not Traditional Chinese) | LIMITATION (deliberate, disclosed) | pre-existing convention (matches `README.md`); not translated in this revision -- see PROJECT_STATUS.md's own header note |
 
 ## G. Git Hygiene
 
@@ -79,9 +79,9 @@ PASS on the basis of this checklist's own say-so.
 |---|---|---|
 | `results/` untracked (only `.gitkeep` tracked) | PASS | `git ls-files \| grep '^results/'` |
 | `external/AWN`, `external/adversarial-rf` pinned, no diff | PASS | `git diff --submodule=log`, `git submodule status` |
-| `origin/nzzz_proposal` untouched | PASS | never checked out, never written to this session |
-| AI attribution = 0 across all new/modified files | PASS | this round's full sweep |
-| `git diff --check` clean | PASS | this round |
+| `origin/nzzz_proposal` untouched | PASS | never checked out, never written to |
+| AI attribution = 0 across all new/modified files | PASS | full sweep for this revision |
+| `git diff --check` clean | PASS | this revision |
 
 ## H. Known Limitations (see `docs/PROJECT_STATUS.md` Part 1 §15 for the full list)
 

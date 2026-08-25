@@ -2,7 +2,7 @@
 
 Ground truth for `src/adapters/attack_adapter.py`'s attack registry. Every
 constructor signature, label requirement, and targeted-mode entry below was
-verified this round by directly introspecting the INSTALLED
+verified by directly introspecting the INSTALLED
 `torchattacks==3.5.1` package (`inspect.signature`, `inspect.getsource` on
 each class's `.forward()`, and `atk.supported_mode` on a constructed
 instance) -- not assumed from memory or from
@@ -52,7 +52,7 @@ dtype constraint than this shared `[N,2,T]` float32 contract.
 `num_classes=11` in `src/adapters/awn_adapter.py:_AWN_2016_10A_CFG`).
 `AttackAdapter._build_torchattacks` defaults `n_classes` to **11** for
 these three unless `attack_params` explicitly overrides it (CLI:
-`--attack-n-classes`). Verified empirically this round: `FAB`/`APGDT`
+`--attack-n-classes`). Verified empirically: `FAB`/`APGDT`
 store the derived `n_target_classes = n_classes - 1` (confirmed `== 10`
 when `n_classes=11` is passed); `AutoAttack` stores `n_classes` directly
 (confirmed `== 11`).
@@ -124,6 +124,6 @@ record of why a custom implementation was necessary.
 byte-for-byte unchanged from every prior formal round: `pgd` still
 defaults to `alpha=eps/4, steps=10`; `cw` still reads `cw_c`/`cw_steps`/
 `cw_lr` (not the new generic `attack_kappa`/`attack_lr` fields, unless
-explicitly passed via `attack_params`). Verified this round via direct
+explicitly passed via `attack_params`). Verified via direct
 construction comparison (`_build_torchattacks("pgd", ..., eps=0.05)` ->
 `atk.alpha == 0.05/4`, `atk.steps == 10`) before any smoke test was run.

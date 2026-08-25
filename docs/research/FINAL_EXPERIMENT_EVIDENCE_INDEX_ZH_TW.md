@@ -1,10 +1,10 @@
 # Final Experiment Evidence Index（正式結果證據索引）
 
-本文件目的：讓任何一個關於「這個數字／這張圖／這個結論從哪裡來」的問題，都能在 30 秒內找到對應的 CSV、manifest 或 log。本文件本身不重新計算任何數字，全部引用既有正式結果目錄；不修改任何既有 `raw_results.csv`、`summary.csv`、`manifest.json`、PNG 或 log。配套機器可讀索引：`results/FINAL_CSV_MASTER_INDEX.csv`（103 列，涵蓋本文件列為 FINAL 且深度盤點的 5 個結果目錄之全部 CSV）。
+本文件建立正式實驗結果與其原始資料、摘要、manifest、驗證紀錄及分析產物之可追溯索引，以支援結果驗證與實驗重現。本文件本身不重新計算任何數字，全部引用既有正式結果目錄；不修改任何既有 `raw_results.csv`、`summary.csv`、`manifest.json`、PNG 或 log。配套機器可讀索引：`results/FINAL_CSV_MASTER_INDEX.csv`（103 列，涵蓋本文件列為 FINAL 且深度盤點的 5 個結果目錄之全部 CSV）。
 
 ## 〇、範圍與方法說明
 
-本輪對 `results/` 下約 100 個資料夾逐一分類（見第一節），並對其中 **5 個「老師優先檢查清單」列出的 FINAL 目錄**做逐檔案（CSV／PNG／JSON／log）盤點：即時 filesystem 掃描、schema 讀取、SHA256 計算，未預先假設任何檔名或內容。這 5 個目錄是：
+本索引對 `results/` 下約 100 個資料夾逐一分類（見第一節），並對其中 **5 個核心 FINAL 結果目錄**做逐檔案（CSV／PNG／JSON／log）盤點：即時 filesystem 掃描、schema 讀取、SHA256 計算，未預先假設任何檔名或內容。這 5 個目錄是：
 
 1. `results/satellite_like_final_20260821T021117Z/`（satellite-like 576 最終整合實驗）
 2. `results/all_attack_acceleration_corrected_20260824T055724Z/`（corrected 17-attack acceleration 最終結果）
@@ -18,7 +18,7 @@ Phase 0-4（`formal_phase*`）與其餘既有正式結果目錄，已於第一�
 
 ## 一、正式結果資料夾總表（狀態分類）
 
-狀態定義：**FINAL**（目前正式引用的證據）／**SUPERSEDED**（已被更新結果取代，不得作為正式證據）／**INTERMEDIATE**（早期分層執行的中間產物，非最終引用版本，但保留作為方法演進紀錄）／**LEGACY**（開發早期的探索性／除錯用資料夾，非正式研究結果）／**UNKNOWN**（本輪未深入判定）。
+狀態定義：**FINAL**（目前正式引用的證據）／**SUPERSEDED**（已被更新結果取代，不得作為正式證據）／**INTERMEDIATE**（早期分層執行的中間產物，非最終引用版本，但保留作為方法演進紀錄）／**LEGACY**（開發早期的探索性／除錯用資料夾，非正式研究結果）／**UNKNOWN**（尚未深入判定）。
 
 ### 1.1 Satellite-like
 
@@ -76,7 +76,7 @@ Phase 0-4（`formal_phase*`）與其餘既有正式結果目錄，已於第一�
 | `sensing_awn_low_perturbation_attacks_20260804T002511Z` | **FINAL** | FGSM + 五種低擾動攻擊之數位基準實驗 |
 | `parameter_validation_20260727T054218Z` | **FINAL** | 核心參數驗收之最終分類（71 IMPLEMENTED_AND_VALIDATED 等） |
 | `parameter_validation_20260727T034426Z` | INTERMEDIATE | 較早的參數驗證回合，被上一列擴充取代 |
-| `results.zip`（檔案，非資料夾） | UNKNOWN | 本輪未解壓檢視，非上述任何正式結果目錄的來源 |
+| `results.zip`（檔案，非資料夾） | UNKNOWN | 尚未解壓檢視，非上述任何正式結果目錄的來源 |
 
 ### 1.7 開發早期探索性／除錯資料夾（LEGACY，不逐一展開）
 
@@ -91,7 +91,7 @@ Phase 0-4（`formal_phase*`）與其餘既有正式結果目錄，已於第一�
 | Satellite-like 576/576 完成 | `results/satellite_like_final_20260821T021117Z/raw_results.csv` | `status`, `fallback_used` | 576 rows, `status`={'ok':576}, `fallback_used`={false:576} |
 | 0 error | 同上 | `status`, `error_type` | `error_type` 全為 NaN（576/576），無 'error' 值 |
 | 0 fallback | 同上 | `fallback_used` | 576/576 為 false |
-| 0 NaN/Inf | 同上 | 全數值欄位 | 本輪掃描 `numeric_inf=0`；`numeric_nan` 非零僅來自設計上本就允許為空的欄位（如 `achieved_snr_db` 僅 channel condition=strong 時有值、`error_message`／`error_type` 皆為 0 error 下的預期空值），不代表資料缺陷 |
+| 0 NaN/Inf | 同上 | 全數值欄位 | 掃描結果 `numeric_inf=0`；`numeric_nan` 非零僅來自設計上本就允許為空的欄位（如 `achieved_snr_db` 僅 channel condition=strong 時有值、`error_message`／`error_type` 皆為 0 error 下的預期空值），不代表資料缺陷 |
 | 0 no_region / 0 no_segment | 同上 | `sensing_detected`, `detected_start`, `detected_end` | `sensing_detected`={true:576}，576/576 皆偵測成功 |
 | Manifest 佐證 | `results/satellite_like_final_20260821T021117Z/manifest_analysis.json` | git commit, raw_results sha256 | 576-row 結果之 git 版本與 SHA256 快照 |
 | 17-attack 18/18 條件完成 0 error | `results/all_attack_acceleration_corrected_20260824T055724Z/attack_acceleration_raw.csv` | `status` | `status`={ok:5124, fallback:57}，0 筆 'error' |
@@ -192,28 +192,28 @@ Phase 0-4（`formal_phase*`）與其餘既有正式結果目錄，已於第一�
 | `satellite_like_final_20260821T021117Z` | `manifest_analysis.json`（分析階段）＋`audit/audit_report.json`（稽核階段） | git commit、raw_results sha256、script 參照 | 無 dataset path／attack list／seed 欄位（這些記錄在 `experiments/run_satellite_like_final.py` 原始碼常數，非 manifest；已知限制） |
 | `all_attack_acceleration_corrected_20260824T055724Z` | `manifest.json`（merge 階段）＋`rerun_5_attacks_only/manifest.json` | dataset_path、checkpoint_path、registry、bench_attacks、tier、batch/thread 設定、eps/seed、n_error/n_fallback、runtime；merge 版額外記錄 bug 說明、受影響/未受影響清單、corrected seed policy | 完整 |
 | `performance_latency_20260818T010552Z` | `manifest.json`＋`validation_round_manifest.json` | git commit、torch/torchattacks 版本、checkpoint sha256、dataset_path | 完整；`phaseA-E_terminal.log` 為各 Phase 執行 log |
-| `end_to_end_latency_20260818T062625Z` | `manifest.json` | scenario/variant 設定 | 未逐一核對，建議會議前快速目視確認 |
+| `end_to_end_latency_20260818T062625Z` | `manifest.json` | scenario/variant 設定 | 未逐一核對，建議引用前先行目視確認 |
 | `spectrum_sensing_utility_formal_20260727T021248Z` | `manifest.json` | run 設定 | `stdout.log`／`stderr.log` 為執行 log |
 
 ---
 
-## 十一、Teacher-Question Lookup Table
+## 十一、驗證項目對照表
 
-| Teacher Question | Open This CSV | Important Columns | Expected Result |
+| Verification Target | Primary Evidence | Relevant Fields | Reference Result |
 |---|---|---|---|
-| 整體 satellite-like 有沒有跑完？ | `satellite_like_final_20260821T021117Z/raw_results.csv` | `status`,`fallback_used` | 576 rows, 0 error, 0 fallback |
-| Spectrum Sensing 有沒有抓到訊號？ | `overall_summary.csv` | `sensing_detection_rate`,`captured_signal_ratio_mean` | detection 100%, mean captured ratio ≈0.973 |
-| AMC 準確率隨 channel 惡化嗎？ | `by_channel.csv` | `clean_accuracy` | 58.3%→33.3%→20.8%→16.7% |
-| FGSM 加速多少？ | `all_attack_acceleration_corrected_20260824T055724Z/attack_bottleneck_summary.csv` | `baseline_median_ms`,`optimized_median_ms`,`median_speedup` | 5.73→0.438ms，13.07x |
-| 為什麼 DIFGSM 可以 batching？ | `attack_correctness_summary.csv`＋`attack_batching_classification.csv` | `prediction_match_rate`,`tensor_max_abs_diff`,`batch_size` | 修正 seed 後全部 batch size 下 100% match，0 diff，分類 A |
-| Square 為什麼不能 batching？ | `attack_correctness_summary.csv`＋`attack_acceleration_raw.csv` | `prediction_match_rate`,`fallback`,`status` | worst match 75%，且 batch≥8 幾乎全數第三方套件崩潰 |
-| FAB 52.8x 是真的嗎？ | `attack_bottleneck_summary.csv`＋`attack_e2e_summary.csv` | `median_speedup`（batch 表）vs `total_median`（E2E 表） | batch=32 下 18.09ms；E2E 單筆仍 108ms——52.8x 是批次吞吐量效果 |
-| E2E latency 在哪？ | `attack_e2e_summary.csv`／`end_to_end_latency_summary.csv` | `total_median`,`total_p95` | 依攻擊/情境查表 |
-| Top-K 有沒有用？ | `audit/topk_denominator_audit.csv` | `recovery_rate_over_attack_failed_only`,`degradation_rate_over_clean_correct_only` | FGSM 2.5%／PGD 6.9% 回復；29.03% clean 反被弄錯 |
-| 17 種攻擊全部測了嗎？ | `attack_acceleration_raw.csv` | `attack` value_counts | 18 個條件（17 canonical＋pgd 拆兩條件），每條件 baseline+thread+batch+E2E 皆有列 |
-| 有沒有 fallback 污染最終數字？ | `attack_acceleration_raw.csv` | `phase`,`fallback` | 57 筆 fallback 全在 `batching_test`，0 筆進入 baseline/aggregate |
-| 四路 sensing 實驗 sensing 跟 oracle 差多少？ | `spectrum_sensing_utility_formal_20260727T021248Z/paired_comparisons.csv` | `accuracy_difference`,`mcnemar_exact_pvalue` | sensing vs oracle 差 +0.0009，p=0.754（不顯著） |
-| Clean pipeline 哪個 stage 最慢？ | `performance_latency_20260818T010552Z/bottleneck_by_percentile.csv` | `stage`,`pct_of_median_total` | 依 median/p95 分別列出主要瓶頸 stage |
+| 整體 satellite-like 實驗是否完整跑完 | `satellite_like_final_20260821T021117Z/raw_results.csv` | `status`,`fallback_used` | 576 rows, 0 error, 0 fallback |
+| Spectrum Sensing 是否正確偵測訊號 | `overall_summary.csv` | `sensing_detection_rate`,`captured_signal_ratio_mean` | detection 100%, mean captured ratio ≈0.973 |
+| AMC 準確率是否隨 channel 惡化 | `by_channel.csv` | `clean_accuracy` | 58.3%→33.3%→20.8%→16.7% |
+| FGSM 加速倍率 | `all_attack_acceleration_corrected_20260824T055724Z/attack_bottleneck_summary.csv` | `baseline_median_ms`,`optimized_median_ms`,`median_speedup` | 5.73→0.438ms，13.07x |
+| DIFGSM 可 batching 之依據 | `attack_correctness_summary.csv`＋`attack_batching_classification.csv` | `prediction_match_rate`,`tensor_max_abs_diff`,`batch_size` | 修正 seed 後全部 batch size 下 100% match，0 diff，分類 A |
+| Square 不可 batching 之依據 | `attack_correctness_summary.csv`＋`attack_acceleration_raw.csv` | `prediction_match_rate`,`fallback`,`status` | worst match 75%，且 batch≥8 幾乎全數第三方套件崩潰 |
+| FAB 52.8x 加速之性質 | `attack_bottleneck_summary.csv`＋`attack_e2e_summary.csv` | `median_speedup`（batch 表）vs `total_median`（E2E 表） | batch=32 下 18.09ms；E2E 單筆仍 108ms——52.8x 為批次吞吐量效果，非單筆延遲改善 |
+| E2E latency 位置 | `attack_e2e_summary.csv`／`end_to_end_latency_summary.csv` | `total_median`,`total_p95` | 依攻擊/情境查表 |
+| Top-K 防禦效果 | `audit/topk_denominator_audit.csv` | `recovery_rate_over_attack_failed_only`,`degradation_rate_over_clean_correct_only` | FGSM 2.5%／PGD 6.9% 回復；29.03% clean 反被弄錯 |
+| 17 種攻擊是否全數涵蓋 | `attack_acceleration_raw.csv` | `attack` value_counts | 18 個條件（17 canonical＋pgd 拆兩條件），每條件 baseline+thread+batch+E2E 皆有列 |
+| 最終數字是否受 fallback 污染 | `attack_acceleration_raw.csv` | `phase`,`fallback` | 57 筆 fallback 全在 `batching_test`，0 筆進入 baseline/aggregate |
+| 四路 sensing 實驗中 sensing 與 oracle 之差距 | `spectrum_sensing_utility_formal_20260727T021248Z/paired_comparisons.csv` | `accuracy_difference`,`mcnemar_exact_pvalue` | sensing vs oracle 差 +0.0009，p=0.754（不顯著） |
+| Clean pipeline 最大延遲瓶頸 stage | `performance_latency_20260818T010552Z/bottleneck_by_percentile.csv` | `stage`,`pct_of_median_total` | 依 median/p95 分別列出主要瓶頸 stage |
 
 ---
 
@@ -242,16 +242,16 @@ Phase 0-4（`formal_phase*`）與其餘既有正式結果目錄，已於第一�
 | 19 | processing class evidence exists | PASS — `attack_processing_class.csv`, 18/18 |
 | 20 | figures traceable to CSV | PASS — 5 個 FINAL 目錄之 PNG 皆有對應同名或同資料夾內 source CSV（`spectrum_sensing_utility_formal` 甚至逐圖附 `*_source.csv`） |
 | 21 | all final CSV SHA256 calculated | PASS — 103 筆列於 `results/FINAL_CSV_MASTER_INDEX.csv` |
-| 22 | no final CSV missing | PASS（於本輪盤點範圍內：5 個優先目錄） |
+| 22 | no final CSV missing | PASS（於本次盤點範圍內：5 個核心目錄） |
 | 23 | superseded runs clearly separated | PASS — `all_attack_acceleration_20260824T031053Z/SUPERSEDED.txt`＋本文件第一節表格 |
 
-**23/23 PASS，本輪盤點範圍內無 FAIL 項目。**
+**23/23 PASS，本次盤點範圍內無 FAIL 項目。**
 
 ---
 
 ## 十三、已知限制（誠實揭露）
 
-1. 本文件對 Phase 0-4（`formal_phase*`）與其他既有正式目錄僅做**分類標記**，未逐 CSV 做 schema／SHA256 盤點——如會議中被問到 Phase 0-4 的特定數字，請改查 `docs/PROJECT_STATUS.md` 或對該目錄比照第三節方法重新掃描。
+1. 本文件對 Phase 0-4（`formal_phase*`）與其他既有正式目錄僅做**分類標記**，未逐 CSV 做 schema／SHA256 盤點——如需 Phase 0-4 的特定數字，請改查 `docs/PROJECT_STATUS.md` 或對該目錄比照第三節方法重新掃描。
 2. `results/results.zip` 未解壓檢視，內容與來源未確認，列為 UNKNOWN。
-3. `sensing_revalidation_after_alignment`（Phase 5 證據）之子目錄結構較深（A/B/C/D 四個子資料夾），本輪僅在第一節標記其為 FINAL，未逐檔展開。
+3. `sensing_revalidation_after_alignment`（Phase 5 證據）之子目錄結構較深（A/B/C/D 四個子資料夾），本文件僅在第一節標記其為 FINAL，未逐檔展開。
 4. `results/FINAL_CSV_MASTER_INDEX.csv` 的 `purpose` 欄位由檔名／欄位規則式判斷產生，多數已人工核對，但未逐筆手動覆核全部 103 列，如有描述不準確之處，請以該 CSV 自身欄位與對應正式研究文件的引用段落為準。

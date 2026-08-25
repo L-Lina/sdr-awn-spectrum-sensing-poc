@@ -12,7 +12,7 @@ inherited from `external/adversarial-rf`'s own conventions without an
 explicit citation. See `docs/formal_experiment_matrix.csv` for the
 machine-readable per-phase matrix that accompanies this document.
 
-This round did **not** run any new experiment -- see section 6 for what was
+This planning pass did **not** run any new experiment -- see section 6 for what was
 actually executed (nothing beyond reading existing files) and section 7 for
 open decisions that must be confirmed before any phase actually runs.
 
@@ -32,7 +32,7 @@ record -- not a theoretical range.
 | SNR | `--dataset-snr` | all 20 values `-20..18` step 2 -- all 20 confirmed both sensing-only and with real fgsm attack (round 14) | CSV row `S,coverage_full_radioml_snr_range` |
 | attack | `--attack` | `{none, fgsm, pgd, cw}` -- exhaustive list this repo wires up (no bim/apgd/deepfool/etc., md section 4). All 4 confirmed real-backend at scale (round 12, 480 combos; round 14, 88 combos) | CSV rows `F,attack`, `Q,fair_topk_verification_at_scale` |
 | attack_eps | `--attack-eps` | `{0.001, 0.01, 0.03, 0.05, 0.1, 0.3, 1.0}` confirmed through the real batch pipeline, linear scaling verified, 0 NaN/Inf even at 1.0 (round 14). **N/A to cw** (no `eps` attribute exists on the constructed `torchattacks.CW` object, confirmed empirically, md section 10.2) | CSV row `S,coverage_attack_eps_sweep` |
-| attack_temperature | `--attack-temperature` | `{1.0 (default), 100.0}` both confirmed real-backend. **Important finding (this round, see section 7 risk R4): default `T=1.0` was shown to be a gradient-saturation no-op under the OLD synthetic + legacy-unit-power pipeline (md section 10.1), but round 12/14's radioml-native-mode batches used `T=1.0` (default) throughout and measured real attack success (fgsm 83.3%, pgd 96.7-100%) -- the saturation problem does not reproduce under the current radioml-native default.** | CSV row `F,attack_temperature`; cross-referenced against `run_fair_topk_matrix.py`/`run_parameter_coverage_completion.py` FIXED dicts |
+| attack_temperature | `--attack-temperature` | `{1.0 (default), 100.0}` both confirmed real-backend. **Important finding (this review, see section 7 risk R4): default `T=1.0` was shown to be a gradient-saturation no-op under the OLD synthetic + legacy-unit-power pipeline (md section 10.1), but round 12/14's radioml-native-mode batches used `T=1.0` (default) throughout and measured real attack success (fgsm 83.3%, pgd 96.7-100%) -- the saturation problem does not reproduce under the current radioml-native default.** | CSV row `F,attack_temperature`; cross-referenced against `run_fair_topk_matrix.py`/`run_parameter_coverage_completion.py` FIXED dicts |
 | cw_c / cw_steps / cw_lr | `--cw-c` / `--cw-steps` / `--cw-lr` | Repo defaults `1.0 / 20 / 0.01` **were found ineffective (0/5 changed) under the OLD synthetic pipeline** (md section 10.2), but the SAME defaults achieved 83.3% (round 12) and 90.9% (round 14) attack success at scale under radioml-native -- same apparent resolution as attack_temperature above (see risk R4). Alternate tuned values `c=10, steps=100, lr=0.1` were also explored (md 10.2) but never run at scale | CSV rows `F,cw_c/cw_steps/cw_lr`, `S,coverage_cw_knobs` |
 | Top-K | `--topk` | full legal range `[1,128]` confirmed (round 14, 10 values incl. boundaries); `{10,20,30,40}` is the value set used throughout every real-backend round since round 4; illegal values (`<=0`→bypass, `>128`→clamp, `NaN/Inf/1.5/'abc'/None`→rejected) all confirmed | CSV row `S,coverage_topk_full_range` |
 | threshold_factor | `--threshold-factor` | stable range `[1.2, 5.0]` gives single-region detection at consistent 0.9852 ratio (round 13); `<=1.0` still `run_status=ok` but produces multiple false-alarm segments -- must not be treated as "clean" on `run_status` alone | CSV row `R,sensing_revalidation_threshold_factor` |
@@ -52,7 +52,7 @@ record -- not a theoretical range.
 | device | `--device` | only `cpu` confirmed (no GPU in this environment, `torch.cuda.is_available()==False`) | CSV row `E,device` |
 | window_size | `--window-size` | must stay `128` for the pinned 2016.10a checkpoint (`external/adversarial-rf/util/config.py:51`, `signal_len=128`) -- other even values structurally load but were never validated as statistically meaningful (md section 8) | CSV row `C,window_size` |
 | segment_hop | `--segment-hop` | only `1` empirically exercised at scale; larger values wired and boundary-tested (round 14: `candidate_count` scales exactly as `(region_len-128)//hop+1`) but never used in a real accuracy-bearing run | CSV row `N,segment_hop`, `S,coverage_remaining_flags` |
-| use_real_awn / use_real_attack / use_real_topk | `--use-real-*` | `True` fully validated at scale (every round 10+); `False` (dummy path) end-to-end validated this session (round 15, `c303daa`) | CSV rows `T,use_real_awn/attack/topk` |
+| use_real_awn / use_real_attack / use_real_topk | `--use-real-*` | `True` fully validated at scale (every round 10+); `False` (dummy path) end-to-end validated in round 15 (`c303daa`) | CSV rows `T,use_real_awn/attack/topk` |
 
 ---
 
@@ -153,7 +153,7 @@ no new code:
 combo-builder script** (following the exact pattern above, typically
 ~100-150 lines, no new pipeline/adapter code), not a new engine. This
 matches every prior round's approach (13 of the last 15 rounds added
-exactly one such script). No new script has been written this round --
+exactly one such script). No new script has been written --
 only this planning pass and the existing-script suitability check above.
 
 ---
@@ -369,11 +369,11 @@ phase (no metric is orphaned, no phase invents an untraceable metric):
 
 ---
 
-## 6. What was actually done this round
+## 6. What was actually done for this planning pass
 
 - Read `docs/parameter_validation.csv` (full, both halves) and the section
   headers / tail of `docs/parameter_validation.md` (already read in full in
-  the immediately preceding round of this session, cross-referenced again
+  the immediately preceding round, cross-referenced again
   here) -- no new experiment was run to produce this inventory.
 - Read `experiments/run_batch.py`'s argparse definitions directly to
   confirm it cannot sweep a radioml multi-(mod,snr,sample_index) grid
@@ -386,7 +386,7 @@ phase (no metric is orphaned, no phase invents an untraceable metric):
 - Wrote this document and `docs/formal_experiment_matrix.csv`.
 - **Did not** execute any pilot, any phase, or any new script. Per the
   explicit instruction, no formal batch (hundreds/thousands of combos) and
-  no execution of even the small pilot were started this round.
+  no execution of even the small pilot were started as part of this planning pass.
 
 ---
 
@@ -410,7 +410,7 @@ phase (no metric is orphaned, no phase invents an untraceable metric):
 - **R4 -- the attack_temperature/CW-defaults "ineffective" finding
   (md section 10.2) appears NOT to reproduce under radioml-native, but this
   causal connection was never explicitly investigated in any prior round --
-  it is this round's own cross-reference/inference (section 1), not a
+  it is this plan's own cross-reference/inference (section 1), not a
   previously-stated conclusion.** The evidence (round 12: cw=83.3% success
   at defaults; round 14: cw=90.9% success at defaults; both under
   radioml-native, both at `attack_temperature=1.0` default) is real and
@@ -421,7 +421,7 @@ phase (no metric is orphaned, no phase invents an untraceable metric):
   -- not assumed here.
 - **R5 -- Phase 1's proposed N=10 gives 2200 combos (~51 min); Phase 3
   reduced/Phase 4 quick are ~2h/~1.4h; Phase 4 reduced is ~8.8h.** These
-  are all currently **designed, not run** (per this round's explicit
+  are all currently **designed, not run** (per this plan's explicit
   scope). Running them requires separate, explicit go-ahead each time --
   this plan does not authorize any of them to start automatically.
 - **R6 -- Phase 5's "reuse existing round-13 evidence" default assumes
@@ -445,7 +445,7 @@ script that calls the same underlying building blocks `src/utils/
 pipeline.py` uses (`energy_detect`, `select_aligned_segments`,
 `apply_awn_preprocess`, `AWNModelAdapter`, `AttackAdapter`, `TopKAdapter`,
 `compute_sensing_ground_truth_metrics`) directly, rather than calling
-`run_dry_run_experiment()` -- this round's fairness requirement is
+`run_dry_run_experiment()` -- this pilot's fairness requirement is
 STRICTER than round 12's ("same attacked IQ reused across K, verified
 bit-identical after the fact"): the SAME in-memory clean/attacked IQ array
 must be reused literally, never regenerated. `run_dry_run_experiment()`
@@ -476,7 +476,7 @@ No sensing/AWN/attack/Top-K algorithm code was written or modified.
 ### 8.2 Full 128-combo pilot
 
 Run with `--resume` on top of the smoke test's 8 completed rows (also
-exercises the `--resume` mechanism required by this round). **128/128
+exercises the `--resume` mechanism required for this pilot). **128/128
 `run_status=ok`, 0 `sensing_failed`, 0 `error`.** All 32
 `(modulation,snr,sample_index,attack)` attack-instances show exactly 1
 unique `attacked_iq_sha256` across their 4 K rows -- 0 fairness
@@ -516,7 +516,7 @@ runtime 13.8s (smoke + full combined).
 - **failure reasons**: none -- 0 `sensing_failed`, 0 `error` across all
   128 combos
 
-### 8.4 Explicit classification (per this round's instruction)
+### 8.4 Explicit classification (per the classification instruction)
 
 - **系統正確性驗證 (system-correctness verification, now confirmed)**:
   real AWN/attack/Top-K backends run end-to-end with zero fallback; fair
@@ -563,7 +563,7 @@ as every prior round's results).
 Phase 0's stated purpose -- confirm the real-backend pipeline executes
 correctly, with correct schema and strict fair Top-K reuse, before Phase
 1-6 are attempted -- is **satisfied**. No bug was found; nothing needed
-fixing. Phase 1-6 remain designed-but-not-run, per this round's explicit
+fixing. Phase 1-6 remain designed-but-not-run, per this execution's explicit
 scope (only Phase 0 was authorized to execute).
 
 ---
@@ -615,7 +615,7 @@ NaN/Inf in `clean_nan`/`direct_nan`. A live error-signature watch
 across `stdout.log`/`stderr.log` never fired during the run; the only
 stderr content for the entire run is the pre-existing, harmless
 `VisibleDeprecationWarning` from `pickle.load(..., encoding="latin1")`
-(unrelated to this round, present in every prior radioml-mode round).
+(unrelated to this execution, present in every prior radioml-mode round).
 
 **Modulation coverage: 11/11.** **SNR coverage: 20/20.**
 
@@ -671,7 +671,7 @@ bit-identical to the corresponding rows in the 2200-combo output.
   sensing-introduced problem, since direct accuracy is equally low).
   QAM16 has the lowest direct-sensed agreement (0.770), notably below
   every other modulation (next-lowest is QAM64 at 0.840) -- worth a closer
-  look in a future round, not explained by this round's data alone.
+  look in a future round, not explained by this dataset alone.
 - **Per-SNR**: accuracy rises monotonically-ish from near-chance
   (~0.09-0.12 at -20/-18/-16 dB) to a plateau around 0.83-0.89 from 0 dB
   upward, exactly the expected SNR-accuracy curve shape. Agreement
@@ -685,7 +685,7 @@ bit-identical to the corresponding rows in the 2200-combo output.
   combos at `threshold_factor=1.5` (matches round 13's finding that this
   value is inside the stable, 0-failure range).
 
-### 9.4 Explicit classification (per this round's instruction)
+### 9.4 Explicit classification (per the classification instruction)
 
 - **正式 Phase 1 baseline 結果 (formal, citable at this N=2200)**: direct
   AMC accuracy 0.5973, sensed end-to-end AMC accuracy 0.5805, gap +0.0168,
@@ -708,8 +708,8 @@ bit-identical to the corresponding rows in the 2200-combo output.
   observations at full N but their ROOT CAUSE (model training artifact?
   checkpoint-specific confusion pair? something about this particular
   awn_preprocess/alignment combination?) is not established by this
-  round's data -- would need a confusion-matrix-level follow-up, out of
-  this round's scope. The `direct - sensed` accuracy gap (+0.0168) is a
+  dataset -- would need a confusion-matrix-level follow-up, out of
+  scope for this analysis. The `direct - sensed` accuracy gap (+0.0168) is a
   real, formal-N result for THIS checkpoint/threshold_factor/alignment
   configuration specifically -- it should not be read as a universal
   "sensing costs ~1.7% accuracy" claim beyond these exact fixed
@@ -767,7 +767,7 @@ output):
 6. **AWN eval-mode restoration**: `AttackAdapter.apply()`'s `finally`
    block unconditionally calls `self.wrapped_model.eval()` before
    returning (confirmed by reading the source). **This was NOT actively
-   verified by the runner before this round's review** -- fixed by adding
+   verified by the runner before this review** -- fixed by adding
    `attack_training_before`/`attack_training_after`/`eval_mode_restored`
    columns (read from each combo's own `summary.csv`) and an explicit
    check that forces `run_status=error` if `attack_training_after` is
@@ -783,7 +783,7 @@ output):
    count among rows where `clean_correct=True`, divided by that subset's
    count. Both computed and reported separately, never conflated.
 10. **sensing_failed vs error**: `run_status` distinguishes the two;
-   0 of either occurred in this round's data.
+   0 of either occurred in this dataset.
 11. **No silent fallback**: `awn_ok`/`attack_ok` require the EXACT real
    backend string + `status=="ok"`; any mismatch forces `run_status=error`
    regardless of what the adapter itself reported.
@@ -898,8 +898,8 @@ was found, no code change is pending, and the reduced-tier's directional
 findings (cw > pgd > fgsm success rate; QAM16 vulnerable, WBFM's baseline
 problem not attack-specific; low-SNR more attack-susceptible) are
 consistent with prior rounds' qualitative expectations. The full run is
-**not started automatically** -- awaiting explicit confirmation, per this
-round's instruction.
+**not started automatically** -- awaiting explicit confirmation, per
+instruction.
 
 ### 10.6 Outputs
 
@@ -963,7 +963,7 @@ not a subsample)
   0.9470) and lowest at high SNR (18dB: 0.7152) -- monotonic-ish decline
   confirmed at full N, same direction as the reduced tier.
 
-### 11.2 Cross-tabulations (new this round, not computed for the reduced tier)
+### 11.2 Cross-tabulations (added for the full-tier analysis, not computed for the reduced tier)
 
 - **attack x eps** (overall success rate): **pgd saturates to 1.000 at
   eps>=0.1** (eps=0.1: 1.000, eps=0.3: 1.000) -- a clean ceiling effect.
@@ -1008,7 +1008,7 @@ not a subsample)
   success modulation) re-run in a fresh independent process -- **all 36
   comparable columns bit-identical**.
 
-### 11.4 Explicit classification (per this round's instruction)
+### 11.4 Explicit classification (per the classification instruction)
 
 - **正式 Phase 3 結果 (formal, citable at N=3960, the complete intended
   grid)**: all numbers in sections 11.1-11.2 above.
@@ -1018,18 +1018,18 @@ not a subsample)
   at the full, intended N, not extrapolated from the reduced tier.
 - **尚不能下結論的觀察 (not yet conclusive, explicitly flagged)**:
   - The fgsm-specific eps=0.1 dip (section 11.2) is real at N=360 for
-    that cell but its MECHANISM is not established by this round's data
+    that cell but its MECHANISM is not established by this dataset
     -- would need a dedicated diagnostic (e.g. per-sample gradient
     inspection at eps=0.05 vs 0.1) to explain, not assumed here.
   - The BPSK-cw-specific resistance (0.617 vs 0.983-1.000 elsewhere) is a
-    genuinely new, striking finding first surfaced by this round's
+    genuinely new, striking finding first surfaced by this
     cross-tabulation -- root cause (something about BPSK's decision
     boundary geometry under this checkpoint? an interaction with CW's
     L2-minimization objective specifically?) is NOT established here.
   - WBFM's clean-baseline problem (re-confirmed at full N) still has no
     established root cause (training artifact vs. checkpoint-specific
     confusion vs. something in this repo's preprocessing) -- flagged
-    again, not re-investigated this round (same status as Phase 1
+    again, not re-investigated here (same status as Phase 1
     section 9.4).
 
 ### 11.5 Outputs
@@ -1053,7 +1053,7 @@ reproducible. Two genuinely new findings emerged only at this scale/via
 cross-tabulation (the fgsm-specific eps=0.1 dip, and BPSK's CW-specific
 resistance) that neither the reduced tier nor Phase 1 could have
 surfaced -- both explicitly flagged as unexplained, not overclaimed.
-Phase 4 (Top-K defense) remains designed-but-not-run, per this round's
+Phase 4 (Top-K defense) remains designed-but-not-run, per this plan's
 explicit scope.
 
 ---
@@ -1072,7 +1072,7 @@ multiplying by the 4 K values -- not a new, independently-specified grid.
 - **modulation**: `QPSK, BPSK, QAM16, 8PSK, QAM64, WBFM` (6)
 - **SNR**: `-10, -4, 0, 6, 12, 18` (6)
 - **attack**: `fgsm, pgd, cw` (3 -- "none" is NOT in the formal grid, only
-  used in this round's smoke test for the bit-identical-no-op system check)
+  used in this validation's smoke test for the bit-identical-no-op system check)
 - **attack_eps**: `0.01, 0.03, 0.05, 0.1, 0.3` (5, fgsm/pgd only)
 - **Top-K**: `10, 20, 30, 40` (4)
 - **sample_index**: `n_per_cell=10` (full formal 0-9 set) for the CSV's
@@ -1146,7 +1146,7 @@ assumed) and/or the smoke test (section 12.5):
 12. `external/AWN`/`external/adversarial-rf` are read-only via the
    existing adapters, same as every prior round -- not modified.
 
-### 12.3 Metric definitions (explicit denominators, per this round's
+### 12.3 Metric definitions (explicit denominators, per the
 instruction not to leave "recovered/total" ambiguous)
 
 Let `N` = all `ok` rows (one row per (mod,snr,idx,attack,eps,K) combo).
@@ -1182,8 +1182,8 @@ quantities don't vary by K).
   attack success already), stated explicitly to avoid ambiguity.
 - **clean_broken_by_defense_rate** (item C) = count(`clean_broken_by_defense`)
   / count(rows where `clean_correct=True`) -- `clean_broken_by_defense` =
-  `clean_correct=True AND defended_correct=False` (a NEW column this
-  round, not present in Phase 0's pilot, since Phase 0 never needed a
+  `clean_correct=True AND defended_correct=False` (a NEW column
+  introduced here, not present in Phase 0's pilot, since Phase 0 never needed a
   degradation-rate view).
 - **defense_changed_prediction_rate** = count(`defense_changed_prediction`)
   / `N` -- `defense_changed_prediction` = `pred_defended != pred_attacked`
@@ -1228,7 +1228,7 @@ combo is duplicated. All `combo_id`s unique.
 eps=0.05 x K{10,20,30,40} = 64 combos, 16 attack-instances)
 
 Run in 2 independent processes. **64/64 `run_status=ok`** in both. Every
-check from this round's instruction passed:
+check from the governing instruction passed:
 
 - 0 `error`, 0 fallback (`awn_backend`/`attack_backend`/`topk_backend`
   each a single real-path string across all 64 rows).
@@ -1277,7 +1277,7 @@ failure_stage, failure_reason, output_dir, clean_iq_sha256,
 attacked_iq_sha256
 ```
 
-### 12.7 Reduced-tier design (designed + dry-run ONLY, not executed this round)
+### 12.7 Reduced-tier design (designed + dry-run ONLY, not executed at this stage)
 
 Keeps the full formal grid (all 6 modulations, all 6 SNRs, all 5 eps
 values, all 3 attacks, all 4 K) and restricts only `sample_index` to the
@@ -1291,7 +1291,7 @@ grid). Estimated time: Phase 3-reduced's 792 attack-instances took
 1100.7s measured; Phase 4 reuses that identical cost plus 2376 additional
 K-only rows (Top-K + 1 AWN forward pass each, cheap relative to a full
 attack computation) -- estimated **~26 minutes**, within the requested
-20-40 minute window. **Not started this round** -- awaiting explicit
+20-40 minute window. **Not started at this stage** -- awaiting explicit
 confirmation, per instruction.
 
 ### 12.8 Outstanding risks
@@ -1306,10 +1306,10 @@ confirmation, per instruction.
   train/eval state, this script's current logic (`None if
   attack_training_after is None`) would silently continue reporting blank
   rather than catching a new failure mode -- worth revisiting if
-  `attack_adapter.py` is ever modified (out of this round's scope, no
+  `attack_adapter.py` is ever modified (out of scope for this validation, no
   such modification occurred or is planned).
-- Metric definitions in section 12.3 (especially items D/E) are new to
-  this round -- they have not yet been cross-validated against an
+- Metric definitions in section 12.3 (especially items D/E) are newly
+  introduced here -- they have not yet been cross-validated against an
   independent hand-calculation on real data (only structurally reviewed
   and unit-level smoke-tested); the reduced-tier run (once approved)
   would be the first chance to sanity-check them against a non-trivial
@@ -1346,7 +1346,7 @@ assumed a larger per-K marginal cost than what real hardware delivered).
   `False` on every row).
 - **Eval-mode restored**: 3168/3168 = 100% (`eval_mode_restored=True`
   on every row; no `attack=none` rows in the formal grid, so no blanks
-  this round, unlike the smoke test).
+  in this run, unlike the smoke test).
 - **Reproducibility**: 96-combo spot-check (BPSK+QAM64 x SNR{-10,18} x
   idx{0,1} x eps{0.01,0.3} x {fgsm,cw} -- deliberately targeting the two
   most extreme K=10 defended-accuracy cases found, BPSK near-0 and QAM64
@@ -1397,7 +1397,7 @@ assumed a larger per-K marginal cost than what real hardware delivered).
 - **23. Per-attack**: cw (0.9306) > pgd (0.8833) > fgsm (0.7444) -- same
   ordering as Phase 3's reduced tier. **Cross-check**: Phase 3-reduced's
   independently-run overall success rate was 654/792=0.8258 vs this
-  round's 653/792=0.8245 -- a single-instance difference, consistent with
+  run's 653/792=0.8245 -- a single-instance difference, consistent with
   the previously-documented (rounds 15/16) ordinary multi-threaded BLAS
   floating-point non-determinism at the 2^-12-ish logit-noise level near
   a decision boundary, not a new finding requiring investigation.
@@ -1406,7 +1406,7 @@ assumed a larger per-K marginal cost than what real hardware delivered).
 - **25. Per-modulation**: WBFM's clean_acc=0.0833 /
   attacked_acc(higher)=0.5379 pattern reproduced again (now the fourth
   independent confirmation across Phase 1/Phase 3-reduced/Phase 3-full/
-  this round).
+  Phase 4-reduced).
 - **26. Per-SNR**: attack success highest at low SNR, same shape as
   Phase 3.
 
@@ -1487,7 +1487,7 @@ the same 595-row denominator, per the explicit definitions in section
   counterproductive on average for these 5 modulations at this
   parameter set. **QAM64 is the sole exception**, where Top-K roughly
   doubles accuracy (0.197 attacked -> 0.453 mean defended). This is the
-  single most important finding of this round.
+  single most important finding of this analysis.
 - **47. Is the reduced tier sufficient to launch the full 15840-row
   Phase 4?** System-correctness: yes, unconditionally -- every check
   passed at 100% (0 error/fallback/NaN, 100% eval-mode, 100% fairness).
@@ -1525,7 +1525,7 @@ at every K tested, and Top-K is actively counterproductive on average for
 5 of 6 modulations** -- is a genuine reduced-tier result, not a system
 artifact, though it awaits the full 15840-row run (or an explicit
 decision not to run it) for full-N statistical confirmation. The full
-Phase 4 run was **not started** this round, per explicit instruction.
+Phase 4 run was **not started** at this stage, per explicit instruction.
 
 ---
 
@@ -1568,7 +1568,7 @@ K): `clean_correct=True` -> 407 of 792; `attacked_wrong=True` -> 595 of
 5. **`attack=none` never contaminates recovery statistics**: confirmed --
    `set(r["attack"] for r in rows) == {"fgsm","pgd","cw"}`, `none` is
    structurally absent from this dataset (Phase 4's formal grid never
-   includes it; only the smoke test and this round's dedicated check do,
+   includes it; only the smoke test and this validation's dedicated check do,
    in separate output directories).
 6. **Numerator/denominator/value all listed together**: done for every
    metric at every K (see full table below).
@@ -1701,7 +1701,7 @@ wrong**, for three independent reasons:
 current implementation is wrong -- no code was changed.** A separate,
 explicit normalized-Top-K ablation (comparing `fft_topk_denoise` vs.
 `fft_topk_denoise_normalized` on an identical combo subset) would be
-needed before drawing a stronger conclusion; not run this round.
+needed before drawing a stronger conclusion; not run as part of this validation.
 
 ### 14.5 `attack=none` clean-degradation check (new minimal 144-combo run,
 NOT a large experiment)
@@ -1804,7 +1804,7 @@ sample_index values were drawn.
 
 1. **現在是否存在必須先修的bug**: **否。** No formula, fairness, or
    implementation bug found that requires a fix before proceeding.
-2. **是否需要修改Top-K實作**: **不建議在本輪修改。** The AWN_All.py
+2. **是否需要修改Top-K實作**: **不建議於現階段修改。** The AWN_All.py
    normalization difference (finding B) is a genuine implementation
    divergence but not proven to be an improvement for this repo's pinned
    checkpoint; changing it now would be an unvalidated speculative fix,
@@ -1828,7 +1828,7 @@ sample_index values were drawn.
    an identical small combo subset, BEFORE deciding whether to change
    the shipped defense implementation.
 5. **若建議，完整Phase4能回答什麼reduced-tier尚不能回答的問題**: (not
-   the recommended path this round, but for completeness) full N=10
+   the recommended path here, but for completeness) full N=10
    would let every per-(modulation,SNR,eps) cell reach the same
    statistical power as Phase 1/3's formal results, sufficient for a
    paper to report per-cell numbers with confidence rather than
@@ -1854,7 +1854,7 @@ per instance), never regenerated.
 ### 15.1 Design
 
 **K values**: `10, 20, 30, 40, 50, 64, 80, 96, 112, 128` (10, extending
-well past the formal grid's `{10,20,30,40}`, per this round's explicit
+well past the formal grid's `{10,20,30,40}`, per this ablation's explicit
 instruction). **Attacks**: `none, fgsm, pgd, cw`. **Modulations**: `QPSK,
 BPSK, QAM16, QAM64, WBFM, AM-SSB` (6, the required minimum set).
 **SNRs**: `-10, 0, 10, 18` (4, the required minimum set).
@@ -2061,7 +2061,7 @@ code was touched. `external/AWN`/`external/adversarial-rf` untouched.
   `0.01,0.03,0.05,0.1,0.3` (5, fgsm/pgd only); attacks `fgsm, pgd, cw`;
   `sample_index` = first 3 of the formal 0-9 set (`[0,1,2]`); K =
   `10,20,30,40,50,64,72,80,88,96,112,128` (12); policy =
-  `current_radioml_native` ONLY (per this round's explicit instruction --
+  `current_radioml_native` ONLY (per this experiment's explicit instruction --
   `normalized_topk_rescaled` and `legacy_awn_all_reference` were not
   re-run, having already been proven bit-identical to A and
   scale-incompatible respectively in round 24).
@@ -2159,16 +2159,16 @@ EVERY attack except the trivial K=128 no-op -- fgsm ranges -0.011 to
 worst case, at K=40/50). WBFM is uniformly harmed by Top-K in this
 design, regardless of attack type or K, with no exception found.
 
-**Explicit note, per this round's requirement**: round 24's finding of
+**Explicit note, per this validation's requirement**: round 24's finding of
 "CW net_gain=+0.139 at K=80" (n=72, using AM-SSB instead of Phase 3's
 official 8PSK, and a smaller sample) **did NOT reproduce** at this
-round's larger, Phase-3-official-grid scale. With the correct modulation
+validation's larger, Phase-3-official-grid scale. With the correct modulation
 set: (a) K=80's WITH-WBFM net_gain is now NEGATIVE (-0.0278, CI includes
 0); (b) even WITHOUT WBFM, K=80 is real and significant but is NOT the
 strongest point -- K=20/30/40 all show larger, equally significant
 effects. Round 24's K=80 spike was substantially an artifact of AM-SSB
 (a modulation outside Phase 3's official 6-class set) combined with a
-smaller sample (n=72 vs this round's n=90/108).
+smaller sample (n=72 vs this run's n=90/108).
 
 ### 16.3 PGD results (Part 三)
 
@@ -2216,11 +2216,11 @@ still shows 68.8% degradation) -- unlike the pure `attack=none` check in
 round 24, which found clean degradation reaching 0% by K=80, this
 fgsm-conditioned subset's clean-correct population apparently
 overlaps less favorably with K's improving region; not further
-decomposed this round.
+decomposed here.
 
 ### 16.5 Deployment fairness (Part 五)
 
-Explicitly separated, per this round's instruction -- **none of the
+Explicitly separated, per this validation's instruction -- **none of the
 attack-specific or modulation-specific numbers above should be read as a
 deployable defense claim**:
 
@@ -2244,7 +2244,7 @@ deployable defense claim**:
   Presented above purely as an analysis upper bound, NOT a deployable
   claim, unless a future round builds and validates an independent,
   non-oracle modulation-or-attack detector to drive such a policy (out
-  of this round's scope).
+  of scope for this validation).
 
 ### 16.6 Outputs
 
@@ -2257,7 +2257,7 @@ Not added to git, matching `.gitignore`'s existing `results/*` rule.
 
 ### 16.7 Conclusion
 
-This round's larger, Phase-3-official-grid confirmation materially
+This validation's larger, Phase-3-official-grid confirmation materially
 revises round 24's headline "CW net_gain=+13.9pp at K=80" finding: that
 result did not reproduce once AM-SSB (not part of Phase 3's official set)
 was replaced with 8PSK and the sample size grew. The corrected picture:
@@ -2277,8 +2277,8 @@ findings.
 
 ## 17. New formal Phase 4 design (K-reduced, full-N): design and dry-run only (round 25)
 
-Not executed this round, per explicit instruction. Reuses the existing
-`experiments/run_phase4_topk_ablation.py` unmodified beyond this round's
+Not executed at this stage, per explicit instruction. Reuses the existing
+`experiments/run_phase4_topk_ablation.py` unmodified beyond this revision's
 already-committed `--eps`-list extension -- no new script file needed,
 since the runner already accepts every required CLI parameter
 (`--mods`, `--snrs`, `--eps`, `--attacks`, `--sample-indices`, `--topks`,
@@ -2286,8 +2286,8 @@ since the runner already accepts every required CLI parameter
 
 ### 17.1 Design
 
-- **K set**: `10, 20, 30, 40, 50, 80, 128` (7 -- the reduced set this
-  round's findings justify: covers PGD's significant K=20, CW's
+- **K set**: `10, 20, 30, 40, 50, 80, 128` (7 -- the reduced set these
+  findings justify: covers PGD's significant K=20, CW's
   significant K=20-50 band plus the previously-claimed K=80 for direct
   comparison, and K=128 as the mandatory no-op control). **K=128 is
   explicitly a no-defense baseline for comparison, never counted as a
@@ -2320,17 +2320,17 @@ python3 experiments/run_phase4_topk_ablation.py --dry-run \
 2. **Final rows**: **27720** (3960 x 7 K).
 3. **Per-attack**: fgsm=12600, pgd=12600, cw=2520 (confirmed via
    `--dry-run`'s own count, not hand-calculated).
-4. **Estimated time**: extrapolated from this round's own measured
+4. **Estimated time**: extrapolated from this run's own measured
    throughput (14256 rows/248.3s) and round 24's (8640 rows/220.5s) --
    both figures are noisy over only 2 data points, so presented as a
    range rather than false precision: roughly **15-45 minutes**,
-   plausibly toward the lower end given this session's consistent
+   plausibly toward the lower end given the consistent
    pattern of actual runtimes beating conservative estimates at every
    prior phase. Not yet empirically confirmed for this exact
    configuration.
 5. **`output_dir`**: `results/formal_phase4_expanded_full/` -- a NEW,
    distinct directory; does not exist yet, will not overwrite
-   `results/formal_phase4_expanded_k/` (this round's 14256-row
+   `results/formal_phase4_expanded_k/` (this run's 14256-row
    confirmation) or any earlier phase's output.
 6. **`--resume` design**: identical to every prior phase script --
    `CsvWriter` flushes to disk after every single row; `load_done_combo_ids()`
@@ -2351,7 +2351,7 @@ python3 experiments/run_phase4_topk_ablation.py --dry-run \
    run_status, failure_stage, failure_reason, output_dir,
    attacked_iq_sha256, policy_notes`).
 8. **Aggregate CSV design** (not yet implemented as code -- described
-   here per this round's "design only" scope): a single
+   here per this stage's "design only" scope): a single
    `ablation_aggregate.csv` with one row per unique combination of the
    7 required groupings (`attack x K`, `modulation x K`, `SNR x K`,
    `eps x K`, `attack x modulation x K`, `attack x SNR x K`,
@@ -2368,8 +2368,8 @@ python3 experiments/run_phase4_topk_ablation.py --dry-run \
    isolate the WBFM-specific sensitivity view (never replacing the main
    all-modulation aggregate, per explicit instruction). All of this is a
    straightforward extension of the analysis code already written ad hoc
-   in this and the previous round's chat-side Python snippets -- not
-   built as a permanent script this round, since there is no data yet to
+   in this and the previous round's supporting Python snippets -- not
+   built as a permanent script at this stage, since there is no data yet to
    run it against.
 9. **Checkpoint loading**: confirmed by reading `main()` --
    `AWNModelAdapter(checkpoint_path=CHECKPOINT, ...)` is constructed
@@ -2383,8 +2383,8 @@ python3 experiments/run_phase4_topk_ablation.py --dry-run \
     the design.
 11. **Safe to resume after interruption**: **confirmed yes** -- flush-
     per-row CSV writing plus `--resume`'s done-ID skip logic (same
-    mechanism validated across every phase this session, including this
-    round's own smoke tests).
+    mechanism validated across every phase to date, including this
+    run's own smoke tests).
 12. **Will it overwrite existing results**: **no** -- distinct
     `--output-dir`, never reuses `results/formal_phase4_expanded_k/` or
     any earlier phase's directory.
@@ -2402,7 +2402,7 @@ exits before any directory creation or file write).
 ## 18. New formal Phase 4 smoke test (round 26)
 
 Uses the formal runner (`experiments/run_phase4_topk_ablation.py`)
-directly, no simplified bypass path. Extended this round to add explicit
+directly, no simplified bypass path. Extended for this validation to add explicit
 traceability hash columns (`original_iq_sha256`, `clean_iq_sha256`,
 `defended_iq_sha256`, `selected_segment_start`/`selected_segment_end`),
 requested for direct (not merely numeric-equality-inferred)
@@ -2449,7 +2449,7 @@ current_radioml_native`, output `results/formal_phase4_expanded_smoke/`.
   `cw_c`/`cw_steps`/`cw_lr` drive the attack exclusively, matching the
   code-level confirmation from round 23's `_build_torchattacks` trace.
 - **CSV schema**: 46 columns (41 original + 5 new traceability hashes/
-  segment-position fields this round).
+  segment-position fields added for this validation).
 
 ### 18.2 Resume test
 
@@ -2495,11 +2495,11 @@ matching predictions.
 Smoke test passed every check on the first attempt (after adding the
 requested traceability hash columns, a diagnostic-only extension, not a
 bug fix). No blocking issue found; full formal execution may proceed
-whenever explicitly authorized (not this round).
+whenever explicitly authorized (not at this stage).
 
 ### 18.5 Formal execution readiness
 
-- **New formal Phase 4 command** (not run this round):
+- **New formal Phase 4 command** (not run at this stage):
   ```
   python3 experiments/run_phase4_topk_ablation.py \
     --mods QPSK,BPSK,QAM16,8PSK,QAM64,WBFM --snrs=-10,-4,0,6,12,18 \
@@ -2509,11 +2509,11 @@ whenever explicitly authorized (not this round).
     --output-dir results/formal_phase4_expanded_full --resume
   ```
 - **Output directory**: `results/formal_phase4_expanded_full/` (still
-  does not exist on disk as of this round).
-- **Re-estimated time**: this round's smoke test (112 rows) and the
+  does not exist on disk as of this writing).
+- **Re-estimated time**: this smoke test (112 rows) and the
   round 25 confirmation run (14256 rows/248.3s) both ran faster than
   naive per-combo extrapolation would suggest; the 15-45 minute estimate
-  from section 17.2 stands, unchanged by this round's additional
+  from section 17.2 stands, unchanged by this revision's additional
   columns (hashing 3 extra arrays per row is computationally
   negligible next to one AWN forward pass).
 
@@ -2702,8 +2702,8 @@ several are significantly harmful. The only statistically strong
 positive effects found (CW at K=20-50, QAM64 at K=10-50) are both
 oracle-conditioned (on attack identity or modulation label
 respectively) and therefore **not directly deployable** under this
-session's deployment-fairness framing (section prior rounds). This is a
+plan's deployment-fairness framing (section prior rounds). This is a
 paper-reportable negative/cautionary result for global fixed-K Top-K
 defense on this checkpoint; the oracle-conditioned sub-findings are
 reportable only as directions for future work (e.g., a non-oracle
-attack/modulation detector), explicitly out of this session's scope.
+attack/modulation detector), explicitly out of this plan's scope.

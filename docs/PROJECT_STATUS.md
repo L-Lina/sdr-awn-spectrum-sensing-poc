@@ -7,14 +7,14 @@ history of Phase 0-4 as written at round 28 (unmodified except where noted).
 Language note: this document and `README.md` are the repo's English-language
 engineering/handoff documents, a pre-existing convention; the formal
 research findings live in Traditional Chinese under `docs/research/*.md`
-(see `docs/research/README.md` for the reading order) -- this split predates
-this round and is intentional, not an inconsistency to "fix" by translating
-this file.
+(see `docs/research/README.md` for the reading order) -- this split is a
+pre-existing, intentional convention, not an inconsistency to "fix" by
+translating this file.
 
 Everything in Part 1 is sourced to actual files/results directories on disk,
-re-checked this round via direct file reads, `pandas`, and background
-research passes over the current repo state -- not carried over from any
-prior chat summary uncritically.
+verified via direct file reads, `pandas`, and background research passes
+over the current repo state -- not carried over from any prior summary
+uncritically.
 
 ---
 
@@ -65,7 +65,7 @@ inferred or assumed.
 | Synthetic (numpy-generated noise+burst) | **COMPLETE** | `src/sensing/iq_source.py`; CLI default `iq_source=synthetic`. |
 | RadioML2016.10a (offline `.pkl`, real recorded samples embedded in synthetic noise) | **COMPLETE** | `src/sensing/radioml_source.py`; used for every formal Phase 0-4 result and the satellite-like Step 3/4 work. Not a live capture -- loads a fixed `[2,128]` sample and synthetically embeds it in a longer noise stream. |
 | `.cfile` (complex64 / interleaved float32 / interleaved int16) | **COMPLETE_WITH_LIMITATION** | See section 9. Wired into the real pipeline and smoke-tested; not yet validated against an actual SDR/GNU-Radio capture file. |
-| Live SDR / USRP / GNU Radio streaming | **NOT_IMPLEMENTED** | No `gnuradio`/`uhd`/`zmq` import anywhere in `src/`, `experiments/`, or `scripts/` (confirmed by grep this round); `docs/DEPLOYMENT_READINESS.md` documents this gap in detail. |
+| Live SDR / USRP / GNU Radio streaming | **NOT_IMPLEMENTED** | No `gnuradio`/`uhd`/`zmq` import anywhere in `src/`, `experiments/`, or `scripts/` (confirmed by direct grep of the repo); `docs/DEPLOYMENT_READINESS.md` documents this gap in detail. |
 
 ## 4. Spectrum Sensing
 
@@ -135,7 +135,7 @@ reimplementation (`torchattacks.DIFGSM`'s own `input_diversity()` assumes a
 covered by its own 6-test unit suite (`experiments/test_iq_difgsm.py`), but
 **not proven formally equivalent** to the original image-domain DIFGSM in
 every respect. `docs/ATTACK_NAME_MAPPING.md` and
-`docs/ATTACK_COMPATIBILITY_WORKLIST.md` were updated this round with the
+`docs/ATTACK_COMPATIBILITY_WORKLIST.md` were updated to reflect the
 17/17 PASS status (both had a stale `difgsm=NEEDS_CUSTOM_IMPLEMENTATION`
 line left over from before the `IQDIFGSM` fix landed).
 
@@ -200,7 +200,7 @@ Two separate, non-overlapping validation rounds exist:
 above -- it is characterized separately as a performance-tuning knob (see
 section 10).
 
-**Dataset-path portability (project-close cleanup, this round)**: the
+**Dataset-path portability (project-close cleanup)**: the
 formal CLI entry point (`run_full_experiment.py` / `src/utils/config.py`)
 already required an explicit `--dataset-path` with no hardcoded fallback.
 The ~31 standalone `experiments/*.py` batch scripts (Phase 0-4, performance,
@@ -220,7 +220,7 @@ helper (env-var-overridable uniformly); the four satellite-like scripts
 additionally accept a real `--dataset-path` CLI flag and print the resolved
 path at startup. The remaining ~27 historical Phase 0-4/performance/
 attack-compatibility scripts were **not** individually given a bespoke CLI
-flag this round (would mean touching each script's own, already-tested
+flag (doing so would mean touching each script's own, already-tested
 argument parsing for zero behavioral gain on already-completed, frozen
 results) -- they inherit the env-var override only. Two manifest-writing
 scripts (`finalize_low_perturbation_results.py`,
@@ -304,7 +304,7 @@ handoff record only:
   factor classification. Research/requirements survey, no code.
 - **Step 2**: `SATELLITE_DATASET_AND_MODULATION_FEASIBILITY_ZH_TW.md` --
   decided project-close **Strategy A**: RadioML2016.10a, BPSK/QPSK/8PSK
-  subset, no retraining, no RadioML2018.01A download this round.
+  subset, no retraining, no RadioML2018.01A download.
 - **Step 3**: `SATELLITE_LIKE_CHANNEL_SIMULATOR_DESIGN_ZH_TW.md` +
   `src/channel/satellite_like.py` -- implements the MUST factors (AWGN,
   amplitude scaling, propagation-delay metadata) and SHOULD factors (CFO,
@@ -426,8 +426,8 @@ All numbers below traced to `results/satellite_like_final_20260821T021117Z/`'s
   simplified/order-of-magnitude references, not actual ground-terminal
   trajectories.
 - WBFM's persistently low clean accuracy and QAM16's low direct/sensed
-  agreement (Phase 1/3/4 era findings) remain unexplained, not
-  investigated further this round.
+  agreement (Phase 1/3/4 era findings) remain unexplained, not yet
+  investigated further.
 - Phase 3's true 11-modulation x 20-SNR full sweep and Phase 5's optional
   11-modulation sensing-sensitivity expansion remain designed-not-run (see
   Part 2 below); Phase 6 (multi-burst extension) remains not executed with
@@ -459,13 +459,13 @@ that every conceivable future capability is complete: live RF/SDR
 ingestion, real OTA validation, a full DVB-S2/S2X stack,
 standards-compliant APSK support, and a production-grade streaming
 detector are explicit future-extension items, outside this project-close
-round's scope (section 16), not gaps in what was promised for this round.
+scope (section 16), not gaps in what this phase set out to deliver.
 
 **COMPLETE** (offline, real-backend, formally verified): offline formal
 pipeline (synthetic + RadioML2016.10a); spectrum sensing (single-channel,
 time-domain); AWN inference; 17-attack formal compatibility (A0 digital);
 Top-K implementation/function; core parameterization (incl. dataset-path
-portability, this round); `.cfile` formal input wiring; performance/latency
+portability); `.cfile` formal input wiring; performance/latency
 characterization; satellite-like channel simulator; the 576-combination
 final integrated experiment; the final result audit (two independent
 rounds, numerical + metric-definition correctness).
@@ -495,16 +495,16 @@ for anyone picking this project up after close.
 
 Everything below this line is preserved from this document's original
 (round 28) version, describing Phase 0-4 in detail. Not re-verified line
-by line this round beyond the cross-checks cited in Part 1 above (e.g. the
-sensing accuracy discrepancy noted in section 4); treat Part 1 as current
-and this part as historical detail/evidence backing it.
+by line beyond the cross-checks cited in Part 1 above (e.g. the sensing
+accuracy discrepancy noted in section 4); treat Part 1 as current and this
+part as historical detail/evidence backing it.
 
-## 0. This round's changes (round 28)
+## 0. Verification Method (Round 28 Update)
 
-**What was actually done this round**: created this document
-(`docs/PROJECT_STATUS.md`) by reading the current repo state directly --
-`git log`, the full text of `docs/formal_experiment_plan.md` (all 19
-sections), `docs/formal_experiment_matrix.csv` (all 11 rows), `docs/
+**Method**: this document (`docs/PROJECT_STATUS.md`) was created by reading
+the current repo state directly -- `git log`, the full text of
+`docs/formal_experiment_plan.md` (all 19 sections),
+`docs/formal_experiment_matrix.csv` (all 11 rows), `docs/
 parameter_validation.md` section 6, the adapter source files under
 `src/adapters/`, and the actual contents of every `results/formal_*`
 directory on disk (via `ls`/`wc -l`/`pandas`, not assumed from row counts in
@@ -512,7 +512,7 @@ the docs). No experiment was run, no existing result file was modified, no
 code in `src/`, `experiments/`, `external/AWN`, or `external/adversarial-rf`
 was changed.
 
-**Verified this round, directly against the repo (not from memory)**:
+**Verified directly against the repo (not from memory)**:
 - `git log`/`git status`/`git diff --stat` confirmed `HEAD=0cccc78`,
   working tree clean before this file was added, `main` in sync with
   `origin/main`.
@@ -525,43 +525,39 @@ was changed.
   (3960 data rows, same 6 modulations) were both opened and their
   `modulation` column values compared directly.
 
-**Discovered this round** (a genuine finding, not previously written down
-in either `formal_experiment_plan.md` or `formal_experiment_matrix.csv`):
+**Documentation inconsistency identified** (not previously recorded in
+either `formal_experiment_plan.md` or `formal_experiment_matrix.csv`):
 `formal_experiment_matrix.csv`'s `phase=3,tier=full` row (a distinct,
 never-run, proposed 11-modulation x 20-SNR sweep, `status=
 designed_not_run_optional`) names the same `output_dir` value
 (`results/formal_phase3_attack_full/`) as the directory that actually holds
 the completed, 6-modulation, N=3960 "full sample_index" run described in
 `formal_experiment_plan.md` section 11. These are two different sweeps
-sharing one directory name by what appears to be a documentation
-coincidence/oversight in the matrix, not an error in the completed run
-itself (`phase3_summary.csv`'s own modulation-coverage matches the
-6-modulation grid the plan document describes, not an 11-modulation one).
-Recorded as an open item in section 5/6 below; **not corrected in either
-source CSV/doc this round**, since resolving it was not requested and doing
-so without explicit confirmation of which row's `status`/`output_dir`
-should change risked overwriting one of the two documents incorrectly.
+sharing one directory name, apparently a documentation coincidence/oversight
+in the matrix, not an error in the completed run itself
+(`phase3_summary.csv`'s own modulation coverage matches the 6-modulation
+grid the plan document describes, not an 11-modulation one). Recorded as an
+open item in section 5/6 below; **not corrected in either source CSV/doc**,
+since resolving it requires an explicit decision on which row's
+`status`/`output_dir` should change, to avoid overwriting either document
+incorrectly.
 
-**Additional discovery from this round's re-check pass** (requested by you
-to specifically re-confirm Phase 0-6 status before commit): `results/
+**Additional finding from the Phase 0-6 status re-check**: `results/
 sensing_revalidation_after_alignment/` (Phase 5's evidence directory)
 contains an `E4_single_vs_multi/` subdirectory with a small single-vs-
-2-burst sensing check -- re-opened and read directly this round, confirmed
-via its own `attack_notes` column that it used the **placeholder/dummy**
-attack backend, not real AWN/attack/Top-K, and is not part of the formal
-528-combo Phase 5 count. It is a precursor sensing-only check, not a
-substitute for the formal Phase 6 design (which needs real backends across
-60 combos and remains entirely unrun). Also re-verified this round: Phase 0
-(128 rows/50 cols), Phase 1 (2200 rows/32 cols), Phase 4 reduced-tier (3168
-rows/60 cols), and Phase 4 Expanded-K (14256 rows/41 cols, 1188 attack
-instances) row/column counts, all read directly via `pandas`, all matching
-what `formal_experiment_plan.md` states.
+2-burst sensing check -- confirmed via its own `attack_notes` column that it
+used the **placeholder/dummy** attack backend, not real AWN/attack/Top-K,
+and is not part of the formal 528-combo Phase 5 count. It is a precursor
+sensing-only check, not a substitute for the formal Phase 6 design (which
+needs real backends across 60 combos and remains entirely unrun). Also
+verified: Phase 0 (128 rows/50 cols), Phase 1 (2200 rows/32 cols), Phase 4
+reduced-tier (3168 rows/60 cols), and Phase 4 Expanded-K (14256 rows/41
+cols, 1188 attack instances) row/column counts, all read directly via
+`pandas`, all matching what `formal_experiment_plan.md` states.
 
-**Not done this round** (explicitly, to avoid any reader inferring
-otherwise from this document's other sections): no Phase 0-6 experiment was
-executed or re-executed; no aggregate CSV was regenerated; no push was
-made; the file remains untracked (`git add` not run) pending your
-confirmation.
+**Explicitly out of scope for this update**: no Phase 0-6 experiment was
+executed or re-executed; no aggregate CSV was regenerated; no commit or push
+was made as part of this verification pass.
 
 ---
 
@@ -612,13 +608,13 @@ literal in-memory reuse.
 ## 2. Completed phases -- status and actual results
 
 ### Phase 0 -- Pilot (real-backend mechanics check)
-**已完成.** `experiments/run_phase0_pilot.py`, 128/128 combos `ok`, 0 error, 0
+**Complete.** `experiments/run_phase0_pilot.py`, 128/128 combos `ok`, 0 error, 0
 fairness violations. Output: `results/formal_pilot_phase0/` (128 rows, 50
 cols). Purpose was mechanics/schema validation, not a citable scientific
 result (N=8 samples per cell). See plan section 8.
 
 ### Phase 1 -- Spectrum Sensing baseline (+ Phase 2, direct-vs-sensed AMC)
-**已完成.** `experiments/run_phase1_sensing_baseline.py`, 2200/2200 combos
+**Complete.** `experiments/run_phase1_sensing_baseline.py`, 2200/2200 combos
 `ok` (11 modulations x 20 SNRs x 10 sample_index), 0 error, 0
 `sensing_failed`. Output: `results/formal_phase1_sensing_clean_amc/` (2200
 rows, 32 cols). Runtime 92.1 min.
@@ -642,7 +638,7 @@ position, vs. this Phase 1 run's single fixed `seed=42`. Both numbers are
 valid for their own methodology; they should not be quoted interchangeably.
 
 ### Phase 3 -- Adversarial attack effectiveness
-**已完成** (both tiers that exist in `formal_experiment_matrix.csv`'s
+**Complete** (both tiers that exist in `formal_experiment_matrix.csv`'s
 `phase=3` rows were run):
 - Reduced tier (`sample_index` 0-1, N=792): `results/formal_phase3_attack_reduced/`
 - Full-N tier (`sample_index` 0-9, N=3960, same 6-modulation/6-SNR/5-eps
@@ -673,28 +669,28 @@ separate output directory. Flagged here rather than silently resolved.
 final formal result is the round-27 full-N run.**
 
 1. **Reduced-tier execution** (`results/formal_phase4_defense_reduced/`,
-   N=792/3168 rows, K in {10,20,30,40}) -- 已完成. Finding: clean-accuracy
+   N=792/3168 rows, K in {10,20,30,40}) -- complete. Finding: clean-accuracy
    degradation (72-79%) vastly exceeds attack-recovery benefit (12-23%);
    net-harmful for 5/6 modulations.
-2. **Root-cause analysis** (plan section 14) -- 已完成 (analysis only, no
+2. **Root-cause analysis** (plan section 14) -- complete (analysis only, no
    code change). No formula/fairness bug found; confirmed genuine
    churn-cancellation at K=20; found (but did not fix, and did not prove
    wrong) a normalization difference vs. the historical `AWN_All.py` usage.
 3. **3-policy preprocessing ablation, K up to 128** (`results/
-   formal_phase4_topk_ablation/`) -- 已完成. Policy A (current, unmodified)
+   formal_phase4_topk_ablation/`) -- complete. Policy A (current, unmodified)
    proven bit-exact identical to policy B (normalize/rescale); policy C
    (legacy `AWN_All.py` replication) confirmed out-of-distribution for this
    checkpoint. Surfaced an initial (later revised) CW K=80 finding that used
    a non-official modulation set (AM-SSB).
 4. **Expanded-K Confirmation Experiment** (`results/formal_phase4_expanded_k/`,
-   N=1188/14256 rows, Phase 3's official 6-modulation grid) -- 已完成. This
+   N=1188/14256 rows, Phase 3's official 6-modulation grid) -- complete. This
    **revised** the K=80 finding: CW's real, statistically significant
    benefit is K=20-50, visible only when WBFM is excluded; PGD's only
    significant K is 20; FGSM shows no significant positive K anywhere.
 5. **New formal Phase 4 design** (K={10,20,30,40,50,80,128}, full N=10,
    WBFM retained) -- designed and dry-run in round 25 (plan section 17), then
    smoke-tested (`results/formal_phase4_expanded_smoke/`, round 26, plan
-   section 18), **then formally executed this round (round 27)**.
+   section 18), **then formally executed in round 27**.
 
 **Formal, citable Phase 4 result (`results/formal_phase4_expanded_full/`,
 N=3960 attack instances / 27720 rows, plan section 19):**
@@ -715,11 +711,11 @@ N=3960 attack instances / 27720 rows, plan section 19):**
   matches `.gitignore`).
 
 ### Not part of the original Phase 0-4 set but present in the matrix
-- **Phase 5** (sensing parameter sensitivity): 已完成 via reuse of an
+- **Phase 5** (sensing parameter sensitivity): complete, via reuse of an
   earlier round's evidence (`results/sensing_revalidation_after_alignment/`,
   subdirectories `A_threshold_factor`(210) + `B_sensing_window_size`(150) +
   `C_min_region_len`(150) + `D_merge_gap`(18) = 528 combos, row counts
-  re-verified directly from each subdirectory's CSV this round, pre-dates
+  re-verified directly from each subdirectory's CSV, pre-dates
   the Phase 0-4 numbering). An **optional 11-modulation elective expansion**
   is designed but not run (`designed_not_run_optional`). The same directory
   also contains `E1_burst_len`/`E2_n_samples`/`E4_single_vs_multi`/
@@ -728,14 +724,14 @@ N=3960 attack instances / 27720 rows, plan section 19):**
   and are not written up as Phase 5 results in `formal_experiment_plan.md`;
   present on disk but not yet formally integrated.
 - **Phase 6** (multi-burst extension, matrix row: `num_bursts=2`, real
-  AWN+attack+Top-K, 60 combos): 尚未執行 -- `results/
+  AWN+attack+Top-K, 60 combos): not yet executed -- `results/
   formal_phase6_multiburst_extension/` does not exist. A much smaller,
   **non-formal** precursor exists in the Phase-5 directory above
   (`E4_single_vs_multi/`, 1 single-burst + 2 multi-burst rows) but it
   explicitly used the **placeholder/dummy** attack backend (`attack_notes`:
   "--use-real-attack not passed; using placeholder"), not real AWN/attack/
   Top-K, and is not a substitute for the formal Phase 6 design.
-- **Phase 4 "quick" tier**: 尚未執行, no results directory exists
+- **Phase 4 "quick" tier**: not yet executed, no results directory exists
   (`results/formal_phase4_defense_quick/` is absent on disk).
 
 ---
@@ -809,7 +805,7 @@ separate concept from the pre-existing `n_samples`/stream-length field),
 `AWNModelAdapter.infer()` chunking, verified bit-identical predictions
 across batch sizes), `--experiment-name` (sanitized, written to
 `summary.csv`), and `--overwrite` (refuses to clobber an existing
-`summary.csv` by default). Also fixed this round: `--topk` is now
+`summary.csv` by default). Also fixed: `--topk` is now
 strictly rejected outside `[1,128]` at the formal CLI/config boundary
 (`require_valid_topk_strict`), and `--min-region-len<=0` is rejected at
 the CLI boundary specifically (`require_valid_min_region_len_strict`,
@@ -833,7 +829,7 @@ verbosity flag exists), 1 `DEFERRED_WITH_REASON` (`resume`), 0
 
 ## 4. Not yet done / not yet verified
 
-**已設計但未執行 (designed, not run):**
+**Designed but not run:**
 - Phase 3's true 11-modulation x 20-SNR full sweep (distinct from the
   completed 6-modulation full-N run -- see section 2's documentation-
   inconsistency note)
@@ -847,7 +843,7 @@ verbosity flag exists), 1 `DEFERRED_WITH_REASON` (`resume`), 0
   oracle-conditioned Phase 4 findings (CW at K=20-50, QAM64 at K=10-50)
   actually deployable -- explicitly out of scope for every round so far
 
-**尚未實作 (not implemented):**
+**Not implemented:**
 - `adaptive_k_defense` / `adaptive_k_v2_defense` (the per-sample knee-based
   Top-K variants present in `external/adversarial-rf/util/defense.py` but
   never wired into `TopKAdapter`, per its own module docstring)
@@ -861,7 +857,7 @@ verbosity flag exists), 1 `DEFERRED_WITH_REASON` (`resume`), 0
   (0.083-0.093 depending on phase) or QAM16's low direct/sensed agreement --
   flagged as open questions since Phase 1, never investigated
 
-**尚未驗證 (not yet verified, flagged in-doc as open):**
+**Not yet verified (flagged in-doc as open):**
 - The fgsm-specific eps=0.1 success-rate dip (Phase 3, section 11.2) --
   real at N=360 but mechanism unexplained
 - BPSK's CW-specific attack resistance (0.617 vs 0.983-1.000) -- newly
@@ -892,8 +888,8 @@ document unless stated otherwise below.)
   matplotlib-missing plotting fallback** -- out of scope throughout.
 - **Every oracle-conditioned Phase 4 finding (attack-specific or
   modulation-specific K) is a real statistical effect but NOT a deployable
-  defense claim** -- this is a standing framing requirement for any paper
-  or meeting use of these numbers, not just a caveat.
+  defense claim** -- this is a standing framing requirement for any
+  downstream citation of these numbers, not just a caveat.
 - **WBFM and QAM16's model-specific weaknesses (low clean accuracy, low
   sensed/direct agreement respectively) have no established root cause** --
   could be training-checkpoint-specific, could be a preprocessing
@@ -962,7 +958,7 @@ of this update) continued the same author/committer convention -- see
 
 ## 8. What can be cited now vs. what cannot yet be concluded
 
-### Can be used in a meeting / paper draft now
+### Findings citable now, without further validation
 
 - Sensing front end costs a small, real accuracy gap vs. an oracle slice:
   **+1.68 percentage points** (direct 0.5973 vs. sensed 0.5805), at

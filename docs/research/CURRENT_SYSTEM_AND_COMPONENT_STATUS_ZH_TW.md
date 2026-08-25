@@ -119,7 +119,7 @@ AWN 模型的載入、真實 checkpoint 推論、`[N, 2, 128]` 輸入格式轉�
 
 ### 5.6 Top-K defense
 
-固定 K 值的頻域前處理防禦已實作並接入正式流程，可與真實 AWN 推論串接使用。功能狀態與防禦效果須分開陳述：**功能狀態為已實作且通過執行驗證**，獨立測試確認防禦模組能正確載入、正確處理輸入並回傳預期形狀的輸出。**防禦效果已透過既有 Phase 4 正式實驗完成 Attack → Top-K → Defended inference 的離線評估**，涵蓋多組 K 值、攻擊方法與調變類型的組合，記錄了受攻擊後準確率、防禦後準確率與是否由防禦恢復正確分類等結果。這組結果具有 condition-dependent 性質——防禦恢復的效果隨 K 值、攻擊方法與調變類型而不同，並非在所有組合下一致有效，**尚未證明固定 K 為跨攻擊、跨調變類型的穩定通用防禦**，也**尚未完成把偵測、分段、防禦與分類一併納入攻擊目標的 full-pipeline defense-aware adaptive attack**。**本輪低擾動攻擊實驗（第六節記錄的 FGSM 與五種攻擊）沒有啟用 Top-K**，因此本輪實驗本身不產生新的「攻擊加防禦」對抗數字，這與既有 Phase 4 已完成的離線評估是兩組不同範圍的結果，不應混為一談。動態選擇 K 值或防禦分支的路由機制**未實作**。
+固定 K 值的頻域前處理防禦已實作並接入正式流程，可與真實 AWN 推論串接使用。功能狀態與防禦效果須分開陳述：**功能狀態為已實作且通過執行驗證**，獨立測試確認防禦模組能正確載入、正確處理輸入並回傳預期形狀的輸出。**防禦效果已透過既有 Phase 4 正式實驗完成 Attack → Top-K → Defended inference 的離線評估**，涵蓋多組 K 值、攻擊方法與調變類型的組合，記錄了受攻擊後準確率、防禦後準確率與是否由防禦恢復正確分類等結果。這組結果具有 condition-dependent 性質——防禦恢復的效果隨 K 值、攻擊方法與調變類型而不同，並非在所有組合下一致有效，**尚未證明固定 K 為跨攻擊、跨調變類型的穩定通用防禦**，也**尚未完成把偵測、分段、防禦與分類一併納入攻擊目標的 full-pipeline defense-aware adaptive attack**。**第六節記錄的低擾動攻擊實驗（FGSM 與五種攻擊）沒有啟用 Top-K**，因此該實驗本身不產生新的「攻擊加防禦」對抗數字，這與既有 Phase 4 已完成的離線評估是兩組不同範圍的結果，不應混為一談。動態選擇 K 值或防禦分支的路由機制**未實作**。
 
 ### 5.7 Logging／metrics／latency
 
@@ -134,7 +134,7 @@ AWN 模型的載入、真實 checkpoint 推論、`[N, 2, 128]` 輸入格式轉�
 | cfile input（三格式讀取） | 讀取外部提供的 IQ 檔案並接入正式推論 | 已實作 | 三格式一致性測試、正式流程串接測試 | 內部產生的等價測試檔案 | 未用真實 SDR 擷取檔驗證外部有效性 |
 | AWN AMC | 對輸入片段給出調變類型與信心 | 已實作 | 全數正式實驗皆使用真實 checkpoint 推論 | A0 數位環境、離線資料 | 無信心校準、無棄權機制 |
 | Attack adapter（十七種攻擊） | 對抗攻擊產生與效果評估 | 已實作 | 相容性驗證、FGSM 與五種低擾動攻擊正式實驗 | A0 數位環境 | 未攻擊 sensing 前端本身，未做防禦感知攻擊 |
-| Top-K defense | 分類前的頻域前處理防禦 | 已實作 | 獨立功能測試；既有 Phase 4 正式實驗（Attack → Top-K → Defended inference） | 多組 K 值、攻擊方法與調變類型的離線組合評估 | 防禦效果為 condition-dependent，未證明跨攻擊、跨調變通用；本輪低擾動攻擊實驗未啟用；未完成 full-pipeline defense-aware adaptive attack |
+| Top-K defense | 分類前的頻域前處理防禦 | 已實作 | 獨立功能測試；既有 Phase 4 正式實驗（Attack → Top-K → Defended inference） | 多組 K 值、攻擊方法與調變類型的離線組合評估 | 防禦效果為 condition-dependent，未證明跨攻擊、跨調變通用；第六節低擾動攻擊實驗未啟用；未完成 full-pipeline defense-aware adaptive attack |
 | Logging／metrics／latency | 記錄感測、分類、擾動與耗時數據 | 已實作 | 隨每次正式實驗一併產生並檢核 | 單次執行的逐筆與彙整統計 | 無跨執行長期趨勢、無即時告警 |
 
 ### 5.9 正式程式路徑對照表
@@ -192,4 +192,4 @@ AWN 模型的載入、真實 checkpoint 推論、`[N, 2, 128]` 輸入格式轉�
 
 ## 可重現性資訊
 
-本文件記錄的驗證結果對應目前主分支程式狀態，正式流程入口為 `experiments/run_full_experiment.py` 與 `src/utils/pipeline.py`，各元件實作位於 `src/sensing/`、`src/adapters/`、`src/utils/`。四路對照實驗、sensing utility 實驗、攻擊相容性驗證、參數驗收、cfile 接線驗證、FGSM 與低擾動攻擊基準實驗，各自的完整逐筆數據與圖表保存於對應的本機結果目錄中，未納入版本控制。上游 AWN 與對抗式攻擊實作為固定版本的外部程式庫，本輪工作未對其進行修改。
+本文件記錄的驗證結果對應目前主分支程式狀態，正式流程入口為 `experiments/run_full_experiment.py` 與 `src/utils/pipeline.py`，各元件實作位於 `src/sensing/`、`src/adapters/`、`src/utils/`。四路對照實驗、sensing utility 實驗、攻擊相容性驗證、參數驗收、cfile 接線驗證、FGSM 與低擾動攻擊基準實驗，各自的完整逐筆數據與圖表保存於對應的本機結果目錄中，未納入版本控制。上游 AWN 與對抗式攻擊實作為固定版本的外部程式庫，本研究工作未對其進行修改。

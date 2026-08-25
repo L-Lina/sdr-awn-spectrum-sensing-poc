@@ -7,17 +7,17 @@
 1. 衛星通訊常見的鏈路時間尺度是多少？
 2. LEO／MEO／GEO 的 propagation delay 與 end-to-end latency 各是多少？
 3. 這些 latency 指標代表什麼，不能代表什麼？
-4. 我們目前的 Clean AMC、optimized FGSM pipeline、optimized PGD pipeline 各自落在哪些 processing budget？
+4. 目前的 Clean AMC、optimized FGSM pipeline、optimized PGD pipeline 各自落在哪些 processing budget？
 5. 哪一種 satellite-like application scenario 最適合目前專案？
-6. 我們的 processing module 應該放在 receiver side digital baseband／gateway／ground station／onboard processor 哪一種位置最合理？
+6. 本專案的 processing module 應該放在 receiver side digital baseband／gateway／ground station／onboard processor 哪一種位置最合理？
 7. Attack 的 threat model 應該如何定義，才不會誤稱成「即時 OTA attacker 一定來得及」？
 8. 未來若要做 satellite-like simulation，最少需要模擬哪些物理因素？
 
-本輪**只做研究、資料核實與正式研究文件**，不修改 formal pipeline、不新增 simulator、不新增 attack、不跑大型實驗、不碰 RadioML2018 訓練、不做 DVB-S2/S2X modem 實作。
+本文件範圍**僅限研究、資料核實與正式研究文件產出**，不修改 formal pipeline、不新增 simulator、不新增 attack、不跑大型實驗、不碰 RadioML2018 訓練、不做 DVB-S2/S2X modem 實作。
 
 ## 二、為什麼需要 Application Latency Validation
 
-`docs/research/PERFORMANCE_AND_LATENCY_ANALYSIS_ZH_TW.md` 已經以嚴謹的 mean／median／p95 方法量測了目前系統的 CPU processing latency（clean pipeline、FGSM／PGD 攻擊生成、Top-K 防禦、端到端 Scenario A-E），但那份文件本身**不涉及任何特定應用場景**，只回答「系統本身有多快」。若要進一步論證「這個速度對某個實際應用是否有意義」，就必須先有一個具體、有標準依據的 latency requirement 可以對照——否則任何「我們的 pipeline 夠快」的陳述都缺乏比較基準，也容易被誤解為對某個未經定義的即時場景做出保證。本文件的角色正是提供這個對照基準，並且明確劃出「我們量到的東西」與「應用場景要求的東西」之間的界線。
+`docs/research/PERFORMANCE_AND_LATENCY_ANALYSIS_ZH_TW.md` 已經以嚴謹的 mean／median／p95 方法量測了目前系統的 CPU processing latency（clean pipeline、FGSM／PGD 攻擊生成、Top-K 防禦、端到端 Scenario A-E），但那份文件本身**不涉及任何特定應用場景**，只回答「系統本身有多快」。若要進一步論證「這個速度對某個實際應用是否有意義」，就必須先有一個具體、有標準依據的 latency requirement 可以對照——否則任何「pipeline 夠快」的陳述都缺乏比較基準，也容易被誤解為對某個未經定義的即時場景做出保證。本文件的角色正是提供這個對照基準，並且明確劃出「實測量到的數字」與「應用場景要求的數字」之間的界線。
 
 ## 三、衛星通訊時間尺度（Satellite Communication Time-Scale）
 
@@ -118,15 +118,15 @@ EN 302 307-2（S2X）於 2014 年核准為 DVB-S2 的非回溯相容延伸，除
 
 ### 6.4　與本專案的關係
 
-本專案目前使用的 RadioML2016.10a 資料集（詳見 6.5 節）採用的是 11 種通用數位/類比調變（8PSK、AM-DSB、AM-SSB、BPSK、CPFSK、GFSK、PAM4、QAM16、QAM64、QPSK、WBFM），其中 **QPSK、8PSK 與 DVB-S2/S2X 的核心 MODCOD 直接重疊**，可作為「衛星廣播/貢獻鏈路」情境下 AMC 任務的合理調變子集；16APSK／32APSK 目前不在 RadioML2016.10a 的調變清單中，若未來要更貼近 DVB-S2/S2X 高階 MODCOD 場景，需要額外資料或訓練，本輪不處理。**本文件僅回答「可以採哪些 modulation family 讓場景具有標準依據」，不實作完整 DVB stack，也不修改現有的調變清單或訓練資料。**
+本專案目前使用的 RadioML2016.10a 資料集（詳見 6.5 節）採用的是 11 種通用數位/類比調變（8PSK、AM-DSB、AM-SSB、BPSK、CPFSK、GFSK、PAM4、QAM16、QAM64、QPSK、WBFM），其中 **QPSK、8PSK 與 DVB-S2/S2X 的核心 MODCOD 直接重疊**，可作為「衛星廣播/貢獻鏈路」情境下 AMC 任務的合理調變子集；16APSK／32APSK 目前不在 RadioML2016.10a 的調變清單中，若未來要更貼近 DVB-S2/S2X 高階 MODCOD 場景，需要額外資料或訓練，本文件範圍不處理。**本文件僅回答「可以採哪些 modulation family 讓場景具有標準依據」，不實作完整 DVB stack，也不修改現有的調變清單或訓練資料。**
 
 ### 6.5　DeepSig RadioML 官方資料頁核實
 
 來源：https://www.deepsig.ai/datasets（DeepSig 官方資料集頁面）。RadioML2016.10a 由 DeepSig 於第 6 屆 GNU Radio Conference 發布，含 11 種調變（8 種數位、3 種類比），使用 GNU Radio 產生，是較早期 2016.04C 資料集的「更乾淨、更正規化」版本，原始產生程式位於 https://github.com/radioML/dataset（DeepSig 官方頁面註明此程式已不再積極維護）。DeepSig 官方頁面本身將這類資料集定位為「歷史性」（historical）資料集，並建議研究者針對目前的研究改用真實資料——這個定位本身是本文件第九節與第十四節「限制」討論的重要依據：現有資料集的通道模擬（AWGN、LO offset 等泛用 RF 損傷）並非針對衛星通道設計，不能直接宣稱等同衛星通道實測。
 
-## 七、我們目前的實測 Processing Latency 對照
+## 七、目前的實測 Processing Latency 對照
 
-以下數字直接讀自既有正式結果，**本輪未重跑任何 benchmark**：
+以下數字直接讀自既有正式結果，**本文件未重跑任何 benchmark**：
 
 - 來源檔案：`results/end_to_end_latency_20260818T062625Z/end_to_end_latency_summary.csv`、`processing_budget_table.csv`
 - 對應章節：`docs/research/PERFORMANCE_AND_LATENCY_ANALYSIS_ZH_TW.md` 第十六節
@@ -151,7 +151,7 @@ EN 302 307-2（S2X）於 2014 年核准為 DVB-S2 的非回溯相容延伸，除
 | 100 ms | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | 250 ms | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-**這只是 processing budget comparison，不是任何特定應用場景的 deadline 證明**：三個 scenario 的 median 與 p95 都落在遠低於 LEO 的 35 ms、MEO 的 95 ms、GEO 的 285 ms supported end-to-end latency（第四節）的量級；PGD 在最嚴格的 5 ms 參照下median／p95 皆不符合，但在 10 ms 以上的參照下三者皆符合。這個結果只能解讀為「相較 3GPP NTN 端到端時間尺度的 processing-budget reference」，**不得稱為「LEO computation deadline」**，因為（如第五節所述）35 ms 是系統層級的 propagation+network 延遲需求，不是留給我們這個特定 AMC/attack pipeline 的計算配額；實際上能分配給接收端 baseband 處理的時間，會因 receiver architecture、其他並行任務、以及應用本身的容忍度而遠小於這個系統層級數字。
+**這只是 processing budget comparison，不是任何特定應用場景的 deadline 證明**：三個 scenario 的 median 與 p95 都落在遠低於 LEO 的 35 ms、MEO 的 95 ms、GEO 的 285 ms supported end-to-end latency（第四節）的量級；PGD 在最嚴格的 5 ms 參照下median／p95 皆不符合，但在 10 ms 以上的參照下三者皆符合。這個結果只能解讀為「相較 3GPP NTN 端到端時間尺度的 processing-budget reference」，**不得稱為「LEO computation deadline」**，因為（如第五節所述）35 ms 是系統層級的 propagation+network 延遲需求，不是留給本專案這個特定 AMC/attack pipeline 的計算配額；實際上能分配給接收端 baseband 處理的時間，會因 receiver architecture、其他並行任務、以及應用本身的容忍度而遠小於這個系統層級數字。
 
 ## 九、Deployment Position Analysis
 
@@ -171,7 +171,7 @@ EN 302 307-2（S2X）於 2014 年核准為 DVB-S2 的非回溯相容延伸，除
 3. Threat model 與目前的 A0（接收端數位白箱基準，見第十節）自然一致，不需要额外假設實體可及性極高的攻擊者。
 4. 完全可離線模擬（現有 RadioML + 真實 AWN + 真實 torchattacks 已經是這個位置的合理離線代理），不需要額外硬體。
 
-位置 C（gateway）與 D（onboard）皆存在較高的實作複雜度與 threat-model 不一致風險（尤其 D 容易被誤解為「已驗證機載即時防禦能力」），本輪不作為主要 reference scenario。
+位置 C（gateway）與 D（onboard）皆存在較高的實作複雜度與 threat-model 不一致風險（尤其 D 容易被誤解為「已驗證機載即時防禦能力」），本文件不將其列為主要 reference scenario。
 
 ## 十、Threat-Model Consistency（A0／A1／A2）
 
@@ -183,7 +183,7 @@ EN 302 307-2（S2X）於 2014 年核准為 DVB-S2 的非回溯相容延伸，除
 | **A1** | Independent RF transmitter——攻擊者是一個獨立的射頻發射端，透過實際無線通道注入訊號或干擾，目標接收端只能觀察到疊加後的合成波形。 |
 | **A2** | Information-limited／query-based attacker——攻擊者對目標模型只有有限資訊（例如僅能查詢輸出、不知道模型參數），需要透過查詢或側通道推斷攻擊方向。 |
 
-**本輪 application scenario 的定義不得把 A0 的 CPU attack generation latency，直接解釋為 A1 OTA attacker 必須在訊號飛行途中即時計算 perturbation 的時間。** 這是兩個性質完全不同的問題：
+**本文件對 application scenario 的定義不得把 A0 的 CPU attack generation latency，直接解釋為 A1 OTA attacker 必須在訊號飛行途中即時計算 perturbation 的時間。** 這是兩個性質完全不同的問題：
 
 - A0 latency（本文件第七節與 `PERFORMANCE_AND_LATENCY_ANALYSIS_ZH_TW.md` 全篇量測的對象）是一個**數位訊號處理 benchmark**：給定一個已經存在於記憶體中的 IQ 張量，計算出對抗擾動並疊加，全程沒有涉及真實無線通道、沒有時序同步問題、沒有頻率飄移。
 - 若未來要評估 A1（真正的 over-the-air 即時攻擊者），除了攻擊演算法本身的計算時間外，還需要額外考慮：
@@ -200,7 +200,7 @@ EN 302 307-2（S2X）於 2014 年核准為 DVB-S2 的非回溯相容延伸，除
 
 ## 十一、Satellite-like Channel 最小物理因素（MUST／SHOULD／OPTIONAL）
 
-本節**只整理**未來若要建置 satellite-like channel simulator，最少應包含哪些物理因素，**不在本輪實作**。分類依據：是否為衛星通道的核心差異來源、是否直接影響 AMC 或 Spectrum Sensing、是否與 LEO/MEO/GEO 軌道選擇直接相關。
+本節**只整理**未來若要建置 satellite-like channel simulator，最少應包含哪些物理因素，**不在本文件範圍內實作**。分類依據：是否為衛星通道的核心差異來源、是否直接影響 AMC 或 Spectrum Sensing、是否與 LEO/MEO/GEO 軌道選擇直接相關。
 
 | 因素 | 分類 | 是否影響 AMC | 是否影響 Spectrum Sensing | 與軌道的關係 | 是否需要真實軌道幾何 |
 |---|---|---|---|---|---|
@@ -214,7 +214,7 @@ EN 302 307-2（S2X）於 2014 年核准為 DVB-S2 的非回溯相容延伸，除
 | Amplitude scaling（接收增益變化） | **OPTIONAL** | 較小影響（現有 `apply_awn_preprocess` 正規化策略已部分吸收） | 較小影響 | 通用效應 | 否 |
 | Non-linear amplifier（HPA 非線性，接近飽和點運作） | **OPTIONAL** | 對 APSK 類調變有影響，但 RadioML2016.10a 本身不含 DVB-S2/S2X 波形 | 不直接影響 | 與 DVB-S2/S2X 的 16/32APSK 預失真設計直接相關（見 6.2 節），但與目前調變清單關聯低 | 否 |
 
-**避免過度複雜**：MUST 項目（AWGN、path-loss 抽象、propagation delay metadata）已經與現有 RadioML 產生流程（`embed_sample_in_noise` 等）的抽象層級相容，不需要引入完整軌道幾何或即時衛星星曆計算；SHOULD 項目（CFO、Doppler、timing offset）是讓場景更貼近真實 LEO/MEO 特性的下一步，但可以用經驗參數範圍近似，不必是精確物理模型；OPTIONAL 項目除非未來場景明確需要（例如真正實作 DVB-S2/S2X 波形），否則不建議投入。
+**避免過度複雜**：MUST 項目（AWGN、path-loss 抽象、propagation delay metadata）已經與現有 RadioML 產生流程（`embed_sample_in_noise` 等）的抽象層級相容，不需要引入完整軌道幾何或即時衛星星曆計算；SHOULD 項目（CFO、Doppler、timing offset）是讓場景更貼近真實 LEO/MEO 特性的延伸方向，但可以用經驗參數範圍近似，不必是精確物理模型；OPTIONAL 項目除非未來場景明確需要（例如真正實作 DVB-S2/S2X 波形），否則不建議投入。
 
 ## 十二、Candidate Scenarios 與評分
 
@@ -237,10 +237,10 @@ EN 302 307-2（S2X）於 2014 年核准為 DVB-S2 的非回溯相容延伸，除
 
 ## 十四、Simulator Scope Boundary
 
-依第十一節分類，若未來要建置 satellite-like channel simulator（**本輪不實作**），範圍應該是：
+依第十一節分類，若未來要建置 satellite-like channel simulator（**本文件範圍不實作**），範圍應該是：
 
 - **必須（MUST）涵蓋**：AWGN（沿用現有機制）、以純量方式抽象化的 attenuation／path-loss（區分 LEO/MEO/GEO 三種鏈路預算量級即可，不需完整鏈路預算計算）、propagation delay 作為情境 metadata（用於文件與圖表標註，不是逐樣本 DSP 效果）。
-- **應該（SHOULD）在下一階段加入**：CFO 與 Doppler shift（可用依軌道類型設定的經驗範圍參數化，不需要即時軌道幾何運算）、timing offset。
+- **應該（SHOULD）於後續階段加入**：CFO 與 Doppler shift（可用依軌道類型設定的經驗範圍參數化，不需要即時軌道幾何運算）、timing offset。
 - **可選（OPTIONAL）、暫不列入近期計畫**：sample-rate offset、amplitude scaling（現有正規化流程已部分吸收）、非線性放大器效應（僅在明確要對接 DVB-S2/S2X 波形時才有必要）。
 
 任何 simulator 實作都應該保持「離線、可重現、使用真實建置模組」的既有慣例（與 `experiments/` 目錄下所有正式腳本一致），並在正式導入前經過與本文件相同等級的一手來源核實，不得引入未經查證的物理參數。

@@ -13,7 +13,7 @@ torchattacks)`) to confirm every referenced class name actually exists in
 the currently pinned environment -- not assumed from the old project's
 source alone.
 
-**Updated this round**: 16 of 17 requested attacks ported into
+**Initial status**: 16 of 17 requested attacks ported into
 `src/adapters/attack_adapter.py` and smoke-tested end-to-end against the
 real AWN checkpoint (`experiments/run_attack_compatibility_smoke.py`,
 `results/attack_compatibility_smoke_20260727T024650Z/`) -- see
@@ -76,7 +76,7 @@ possible.
 | FFGSM | `torchattacks.FFGSM` | yes | yes | 尚未移植 |
 | PGDL2 | `torchattacks.PGDL2` | yes | yes | 尚未移植 |
 | EADL1 | `torchattacks.EADL1` | yes | yes | **已移植且smoke test通過** (this repo's `ead` CLI name, default variant) |
-| EADEN | `torchattacks.EADEN` | yes | yes | **已移植且smoke test通過** (via `attack_params={"_ead_variant": "eaden"}`, not separately smoke-tested from `eadl1` this round -- same code path) |
+| EADEN | `torchattacks.EADEN` | yes | yes | **已移植且smoke test通過** (via `attack_params={"_ead_variant": "eaden"}`, not separately smoke-tested from `eadl1` -- same code path) |
 | FAB | `torchattacks.FAB` | yes | yes | **已移植且smoke test通過** |
 | APGDT | `torchattacks.APGDT` | no (`adv_eval.py` only) | yes | **已移植且smoke test通過** |
 | AutoAttack | `torchattacks.AutoAttack` | no (`adv_eval.py` only) | yes | **已移植且smoke test通過** (smoke-tested with `version="rand"` for CPU runtime, not the default `"standard"` ensemble -- see `SMOKE_ATTACK_PARAMS`) |
@@ -95,21 +95,21 @@ possible.
 | Square | `torchattacks.Square` | no (`adv_eval.py` only) | yes | **已移植且smoke test通過** |
 | TIFGSM | `torchattacks.TIFGSM` | no (`adv_eval.py` only) | yes | 尚未移植 |
 | TPGD | `torchattacks.TPGD` | no (`adv_eval.py` only) | yes | **已移植且smoke test通過** (untargeted-only, no label used internally -- see mapping doc) |
-| DIFGSM | `torchattacks.DIFGSM` originally (no (found via `dir(torchattacks)` only, not referenced by name in any `.py` grepped this round) | yes for `torchattacks.DIFGSM` itself, but this repo now dispatches `difgsm` to a custom `src/adapters/iq_difgsm.py:IQDIFGSM` class instead | **已移植且smoke test通過（IQ-compatible custom implementation，見下方 Update）** -- the original `torchattacks.DIFGSM` crashed in `forward()` for every parameter combination (architectural: `input_diversity()` resizes the tensor's last dim, which is a singleton in this repo's `[N,2,T,1]` layout); this was fixed by routing `difgsm` to `IQDIFGSM` (`_ATTACK_CLASS_MAP["difgsm"]`), confirmed `PASS` in `results/attack_compatibility_smoke_20260727T030223Z/`, not `torchattacks.DIFGSM` directly -- see `docs/ATTACK_NAME_MAPPING.md` |
+| DIFGSM | `torchattacks.DIFGSM` originally (no (found via `dir(torchattacks)` only, not referenced by name in any `.py` file grepped for this check) | yes for `torchattacks.DIFGSM` itself, but this repo now dispatches `difgsm` to a custom `src/adapters/iq_difgsm.py:IQDIFGSM` class instead | **已移植且smoke test通過（IQ-compatible custom implementation，見下方 Update）** -- the original `torchattacks.DIFGSM` crashed in `forward()` for every parameter combination (architectural: `input_diversity()` resizes the tensor's last dim, which is a singleton in this repo's `[N,2,T,1]` layout); this was fixed by routing `difgsm` to `IQDIFGSM` (`_ATTACK_CLASS_MAP["difgsm"]`), confirmed `PASS` in `results/attack_compatibility_smoke_20260727T030223Z/`, not `torchattacks.DIFGSM` directly -- see `docs/ATTACK_NAME_MAPPING.md` |
 
 **Verification method for the "exists in installed torchattacks" column**:
 `/home/xiaomi/adversarial-rf/.venv/bin/python3 -c "import torchattacks;
 print(sorted(n for n in dir(torchattacks) if n[0].isupper()))"` -- 39
 classes returned, every name in the table above is among them (plus
 `LGV`, `MultiAttack`, `VANILA`, not referenced by any script grepped in
-`external/adversarial-rf` this round, so not listed as a worklist item).
+`external/adversarial-rf`, so not listed as a worklist item).
 
-## Remaining, not ported this round
+## Remaining, not yet ported
 
 `UPGD`, `EOTPGD`, `Jitter`, `FFGSM`, `PGDL2`, `GN`, `JSMA`, `NIFGSM`,
 `OnePixel`, `PGDRS`, `PGDRSL2`, `PIFGSM`, `PIFGSMPP`, `Pixle`, `SINIFGSM`,
-`SparseFool`, `SPSA`, `TIFGSM` -- none of these were in the 17-attack list
-requested this round. `PGDL2` differs by distance metric (L2, not Linf)
+`SparseFool`, `SPSA`, `TIFGSM` -- none of these were in the 17-attack
+target list. `PGDL2` differs by distance metric (L2, not Linf)
 and needs a parameter-shape decision (`--attack-eps` is currently
 documented as an Linf budget) before porting. `OnePixel`/`Pixle`/`JSMA`/
 `SparseFool`/`SPSA`/`GN` are image-classification-oriented sparse/
@@ -125,13 +125,13 @@ now the live implementation behind the `difgsm` attack name.
 
 **Reuse, do not reimplement**: every ported attack above uses the exact
 constructor kwarg names/defaults verified via `inspect.signature` against
-the installed `torchattacks==3.5.1` this round (`docs/
+the installed `torchattacks==3.5.1` (`docs/
 ATTACK_NAME_MAPPING.md`), following the same `Model01Wrapper` +
 per-segment min-max mapping architecture the original fgsm/pgd/cw code
 already established -- no new attack algorithm code was written, only
 registry/dispatch code in `_build_torchattacks`.
 
 Until an attack in this table is smoke-tested against the real formal
-pipeline (same discipline as this session's `precheck_real_backends` +
+pipeline (same discipline as this repo's `precheck_real_backends` +
 smoke-test-before-scale pattern), it must not be described as "available"
 in any experiment plan or report.

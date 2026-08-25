@@ -240,7 +240,7 @@ in this repo.
   negative, zero, NaN, Inf, and non-numeric strings; see
   `docs/parameter_validation.csv` for the per-parameter matrix. Fixed a real
   bug in the process: the pre-existing `attack_temperature <= 0` check
-  silently let NaN and Inf through (see section 8). This round's validation
+  silently let NaN and Inf through (see section 8). This validation
   is config/CLI/adapter-boundary level only -- it does **not** re-verify
   that legal-but-unusual values (e.g. `window_size=1`, `threshold_factor
   =0.0001`) actually behave sensibly through the full sensing/AWN/attack/
@@ -248,14 +248,14 @@ in this repo.
 
 **部分通過 (partial)**
 - `--snr`: tested at -10, 0, 10, 18 (real backends), plus -200 as a boundary
-  legal value and NaN/Inf/non-numeric as rejected values (this round); no
-  intentional upper/lower dB range limit was added (out of scope this round)
+  legal value and NaN/Inf/non-numeric as rejected values (current validation); no
+  intentional upper/lower dB range limit was added (out of scope)
 - `--mod`: cosmetic-only behavior confirmed for 4 values; arbitrary/malformed
   strings not tested
 - `--topk`: tested at 10, 20, 30, 40, real backend, K confirmed to reach the
   real `fft_topk_denoise` function itself (section 10.3); default `50` never
   actually run; boundary values (0, negative, > window_size, NaN, Inf)
-  intentionally left unvalidated this round -- see the `topk=Inf`
+  intentionally left unvalidated -- see the `topk=Inf`
   uncaught-crash finding in section 8, not yet fixed. **Defense-recovery
   effectiveness against fgsm/pgd remains NOT ESTABLISHED** -- only a small,
   non-systematic number of recoveries observed across the Phase 1 round
@@ -265,15 +265,15 @@ in this repo.
 - `--use-real-awn`/`--use-real-topk`/`--use-real-attack`: `True` path fully
   exercised; `False` (dummy) path never actually run end-to-end in-session
   (though `AttackAdapter`'s dummy fallback branch specifically was exercised
-  directly in this round's boundary tests)
+  directly in these boundary tests)
 - `--threshold-factor`/`--window-size`/`--burst-len`: boundary validation
-  (0, negative, NaN, Inf, non-numeric) added and verified this round; the
+  (0, negative, NaN, Inf, non-numeric) added and verified; the
   *legal* non-default values (e.g. `window_size` other than 128) still have
   never been run through the actual sensing/AWN pipeline
 
 **未測 (not tested)**
 - `--merge-gap`: only ever run at its default value (`0`); never varied to a
-  nonzero value; boundary behavior intentionally left as-is this round (no
+  nonzero value; boundary behavior intentionally left as-is (no
   validation added, no-op for `<=0` already existed and was left untouched)
 - `--checkpoint`, alternate values (`2016.10b_AWN.pkl`, `2018.01a_AWN.pkl`):
   never tried; see section 8 for why they would likely fail silently
@@ -286,8 +286,7 @@ in this repo.
 - New-pipeline `--input`/`--cfile` real-capture flag (exists only in the old
   standalone script)
 - GNU Radio ZMQ streaming, USRP/UHD hardware path (README-only, no code)
-- Global torch determinism / seed CLI (simply not present; **REVISED this
-  round** -- previously believed "not needed", now known to matter for PGD
+- Global torch determinism / seed CLI (simply not present; **REVISED here** -- previously believed "not needed", now known to matter for PGD
   specifically due to `random_start=True`, see section 10.3)
 
 ---
@@ -328,13 +327,13 @@ in this repo.
    the dummy backend rather than erroring loudly.
 5. ~~`--min-region-len 0` cannot actually be set~~ — **fixed** (an earlier
    round). ~~Negative `--min-region-len` values are unvalidated~~ — **fixed**
-   this round (`require_nonneg_int`); `0` confirmed to remain legal.
+   (`require_nonneg_int`); `0` confirmed to remain legal.
 6. ~~No boundary-value testing exists for `threshold-factor`, `window-size`,
-   `burst-len`, or `attack-eps`~~ — **fixed this round** for these four plus
+   `burst-len`, or `attack-eps`~~ — **fixed** for these four plus
    `snr` and `attack-temperature` (zero/negative/NaN/Inf/non-numeric all now
    rejected with clear messages at both the CLI and adapter/algorithm
    boundary layers; see section 8). **`merge-gap` and `topk` remain
-   unvalidated** — explicitly out of scope this round (design decisions
+   unvalidated** — explicitly out of scope (design decisions
    deferred, see `docs/parameter_validation.csv`); `topk=Inf` in particular
    is a confirmed uncaught crash (see section 8), not yet fixed.
 7. **Segmentation has no overlap/hop-size or max-segments control** — if a
@@ -348,7 +347,7 @@ in this repo.
    `window_size` != 128 vs. the AWN checkpoint's expected input length).
 10. **`merge-gap` and `topk<=0`/`topk` FFT-bin-count clamping design
     decisions remain open**, along with whether `window-size` should ever be
-    forced to exactly 128 — all explicitly deferred per this round's scope.
+    forced to exactly 128 — all explicitly deferred at this stage.
 
 ---
 
@@ -377,7 +376,7 @@ in this repo.
 
 - **Boundary validation added for `threshold_factor`, `window_size`,
   `min_region_len`, `burst_len`, `snr`, `attack_eps`, `attack_temperature`
-  — FIXED (dedicated round).** Prior to this round, none of these seven
+  — FIXED (dedicated round).** Previously, none of these seven
   parameters had any validation beyond argparse's own type coercion
   (`float`/`int`), and a read-only boundary audit found several concrete
   failure modes documented here for the record:
@@ -412,7 +411,7 @@ in this repo.
   class is callable independently of `ExperimentConfig`. No changes were
   made to the actual sensing/attack/Top-K algorithm logic — only guard
   clauses added ahead of it. `merge_gap` and `topk` were explicitly **not**
-  touched this round (deferred design decisions).
+  touched (deferred design decisions).
 
 - **`attack_temperature <= 0` check silently let NaN/Inf through — FIXED.**
   Found during the same boundary audit: `nan <= 0` and `inf <= 0` are both
@@ -426,7 +425,7 @@ in this repo.
   config, and direct-`AttackAdapter`-call layers.
 
 - **`topk=Inf` causes an uncaught crash in BOTH the real and dummy Top-K
-  backends — found, NOT fixed this round (out of scope).** `TopKAdapter`'s
+  backends — found, NOT fixed (out of scope).** `TopKAdapter`'s
   real-backend call fails with `OverflowError: cannot convert float
   infinity to integer` (external `fft_topk_denoise`'s `int(topk)`), gets
   caught by `TopKAdapter.apply()`'s broad `except Exception`, which then
@@ -434,7 +433,7 @@ in this repo.
   the same `OverflowError` a second time**, uncaught, escaping
   `TopKAdapter.apply()` entirely. This is the only case found in the audit
   where the fallback path itself also fails. `topk` was explicitly out of
-  scope for this round's fix; see `docs/parameter_validation.csv` (`topk`
+  scope for this fix; see `docs/parameter_validation.csv` (`topk`
   row) and outstanding item 6/10 above.
 
 - **`--checkpoint` has no existence/compatibility check.** A missing or
@@ -484,7 +483,7 @@ in this repo.
   `to_awn_input(..., seg_len=cfg.window_size)` (AWN model input temporal
   length T). This made any `--window-size` sweep intended to explore sensing
   behavior *also* change what gets fed to the AWN model, confounding two
-  independent experimental variables. Fix implemented this round:
+  independent experimental variables. Fix implemented as follows:
   1. **Sensing window and AWN segment length are now decoupled.** A new
      `--sensing-window-size` CLI flag (and matching `ExperimentConfig.
      sensing_window_size: Optional[int] = None` field) controls *only*
@@ -505,7 +504,7 @@ in this repo.
      still be kept at 128 for any real experiment** — this is a dataset/
      training convention (`external/adversarial-rf/util/config.py:51`:
      `self.signal_len = 128` for `2016.10a`/`2016.10b`; `:58`:
-     `self.signal_len = 1024` for `2018.01a`), not something this round
+     `self.signal_len = 1024` for `2018.01a`), not something this section
      changed or validated otherwise.
   4. **The AWN model architecture structurally accepts other EVEN T values
      without a shape error** — traced `external/adversarial-rf/models/
@@ -527,7 +526,7 @@ in this repo.
      input length remain hard-tied to the same `--window-size` value; a
      third `model_input_length` parameter with a crop/pad/resample bridge
      (needed to fully decouple segment length from AWN input length) was
-     explicitly out of scope this round and is a separate, larger design
+     explicitly out of scope and is a separate, larger design
      decision (see the architecture-options analysis from the audit turn:
      option C in that discussion).
   6. **2018.01a model configuration is NOT wired in.** `src/adapters/
@@ -539,7 +538,7 @@ in this repo.
      `levels.level_0.*`). Pointing `--checkpoint` at `2018.01a_AWN.pkl`
      without also changing `num_levels`/`in_channels`/`latent_dim`/
      `num_classes` in the adapter would still fail `load_state_dict`
-     (missing keys) — unrelated to and unaffected by this round's change.
+     (missing keys) — unrelated to and unaffected by this change.
 
 ---
 
@@ -669,7 +668,7 @@ checkpoint).
   checkpoint's logit-margin scale and should not be cited as "CW doesn't work
   against this model" — only "CW doesn't work at these specific untuned
   defaults." Whether to change the shipped defaults is an open design
-  decision, not made in this round (out of scope; would need its own
+  decision, not made here (out of scope; would need its own
   before/after correctness check).
 
 ### 10.3 Top-K real-backend validation (K = 10/20/30/40 × none/fgsm/pgd)
@@ -697,7 +696,7 @@ NaN/Inf.
   concrete instance of the previously-documented "no global torch
   determinism" gap (section 6/7) — previously that gap was believed
   "empirically shown unnecessary" for eval-mode AWN forward passes; this
-  round shows it **does** matter for PGD specifically. Across the K-sweep,
+  section shows it **does** matter for PGD specifically. Across the K-sweep,
   Top-K recovered 2 out of roughly 18 successfully-attacked (K,segment)
   pairs (K=20 seg0, K=40 seg4) — sporadic, not a systematic pattern.
 - **Confirmed K reaches the real `fft_topk_denoise` function itself, not
@@ -710,7 +709,7 @@ NaN/Inf.
 - **Overall defense-recovery conclusion: NOT ESTABLISHED.** Across the
   4-attack smoke test (10.1) and the 12-run K-sweep (10.3), Top-K recovered
   a small, inconsistent minority of successfully-attacked segments (3 out of
-  roughly 34 total attacked-segment instances observed this round). This is
+  roughly 34 total attacked-segment instances observed in this validation). This is
   not evidence Top-K "doesn't work" (no systematic sweep across
   SNR/eps/attack-strength has been run), but it is clear evidence that
   **"Top-K=10 defends against FGSM/PGD" is not a validated claim** at this
@@ -719,12 +718,12 @@ NaN/Inf.
 
 ### 10.4 eps sweep for FGSM/PGD (real backend, same input)
 
-Historical eps values actually used in this repo before this round (grepped
+Historical eps values actually used in this repo before this validation (grepped
 from `docs/parameter_validation.md`/`.csv`, not recalled from memory):
 `--attack-eps` default `0.03` (`src/utils/config.py`); previously tested
 real values `0.1, 0.2, 0.3, 0.5` (`results/eps_sweep_first_change/`,
 finding: first prediction-changing eps was `0.5` for fgsm, `0.3` for pgd).
-This round reused exactly this set (`0.03, 0.1, 0.2, 0.3, 0.5` — no new eps
+This validation reused exactly this set (`0.03, 0.1, 0.2, 0.3, 0.5` — no new eps
 values invented) plus the repo default, same synthetic IQ/SNR/mod/seed,
 `--attack-temperature 100`, `--topk 10`.
 
@@ -750,7 +749,7 @@ values invented) plus the repo default, same synthetic IQ/SNR/mod/seed,
   varies per segment (depends on each segment's own min-max range used to
   denormalize back from `[0,1]`), as expected from the per-segment min-max
   domain mapping (`0aa95ea`).
-  - Note this round's `--attack-eps 0.03` (fgsm) row is a **direct
+  - Note the `--attack-eps 0.03` (fgsm) row above is a **direct
     contradiction check** against the CW section 10.2 finding that CW
     ignores eps entirely — FGSM/PGD by contrast visibly and exactly obey it.
   - First-change eps reproduced exactly as previously documented: fgsm
@@ -762,7 +761,7 @@ values invented) plus the repo default, same synthetic IQ/SNR/mod/seed,
     on a re-run** — see 10.3 for the root cause (`random_start=True`, no
     `torch.manual_seed`).
 
-### 10.5 Still not completed after this round
+### 10.5 Still not completed after this validation pass
 
 1. CW's shipped default hyperparameters remain unchanged and remain
    ineffective against this checkpoint; whether to change them is an open
@@ -775,26 +774,26 @@ values invented) plus the repo default, same synthetic IQ/SNR/mod/seed,
    established** — only a small, non-systematic set of recoveries has been
    observed; no sweep across SNR/eps/K designed specifically to
    characterize recovery rate has been run.
-4. This round used `--attack-temperature 100` (not the `T=1.0` default)
+4. This validation used `--attack-temperature 100` (not the `T=1.0` default)
    throughout, deliberately, to get past the already-documented
    gradient-saturation no-op — real-backend behavior at the CLI's actual
    default `T=1.0` for fgsm/pgd/cw has still not been separately
-   re-confirmed in this round (expected, per the saturation finding, to
+   re-confirmed here (expected, per the saturation finding, to
    reproduce the T=1 zero-gradient no-op — but not empirically re-checked
    here).
-5. No SNR/modulation variation was run this round (fixed at SNR=18, QPSK
-   throughout, per this round's explicit scope) — attack/defense
+5. No SNR/modulation variation was run in this validation (fixed at SNR=18, QPSK
+   throughout, per this section's explicit scope) — attack/defense
    effectiveness at other SNRs remains unknown.
 6. `merge-gap`, `topk<=0`/`topk=Inf` boundary behavior, `--checkpoint`
    existence validation, and `--device cuda` remain exactly as documented in
-   section 7 — untouched by this round.
+   section 7 — untouched here.
 
 ---
 
 ## 11. Reproducibility fix + fair Top-K comparison + CW CLI design (round 2)
 
-Follow-up round to section 10's PGD non-determinism finding. Code changes
-this round: `src/utils/config.py`, `src/utils/pipeline.py`,
+Follow-up round to section 10's PGD non-determinism finding. Code changes in this
+section: `src/utils/config.py`, `src/utils/pipeline.py`,
 `experiments/run_batch.py` (adds a `--seed` CLI flag / `ExperimentConfig.
 seed` field and global RNG seeding; **no changes to
 `external/AWN`/`external/adversarial-rf`**). Section 10's smoke-test /
@@ -913,7 +912,7 @@ recovery**, not proof of a reliable defensive effect; still **NOT
 ESTABLISHED** as a validated general claim, consistent with section 10.3's
 conclusion, now with the attack-randomness confound removed.
 
-### 11.4 CW CLI design proposal (design only — not implemented this round)
+### 11.4 CW CLI design proposal (design only — not implemented)
 
 **Where `c`/`steps`/`lr` are currently hardcoded**: `src/adapters/
 attack_adapter.py:_build_torchattacks`, the `cw` branch:
@@ -926,7 +925,7 @@ this line directly.
 
 **Proposed minimal design** (not implemented — touches `AttackAdapter.
 apply()`'s signature, which `fgsm`/`pgd` also call through, so it is not a
-"very small, isolated" change per this round's instructions):
+"very small, isolated" change per this section's instructions):
 
 - Three new CLI flags, mirroring the existing `--attack-temperature`
   pattern (single value, applied uniformly to every combo in a batch, no
@@ -956,7 +955,7 @@ apply()`'s signature, which `fgsm`/`pgd` also call through, so it is not a
   `AttackAdapter.apply()` itself (matching the existing `attack_eps`/
   `attack_temperature` dual-layer pattern), since `AttackAdapter` is called
   directly by scratch/diagnostic scripts that bypass `ExperimentConfig`
-  entirely (as section 10.2's and this round's own diagnostic scripts do).
+  entirely (as section 10.2's and this section's own diagnostic scripts do).
 - **CSV columns**: yes, add `cw_c`/`cw_steps`/`cw_lr` to both `summary.csv`
   and `batch_summary.csv`, populated unconditionally on every row (same
   precedent as `attack_temperature`, which is present even on `attack=none`
@@ -973,7 +972,7 @@ apply()`'s signature, which `fgsm`/`pgd` also call through, so it is not a
 
 ## 12. CW CLI implementation, CW reproducibility, Top-K boundary, spectrum-sensing boundary (round 3)
 
-Implements section 11.4's design. Code changes this round: `src/utils/
+Implements section 11.4's design. Code changes in this section: `src/utils/
 config.py`, `src/adapters/attack_adapter.py`, `src/utils/pipeline.py`,
 `experiments/run_batch.py` (**no changes to `external/AWN`/
 `external/adversarial-rf`**).
@@ -995,7 +994,7 @@ boundary, since it's called directly by diagnostic scripts bypassing
 `summary.csv` and `batch_summary.csv`, unconditionally (same precedent as
 `attack_temperature`).
 
-**Verified this round**:
+**Verified**:
 - `--cw-c -5` rejected at CLI parse time: `cw_c must be a positive finite
   number, got -5.0`.
 - FGSM run with `--cw-c 999 --cw-steps 999 --cw-lr 999` vs. the same FGSM run
@@ -1032,7 +1031,7 @@ all of synthetic-IQ SHA256, `x_clean` SHA256, `x_attacked` SHA256,
 file SHA256 match) were identical across both processes, for **all three**
 param sets.
 
-**Correctness conclusion** (per this round's explicit pass criteria —
+**Correctness conclusion** (per this section's explicit pass criteria —
 prediction change is NOT required):
 - ✅ real CW backend correctly invoked in all 3 sets (never fell back)
 - ✅ `cw_c`/`cw_steps`/`cw_lr` correctly reached the constructed
@@ -1046,7 +1045,7 @@ prediction change is NOT required):
   (defaults) produced a bit-exact no-op (IQ Linf `0.0`), set2/set3 produced
   materially different perturbations (IQ Linf 2.48 / 2.03) and different
   `pred_attacked` patterns (4/5 vs 3/5 changed) — confirms CW's parameters
-  are live, not inert, exactly as this round's pass criteria required.
+  are live, not inert, exactly as this section's pass criteria required.
 
 ### 12.3 Top-K boundary validation (algorithm unmodified — behavior observation only)
 
@@ -1087,11 +1086,11 @@ current `type=int` CLI layer accepts, at `T=128`:
    dummy — no exception reaches the caller, but the "real backend" request
    was silently not honored.
 4. **`topk=inf` is the only value that crashes uncaught** — confirmed still
-   reproducible exactly as documented in section 8 (unchanged this round).
+   reproducible exactly as documented in section 8 (unchanged in this section).
    Both the real backend's fallback-triggering exception AND the dummy
    fallback's own attempt raise the identical `OverflowError`, so the
    second one is never caught by anything and propagates out of
-   `TopKAdapter.apply()`. Reproduced directly this round via
+   `TopKAdapter.apply()`. Reproduced directly in this section via
    `ExperimentConfig(topk=float('inf'), ...)` + `run_dry_run_experiment`
    (full pipeline, not just the adapter in isolation) — the `OverflowError`
    propagates uncaught out of the entire pipeline call.
@@ -1103,7 +1102,7 @@ current `type=int` CLI layer accepts, at `T=128`:
    `run_full_experiment.py`/`run_batch.py`'s actual command line.
 6. No algorithm-level changes were made to reconcile the `nan`/`inf`
    divergence between backends or to fix the `inf` double-crash — this
-   section is observation only, per this round's explicit instruction.
+   section is observation only, per its stated scope.
 
 ### 12.4 Spectrum-sensing boundary validation (dummy backend, `attack=none`, `--seed 42`, `SNR=18`/`QPSK`)
 
@@ -1119,7 +1118,7 @@ ever produces a single raw region at `threshold_factor=1.5`, so
 value — **this test did not actually exercise the merge logic itself**, only
 confirmed no crash/no validation exists at any of these values (matches
 `docs/parameter_validation.csv`'s existing `merge_gap` row: unvalidated,
-`<=0` is a documented no-op, and this round found no crash at a very large
+`<=0` is a documented no-op, and this validation found no crash at a very large
 gap either). No error message for negative or huge values (none expected,
 none occurred).
 
@@ -1171,13 +1170,13 @@ process each) were identical. `x_clean.shape[1:] == (2, 128)` held for every
 successful case (segment length unaffected by any of these 5 parameters, as
 expected — only `--window-size` controls it).
 
-### 12.5 Cross-reference to this round's required status labels
+### 12.5 Cross-reference to the required status labels
 
 - **seed propagation**: PASS (section 11.1/11.2, re-confirmed section 12.2)
 - **PGD reproducibility**: PASS (section 11.2, fixed and verified)
 - **fair Top-K comparison**: PASS (section 11.3)
 - **Top-K effectiveness**: NOT YET ESTABLISHED (sections 10.3/11.3, unchanged)
-- **CW CLI**: PASS — implemented and verified this round (section 12.1)
+- **CW CLI**: PASS — implemented and verified (section 12.1)
 - **CW reproducibility**: PASS — 3 param sets × 2 independent processes, all bit-identical (section 12.2)
 - **Top-K boundary**: documented, no algorithm changes (section 12.3) — `topk=inf` double-crash and `topk=nan` silent-fallback both confirmed still present, both unreachable via the actual CLI
 - **Spectrum-sensing boundary**: documented, no algorithm changes (section 12.4) — no silent no-ops found across 25 combinations
@@ -1187,7 +1186,7 @@ expected — only `--window-size` controls it).
 
 ## 13. Top-K direct-API guard, real multi-region merge-gap test, CW fair Top-K sweep, SNR smoke matrix (round 4)
 
-Code changes this round: `src/utils/config.py` (new `require_valid_topk`),
+Code changes in this section: `src/utils/config.py` (new `require_valid_topk`),
 `src/adapters/defense_adapter.py`, `src/adapters/topk_adapter.py` (**no
 changes to `external/AWN`/`external/adversarial-rf`**, and no changes to
 `generate_synthetic_iq`'s single-burst default or any other pipeline
@@ -1350,18 +1349,18 @@ generally higher — recovery pattern than FGSM/PGD in this sample. It does
 **not** establish general attack-effectiveness or defense-effectiveness
 trends across SNR.
 
-### 13.5 Cross-reference to this round's required status labels
+### 13.5 Cross-reference to the required status labels
 
-- **CW CLI**: PASS (implemented and verified section 12.1, reused successfully throughout this round)
-- **CW reproducibility**: PASS (section 12.2, reused successfully throughout this round)
+- **CW CLI**: PASS (implemented and verified section 12.1, reused successfully throughout this section)
+- **CW reproducibility**: PASS (section 12.2, reused successfully throughout this section)
 - **CW parameter sensitivity**: PASS (section 12.2 — different c/steps/lr produce genuinely different `x_attacked`/predictions; reconfirmed section 13.3)
 - **Top-K normal boundary**: PASS (section 12.3 — bypass/clamp semantics confirmed correct and unchanged)
-- **Top-K NaN/Inf direct API**: FIXED this round (section 13.1) — explicit `ValueError`, no silent fallback, no crash; CLI unaffected
-- **merge-gap actual merging**: PASS this round (section 13.2) — real multi-region merge/no-merge boundary confirmed exactly on a purpose-built (scratch-only) dual-burst signal
-- **CW fair Top-K sweep**: DONE this round (section 13.3) — fair, single-attacked-IQ comparison completed; results reported as observations, not claimed as established defense effectiveness
-- **SNR smoke sweep**: DONE this round (section 13.4) — 24/32 combinations succeeded with real backends and full reproducibility; 8 failed combinations (all SNR=-10) preserved with clear errors, not skipped
+- **Top-K NaN/Inf direct API**: FIXED (section 13.1) — explicit `ValueError`, no silent fallback, no crash; CLI unaffected
+- **merge-gap actual merging**: PASS (section 13.2) — real multi-region merge/no-merge boundary confirmed exactly on a purpose-built (scratch-only) dual-burst signal
+- **CW fair Top-K sweep**: DONE (section 13.3) — fair, single-attacked-IQ comparison completed; results reported as observations, not claimed as established defense effectiveness
+- **SNR smoke sweep**: DONE (section 13.4) — 24/32 combinations succeeded with real backends and full reproducibility; 8 failed combinations (all SNR=-10) preserved with clear errors, not skipped
 - **modulation waveform**: NOT IMPLEMENTED (unchanged, section 5)
-- **formal full batch** (SNR × modulation × attack × eps × topk): **NOT STARTED** — explicitly out of scope this round
+- **formal full batch** (SNR × modulation × attack × eps × topk): **NOT STARTED** — explicitly out of scope
 
 ---
 
@@ -1388,7 +1387,7 @@ path is untouched and unaffected — verified via regression check, section
    in, but a distinct git checkout from the `external/adversarial-rf`
    submodule pinned in this repo. Because of this, `--dataset-path` is a
    required, absolute, external CLI argument, not a hardcoded relative
-   path — verified this session that reusing `external/adversarial-rf/
+   path — verified that reusing `external/adversarial-rf/
    data_loader/data_loader.py:Load_Dataset` directly is not possible
    without either copying the ~640MB file into the submodule's own `data/`
    or modifying `Load_Dataset`'s hardcoded `'./data/%s'` relative path
@@ -1413,7 +1412,7 @@ path is untouched and unaffected — verified via regression check, section
    verbatim into this repo's own `RML2016_10A_CLASSES` constant (see point
    6 below), rather than re-derived or guessed.
 5. **Per-sample shape**: confirmed **`[2, 128]` float32** for every sample
-   checked this session (`arr[i].shape == (2, 128)`) — matches
+   checked (`arr[i].shape == (2, 128)`) — matches
    `external/adversarial-rf/util/config.py:51`'s `signal_len = 128` for
    `2016.10a`, independently re-confirmed here directly against the actual
    dataset array shape, not just the config citation.
@@ -1462,7 +1461,7 @@ to all be set when `iq_source=='radioml'` (existence/key-validity of the
 dataset file itself is checked later, at load time, since that requires
 actually opening the pickle).
 
-**Explicit separation, not metadata-only** (the round's core requirement):
+**Explicit separation, not metadata-only** (this section's core requirement):
 `--mod`/`--snr` continue to control ONLY the synthetic generator and are
 **completely unused** when `iq_source=='radioml'` — `src/utils/
 pipeline.py`'s `run_dry_run_experiment` branches entirely around
@@ -1536,7 +1535,7 @@ extra-noise-ratio fields are `None` (nothing to measure them against). If
 `--use-real-awn`, `--seed 42`, `--threshold-factor 1.5 --window-size 128
 --sensing-window-size 128`. **Regression check first**: an unrelated
 synthetic-mode run at the same fixed params gave the exact same occupied
-region `(3734, 4459)` this session has produced dozens of times before —
+region `(3734, 4459)` this pipeline has reproduced dozens of times before —
 confirms the RadioML integration did not alter the synthetic path.
 
 All 12 RadioML combinations: real `awn_backend` (`AWN`, `status=ok`, no
@@ -1561,11 +1560,11 @@ reported not filtered).
 
 ### 14.5 merge-gap multi-RadioML-burst main-pipeline integration — DESIGN ONLY, not implemented
 
-Per this round's instructions, a design proposal, deliberately not built —
+Per this section's instructions, a design proposal, deliberately not built —
 extending `embed_sample_in_noise` (single burst) touches the core pipeline
-branch added this round non-trivially (variable burst count, per-burst
+branch added in this section non-trivially (variable burst count, per-burst
 metadata, many-to-many region↔truth attribution), so it doesn't meet the
-"very small, isolated change" bar this session has used to decide
+"very small, isolated change" bar used throughout this document to decide
 design-only vs. implement-now (same bar applied to the CW CLI design in an
 earlier round).
 
@@ -1624,9 +1623,9 @@ earlier round).
    *captured cleanly*, *captured but merged with a neighbor*, or *missed*.
    This directly answers "how does `--merge-gap` interact with multiple
    ground-truth bursts" empirically once built, rather than assuming an
-   answer — not implemented this round.
+   answer — not implemented.
 
-### 14.6 Cross-reference to this round's required status labels
+### 14.6 Cross-reference to the required status labels
 
 - **Top-K boundary**: PASS (unchanged from round 4, section 13.1)
 - **merge-gap algorithm**: PASS (unchanged from round 4, section 13.2 — dual-burst scratch test)
@@ -1650,7 +1649,7 @@ New files: none. Modified: `src/sensing/radioml_source.py` (new
 
 ### 15.0 Fresh re-inventory of the actual code (not the prior summary)
 
-Re-read directly from the current files before writing any code this round:
+Re-read directly from the current files before writing any code in this section:
 
 1. **Single-burst embedding**: `embed_sample_in_noise()`
    (`radioml_source.py`) draws the ENTIRE `n_samples`-length background
@@ -1665,9 +1664,9 @@ Re-read directly from the current files before writing any code this round:
    whose return dict's `true_start`/`true_end` keys are written into
    `summary.csv`'s `true_burst_start`/`true_burst_end` columns — identically
    on **every** segment row (there being only one true burst, this was never
-   ambiguous before this round).
+   ambiguous until now).
 3. **`merge_close_regions` → `filter_by_min_length` order**
-   (`pipeline.py`, unchanged before and after this round):
+   (`pipeline.py`, unchanged before and after this section's changes):
    `mask_to_regions` → `merge_close_regions(merge_gap)` →
    `filter_by_min_length(min_region_len)` — merging always happens
    **before** the length filter, so a `--merge-gap` that successfully joins
@@ -1707,7 +1706,7 @@ possible**, no separate check needed), and computes ONE shared background
 noise level for the whole stream from the MEAN power across all (possibly
 scaled) bursts, since a single real capture has a single noise floor.
 
-**Verified this round** (all via the real `run_full_experiment.py` CLI, real
+**Verified** (all via the real `run_full_experiment.py` CLI, real
 AWN, `--seed 42`):
 - **Regression, both prior paths unaffected**: an unrelated synthetic-mode
   run gave the same region `(3734, 4459)` seen dozens of times this
@@ -1731,7 +1730,7 @@ AWN, `--seed 42`):
   — and therefore `long_iq_sha256` — still differs by seed, confirmed.
 - **Single-burst mode completely undisturbed**: confirmed via the
   regression checks above, run both before and after every code change
-  this round.
+  in this section.
 
 ### 15.2 Truth-to-detection matching + formal metrics — method and formulas
 
@@ -1741,7 +1740,7 @@ overlap enumeration**, not a strict one-to-one match (IoU-max or Hungarian
 assignment) — a strict 1:1 match cannot correctly represent a region that
 genuinely overlaps two neighboring bursts merged by `--merge-gap`, or a
 burst genuinely split across two detected regions, both of which this
-round's test cases are specifically designed to produce. Every `(burst,
+section's test cases are specifically designed to produce. Every `(burst,
 region)` pair with `intersection_length > 0` is a real edge; a burst or
 region can have zero, one, or multiple edges. Detected regions are treated
 as pairwise non-overlapping (guaranteed by `merge_close_regions`/
@@ -1786,7 +1785,7 @@ returned result dict):
 | `mean_captured_signal_ratio` | simple mean of per-burst `captured_signal_ratio` | NOT sample-weighted (distinct from the FNR above) |
 | `mean_abs_start_boundary_error` / `mean_abs_end_boundary_error` / `mean_abs_boundary_error` | mean of `abs(...)` over MATCHED bursts only (the third pools both edges together) | `None` if zero bursts matched |
 
-**Verified this round** with a synthetic 4-region/3-burst scenario
+**Verified** with a synthetic 4-region/3-burst scenario
 (intervals only, not run through the real pipeline) exercising all 5
 required scenarios simultaneously in one call: region merging 2 bursts
 (`matched_burst_ids=[0,1]`), a burst split across 2 regions
@@ -1885,7 +1884,7 @@ exactly `2^-12` (`0.0` vs `0.000244140625`) — consistent with ordinary
 floating-point non-associativity in multi-threaded CPU BLAS/torch kernels
 across process launches, not a bug in this repo's own code, and not
 something that changed any prediction or ground-truth metric. Not
-investigated further (out of this round's scope).
+investigated further (out of scope for this section).
 
 ### 15.5 Complete RML2016.10a class mapping (`docs/radioml_class_mapping.csv`)
 
@@ -1903,7 +1902,7 @@ investigated further (out of this round's scope).
 | QPSK | 9 | QPSK | yes |
 | AM-SSB | 10 | AM-SSB | yes |
 
-Cross-verified this round at **8 independent locations** in
+Cross-verified at **8 independent locations** in
 `external/adversarial-rf` (submodule, pinned `ced705e`): the `classes`
 dict (`data_loader/data_loader.py:13`, `util/config.py:52`) and a separate
 `CLASS_NAMES` ordered list used purely for human-readable plot labels
@@ -1913,15 +1912,15 @@ dict (`data_loader/data_loader.py:13`, `util/config.py:52`) and a separate
 8 agree exactly, no discrepancy between the dataset key string and the
 "display name" was found anywhere.
 
-### 15.6 Cross-reference to this round's required status labels
+### 15.6 Cross-reference to the required status labels
 
 - **RadioML loader**: PASS (unchanged, section 14)
 - **RadioML modulation truthfulness**: PASS, small-sample (unchanged claim scope from section 14.6, reinforced by section 15.4's 20-combination Group 1)
 - **single-burst ground truth metrics**: PASS (unchanged, section 14.3)
-- **multi-burst source**: **PASS this round** (section 15.1) — implemented, all 6 stated requirements verified, single-burst mode regression-confirmed unaffected
+- **multi-burst source**: **PASS** (section 15.1) — implemented, all 6 stated requirements verified, single-burst mode regression-confirmed unaffected
 - **merge-gap function**: PASS (unchanged, section 13.2 — scratch-only dual-burst test)
-- **merge-gap main pipeline**: **PASS this round** (section 15.3) — all 5 required scenarios (separate/merge/mixed/missed/false-alarm) reproduced through the real main pipeline, not an isolated function call, all reproducible
-- **Pd/Pfa metrics**: **PASS this round** (section 15.2) — implemented, formulas documented with explicit denominators, verified against a hand-checked synthetic scenario covering all 5 required matching cases simultaneously
+- **merge-gap main pipeline**: **PASS** (section 15.3) — all 5 required scenarios (separate/merge/mixed/missed/false-alarm) reproduced through the real main pipeline, not an isolated function call, all reproducible
+- **Pd/Pfa metrics**: **PASS** (section 15.2) — implemented, formulas documented with explicit denominators, verified against a hand-checked synthetic scenario covering all 5 required matching cases simultaneously
 - **formal full batch**: **NOT STARTED** (unchanged)
 
 ## 16. Sensing-failure handling, batch aggregation CSVs, metrics-denominator confirmation (round 7)
@@ -1930,7 +1929,7 @@ New file: `src/utils/batch_aggregation.py`. Modified: `src/utils/pipeline.py`,
 `src/sensing/ground_truth_metrics.py` (new
 `derive_batch_aggregate_sensing_fields`), `experiments/run_batch.py`. **No
 changes to `external/AWN`/`external/adversarial-rf`.** Formal full-parameter
-batch: **still not started** (explicitly out of scope this round).
+batch: **still not started** (explicitly out of scope).
 
 ### 16.1 Sensing-failure handling — structured results, not batch-aborting exceptions
 
@@ -1956,7 +1955,7 @@ and the function returns a normal (non-raising) dict with
 AWN/attack/Top-K. Every other exception in the function — adapter
 shape-mismatch `RuntimeError`s, dataset-load `ValueError`s, config
 validation `ValueError`s — is **not** caught anywhere in `pipeline.py` and
-still propagates normally, exactly as before this round.
+still propagates normally, exactly as before this change.
 
 **What is NOT done, per the explicit requirements**:
 - `--threshold-factor` / `--min-region-len` are never silently altered to
@@ -1986,13 +1985,13 @@ when there are zero segments to feed them), plus the 9
 `derive_batch_aggregate_sensing_fields` keys (16.3) merged into both paths
 identically via `**sensing_agg`.
 
-**Verified this round** (all via direct `run_dry_run_experiment()` calls,
+**Verified** (all via direct `run_dry_run_experiment()` calls,
 real code paths, not mocked):
 - Regression: synthetic mode, single-burst radioml mode (equivalence
   cross-checked against `ground_truth`, see 16.3), and multi-burst radioml
   mode (3 bursts) all still produce identical detected regions /
   `long_iq_sha256` / `captured_signal_ratio` behavior as before this
-  round's edit — only the returned dict grew new keys, nothing existing
+  change — only the returned dict grew new keys, nothing existing
   changed.
 - `filter_by_min_length` failure genuinely triggered end-to-end
   (`--threshold-factor 1000` on synthetic mode): `run_status=sensing_failed`,
@@ -2060,7 +2059,7 @@ csv_writer.py` derives fieldnames from the first row) and multi-burst
 per-burst rows carry extra metadata keys a synthesized single-burst row
 does not. Mixed-mode sweeps must be run as separate `run_batch_combos()`
 calls (separate output subdirectories) — this matches how every batch in
-this round and section 15 was actually run (one ground-truth mode per
+this section and section 15 was actually run (one ground-truth mode per
 sweep).
 
 **Behavior change to note**: per-combo output subdirectories are now named
@@ -2070,7 +2069,7 @@ helper is generic over arbitrary combo-parameter dicts and cannot construct
 a parameter-based directory name in general. The full parameter values for
 any `combo_id` are always recoverable from that row in `batch_summary.csv`.
 
-**Verified this round**, all via the real `experiments/run_batch.py` CLI:
+**Verified**, all via the real `experiments/run_batch.py` CLI:
 - Synthetic 2-combo grid (`--snr-list 0,10`): `snr=0` combo genuinely hit
   `sensing_failed` (no occupied region at that SNR/threshold), `snr=10`
   combo succeeded — the batch did **not** abort, both rows appear in
@@ -2095,8 +2094,8 @@ any `combo_id` are always recoverable from that row in `batch_summary.csv`.
 ### 16.3 Metrics-aggregation definitions — confirmed, fixed, and proven
 
 All of the following were already implemented in
-`compute_multi_burst_sensing_metrics` (section 15.2) prior to this round;
-this subsection is this round's explicit written confirmation/proof per the
+`compute_multi_burst_sensing_metrics` (section 15.2) before this subsection;
+this subsection provides the explicit written confirmation/proof per the
 requirement to fix and document these definitions, plus the new
 `derive_batch_aggregate_sensing_fields` normalizer that makes the
 single-burst case use the exact same formulas (not a second implementation).
@@ -2180,7 +2179,7 @@ single-burst case use the exact same formulas (not a second implementation).
    parallel set of formulas for the `--num-bursts 1` / non-multi-burst
    radioml case, this function routes it through
    `compute_multi_burst_sensing_metrics` with a synthesized single-entry
-   `true_bursts` list (`burst_id=0`). Verified this round by direct
+   `true_bursts` list (`burst_id=0`). Verified in this section by direct
    comparison against the pre-existing `compute_sensing_ground_truth_metrics`
    output on the same real run (radioml BPSK/snr18/idx0, default flags):
    `mean_captured_signal_ratio == ground_truth["captured_signal_ratio"]`
@@ -2262,7 +2261,7 @@ Group 3/4's design.
    159 separate raw regions instead of one clean burst region, at
    `merge_gap=0`. This was not designed into the matrix; it fell out of
    the `threshold_factor`/`sensing_window_size` OFAT sweeps and is exactly
-   the kind of real, unmanufactured sensing behavior this round's
+   the kind of real, unmanufactured sensing behavior this section's
    infrastructure needed to be able to record without crashing — and it
    did (`batch_regions_summary.csv` wrote all 370 rows without error, and
    none of these fragmented-mask combos happened to also be one of the 12
@@ -2314,7 +2313,7 @@ Group 3/4's design.
    round used a much narrower `sensing-window-size=16`, which produces a
    detected gap close to the true gap instead of closing it via smoothing.
    `--merge-gap`'s effect is real but conditional on the smoothing-window
-   size relative to the true burst gap; this round's 3-combo check at
+   size relative to the true burst gap; this section's 3-combo check at
    `sensing_window_size=128` was not designed to reproduce that regime and
    correctly shows no additional effect there.
 7. **AWN prediction correctness NOT used as a pass condition**: confirmed
@@ -2329,33 +2328,33 @@ Output directories: `results/sensing_validation_matrix/single_burst/`
 and `results/sensing_validation_matrix/multi_burst_merge_gap/` (same three
 CSVs, 3 `comboNNNN/` subdirectories).
 
-### 16.5 Cross-reference to this round's required status labels
+### 16.5 Cross-reference to the required status labels
 
-- **Sensing-failure structured handling**: **PASS this round** (16.1) —
+- **Sensing-failure structured handling**: **PASS** (16.1) —
   implemented, both expected `RuntimeError` sites converted, genuine errors
   confirmed still raising, verified end-to-end for both failure stages
   through the real pipeline, batch tested (16.4: 12/48 real failures
   handled without aborting)
 - **Batch aggregate CSVs (`batch_summary`/`batch_bursts_summary`/
-  `batch_regions_summary`)**: **PASS this round** (16.2) — implemented,
+  `batch_regions_summary`)**: **PASS** (16.2) — implemented,
   function tested (synthetic/single-burst/multi-burst/error smoke tests),
   batch tested (16.4, 48 real combos, real AWN)
-- **Metrics-denominator definitions**: **PASS this round** (16.3) —
+- **Metrics-denominator definitions**: **PASS** (16.3) —
   confirmed, fixed, and proven (including the FPR-denominator equivalence
   proof and the no-double-counting proof requested explicitly), documented
   here
-- **Small sensing validation matrix**: **PASS this round** (16.4) — batch
+- **Small sensing validation matrix**: **PASS** (16.4) — batch
   tested, 48/48 combos completed (0 genuine errors), all 7 stated goals
   addressed with real results (including one honest negative result, goal
   6)
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
-  STARTED** (unchanged, explicitly out of scope this round)
+  STARTED** (unchanged, explicitly out of scope)
 
 
 ## 17. Cross-modulation x SNR smoke matrix (round 8)
 
 New file: `experiments/run_modulation_snr_matrix.py`. No changes to
-`src/` (this round is a pure batch-aggregation consumer, no code changes
+`src/` (this section is a pure batch-aggregation consumer, no code changes
 were needed). **No changes to `external/AWN`/`external/adversarial-rf`.**
 Formal full-parameter batch: **still not started**.
 
@@ -2379,9 +2378,9 @@ CSVs written with exactly 132 rows each (`batch_summary.csv`,
 `batch_bursts_summary.csv`, `batch_regions_summary.csv`) — every combo
 detected exactly one clean region matching its one truth burst
 (`mean_num_detected_regions=1.0` in every modulation and every SNR group;
-no fragmentation this round, consistent with section 16.4's finding that
+no fragmentation in this validation, consistent with section 16.4's finding that
 fragmentation only appears at extreme `threshold_factor`/
-`sensing_window_size` values, not at this round's fixed
+`sensing_window_size` values, not at this section's fixed
 `threshold_factor=1.5, sensing_window_size=128` operating point).
 
 **Pass-condition checks (Part C, all 10 verified programmatically against
@@ -2475,18 +2474,18 @@ here at full 11×4 coverage rather than a handful of samples).
   1 — regardless of the sample's true modulation. The only 12 cases where
   `pred_clean` matched the true `dataset_mod` label were exactly the 12
   QAM64 combos themselves (12/12 correct). Recorded per Part E.7's
-  instruction; **not used as a pass/fail condition this round**, and no
+  instruction; **not used as a pass/fail condition here**, and no
   cause is diagnosed here (would require inspecting AWN
   preprocessing/normalization alignment against its original training
-  pipeline, out of scope for this round's batch-aggregation focus).
+  pipeline, out of scope for this section's batch-aggregation focus).
 - **No AM/FM-vs-digital fragmentation difference observed**: every one of
   the 11 modulations produced `mean_num_detected_regions=1.0` (never
-  fragmented) at this round's fixed sensing parameters — energy detection
+  fragmented) at this section's fixed sensing parameters — energy detection
   operates on total IQ magnitude, which is not modulation-scheme-dependent
   in a way that would fragment one modulation class differently from
   another at a fixed threshold/window; section 16.4's fragmentation
   finding was purely a function of `threshold_factor`/
-  `sensing_window_size`, not modulation type, and this round's uniform
+  `sensing_window_size`, not modulation type, and this section's uniform
   1-region-per-combo result is consistent with (not contradicting) that.
 
 ### 17.7 Real AWN backend verification
@@ -2511,19 +2510,19 @@ except the `mod` column (`QPSK` vs the CLI default `BPSK`) — which is the
 documented cosmetic synthetic-generator field, unused in radioml mode
 (section 14's original design), not a real reproducibility discrepancy.
 
-### 17.9 Cross-reference to this round's required status labels
+### 17.9 Cross-reference to the required status labels
 
-- **Cross-modulation × SNR smoke matrix**: **PASS this round** (17.1–17.8)
+- **Cross-modulation × SNR smoke matrix**: **PASS** (17.1–17.8)
   — batch tested, 132/132 combos completed (0 genuine errors, 0 sensing
   failures), all 10 pass conditions verified programmatically, all 7
   special checks (17.5/17.6/17.8) addressed with real results including
   one fully-negative sensing-failure list (SNR=-10 succeeded uniformly,
   explained not manufactured) and 3 unplanned partial-capture findings
-- **AMC accuracy across modulations**: explicitly **NOT evaluated** this
-  round (not a pass condition) — `pred_clean` distribution recorded only
+- **AMC accuracy across modulations**: explicitly **NOT evaluated** here
+  (not a pass condition) — `pred_clean` distribution recorded only
   (17.6)
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
-  STARTED** (unchanged, explicitly out of scope this round)
+  STARTED** (unchanged, explicitly out of scope)
 
 ## 18. AWN input-scale + segment-alignment root-cause diagnosis and fix (round 9)
 
@@ -2535,7 +2534,7 @@ columns), `src/utils/batch_aggregation.py` (new aggregate fields),
 `experiments/run_batch.py` (new CLI flags). **No changes to
 `external/AWN`/`external/adversarial-rf`.**
 
-### 18.1 Normalization-scale mismatch (diagnosis only, NOT fixed this round)
+### 18.1 Normalization-scale mismatch (diagnosis only, NOT fixed)
 
 Triggered by re-reading `external/adversarial-rf`'s own `CLAUDE.md`
 (`data_loader.py:Load_Dataset` feeds raw, un-normalized RML samples --
@@ -2545,7 +2544,7 @@ normalization, ~50-100x rescale), applied unconditionally before every AWN
 call in every prior round. `docs/integration_plan.md` section 5 flagged
 this exact risk from the very first planning pass ("Needs a real run to
 check classification accuracy... before trusting any prediction") but it
-was never empirically checked until this round.
+was never empirically checked until now.
 
 **Empirical confirmation** (7 real samples, BPSK/QPSK/8PSK/QAM16/QAM64/
 WBFM/AM-DSB, snr=18, sample_index=0, real AWN): feeding the SAME clean,
@@ -2561,7 +2560,7 @@ This is almost certainly what explains section 17.6's "AWN predicted
 QAM64 in 127/132 combos" finding from the prior round's smoke matrix --
 not a spectrum-sensing degradation effect, but this pre-existing scale
 mismatch, present in every real-AWN + radioml-mode run across this entire
-session (including commit `82df790`). **This round does NOT fix
+session (including commit `82df790`). **This section does NOT fix
 normalization** -- it is a separate, already-diagnosed issue explicitly
 deferred by the user pending a decision; every result below (18.2-18.5)
 deliberately holds normalization treatment CONSTANT (either always-off, to
@@ -2627,7 +2626,7 @@ the original `segment_regions()`. Two policies, selected via new
   within the region) with the highest mean power
   (`mean(|x|^2)`). Deliberately a MINIMAL scope (one window per region, not
   a general multi-window replacement for naive's long-region case), per
-  this round's explicit "minimal verifiable" requirement. **Structurally**
+  this section's explicit "minimal verifiable" requirement. **Structurally**
   cannot depend on `true_burst_start`/`true_burst_end` -- the function
   signature never receives ground truth at all, only `iq`/`regions`/
   `seg_len`/`policy`/`hop`.
@@ -2694,7 +2693,7 @@ E(oracle)=4/7. **max-energy exactly matches the oracle-path accuracy.**
 **Mean segment-level captured_signal_ratio**: naive=0.5658,
 **max-energy=0.9375**.
 
-**Note on max-energy's failure mode, checked explicitly per this round's
+**Note on max-energy's failure mode, checked explicitly per this section's
 requirement** ("請特別檢查max-energy是否可能只選到局部高能量噪聲或burst的
 局部峰值"): for BPSK specifically, max-energy's segment ratio (0.586) is
 marginally LOWER than naive's (0.625) for this one sample -- the region
@@ -2704,7 +2703,7 @@ that already excludes part of the burst, "highest mean power" is not
 always exactly "maximum true-burst overlap" since real modulated signal
 power is not perfectly uniform sample-to-sample. This is a real,
 un-smoothed-over instability, reported as found -- not treated as a reason
-to add a more complex selection heuristic this round, per the explicit
+to add a more complex selection heuristic here, per the explicit
 instruction to only report if found unstable, not engineer around it.
 Every other one of the 7 samples showed max-energy meeting or exceeding
 naive's ratio.
@@ -2716,7 +2715,7 @@ would see today): naive=1/7, max-energy=2/7 correct in a supplementary run
 against the same 7 samples. Both are far below the isolated-alignment
 numbers above, confirming 18.1's scale mismatch remains the dominant
 confound in any real end-to-end run using this repo's current default
-normalization -- fixing alignment alone (this round) is necessary but,
+normalization -- fixing alignment alone (this fix) is necessary but,
 until normalization is also addressed, not sufficient to restore accuracy
 in a real run through the committed pipeline.
 
@@ -2749,19 +2748,19 @@ in a real run through the committed pipeline.
 these 7 samples), NOT treated as a 7/7 pass target, per the explicit
 instruction.
 
-### 18.6 Cross-reference to this round's required status labels
+### 18.6 Cross-reference to the required status labels
 
-- **Normalization-scale mismatch**: **diagnosed, NOT fixed** this round --
+- **Normalization-scale mismatch**: **diagnosed, NOT fixed** --
   root cause confirmed (thousands-magnitude saturated logits vs. tens for
   raw-scale input), deferred pending a separate design decision.
-- **Segment-alignment root cause**: **diagnosed and fixed this round**
+- **Segment-alignment root cause**: **diagnosed and fixed**
   (18.2/18.3) -- `select_aligned_segments` implemented, function tested
   (regression: naive byte-identical to prior behavior; multi-burst mode
   regression-confirmed with both ambiguous- and unambiguous-match cases),
   and validated via a real 7-modulation comparison (18.4) showing
   max-energy matches oracle-path accuracy when normalization is held
   constant.
-- **`--alignment-policy`/`--segment-hop`**: **PASS this round** -- CLI
+- **`--alignment-policy`/`--segment-hop`**: **PASS** -- CLI
   wired into both `run_full_experiment.py` and `run_batch.py`, validated
   (`naive` default preserves every prior round's exact behavior;
   `max-energy` reproducible cross-process).
@@ -2770,7 +2769,7 @@ instruction.
   default pipeline's real predictions remain dominated by the normalization
   confound (18.4 footnote) until that separate issue is addressed.
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
-  STARTED** (unchanged, explicitly out of scope this round)
+  STARTED** (unchanged, explicitly out of scope)
 
 ## 19. AWN input-scale fix: `--awn-preprocess {legacy-unit-power,radioml-native}` (round 10)
 
@@ -2781,14 +2780,14 @@ at the AWN input boundary only; new summary.csv columns),
 `src/utils/batch_aggregation.py` (new aggregate fields),
 `experiments/run_batch.py` (new CLI flag). **No changes to
 `external/AWN`/`external/adversarial-rf`.** Default value **unchanged**
-this round (`legacy-unit-power`) pending a separate decision, per explicit
+in this section (`legacy-unit-power`) pending a separate decision, per explicit
 instruction.
 
 ### 19.1 Traced evidence: what `external/adversarial-rf` actually feeds AWN
 
 Read directly (not inferred from comments/docs), cross-checked between the
 pinned submodule (`external/adversarial-rf`, `ced705e`) and the real venv
-install used for this session's real-backend testing
+install used for this validation's real-backend testing
 (`/home/xiaomi/adversarial-rf`, `70036bc`) -- `diff` confirmed
 `data_loader.py`'s core loading path, `util/training.py`,
 `util/evaluation.py`, and `models/model.py` are identical between the two
@@ -2846,7 +2845,7 @@ same constant does not change which samples are "louder" relative to each
 other. **What `legacy-unit-power` actually breaks is not the relative
 burst/noise structure, but the absolute scale relative to AWN's training
 distribution** -- an important distinction from what might be assumed;
-this round's fix targets the absolute-scale problem specifically, not a
+this fix targets the absolute-scale problem specifically, not a
 (non-existent) relative-SNR corruption. `embed_snr_margin`'s effect
 (`noise_power = burst_power / embed_snr_margin`, section 15.1) is set
 during embedding, long before `apply_awn_preprocess` ever runs, and
@@ -2901,7 +2900,7 @@ the no-op it's documented as, not merely by code reading.
 `summary.csv`) -- `--awn-preprocess` never touches detection or alignment,
 exactly as required.
 
-### 19.5 Attack-domain tracing (Part 六 -- tracked only, NOT redesigned this round)
+### 19.5 Attack-domain tracing (Part 六 -- tracked only, NOT redesigned here)
 
 `src/adapters/attack_adapter.py:AttackAdapter.apply()` receives `x` =
 `x_clean` (i.e. **already** run through `apply_awn_preprocess`, whichever
@@ -2924,7 +2923,7 @@ for one `--awn-preprocess` policy will therefore correspond to a very
 different absolute perturbation magnitude under the other. This is flagged
 for a future round's explicit decision (e.g. whether `attack_eps` should
 be redefined once `radioml-native` is adopted) -- no attack code or
-default was touched this round.
+default was touched in this section.
 
 ### 19.6 Pass-condition verification
 
@@ -2960,19 +2959,19 @@ default was touched this round.
    in `summary.csv`; mean/global-min/global-max/any() aggregates in
    `batch_summary.csv`, verified via a 2-combo smoke batch).
 
-### 19.7 Cross-reference to this round's required status labels
+### 19.7 Cross-reference to the required status labels
 
-- **`external/adversarial-rf` preprocessing evidence chain**: **PASS this
-  round** (19.1) -- traced to exact file/line in both the pinned submodule
+- **`external/adversarial-rf` preprocessing evidence chain**: **PASS**
+  (19.1) -- traced to exact file/line in both the pinned submodule
   and the real venv install, confirmed identical for every relevant file.
-- **`--awn-preprocess {legacy-unit-power,radioml-native}`**: **PASS this
-  round** (19.2/19.3/19.6) -- implemented at the AWN input boundary only,
+- **`--awn-preprocess {legacy-unit-power,radioml-native}`**: **PASS**
+  (19.2/19.3/19.6) -- implemented at the AWN input boundary only,
   function tested (regression: default behavior byte-identical to every
   prior round) and validated via a real 7-modulation comparison (19.4)
   showing `radioml-native` matches the oracle-path accuracy exactly (4/7)
   with 7/7 prediction agreement, vs. `legacy-unit-power`'s 2/7 and 0/7.
-  Default value **deliberately left unchanged** this round.
-- **Attack-domain (`attack_eps`) tracing**: **PASS this round, tracking
+  Default value **deliberately left unchanged**.
+- **Attack-domain (`attack_eps`) tracing**: **PASS, tracking
   only** (19.5) -- documented that `attack_eps` is relative-scale-invariant
   but absolute-magnitude-dependent on `--awn-preprocess`; explicitly not
   redesigned.
@@ -2983,7 +2982,7 @@ default was touched this round.
   **both previously-diagnosed degradation sources are now addressed**,
   though the default CLI values remain unchanged pending explicit adoption.
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
-  STARTED** (unchanged, explicitly out of scope this round)
+  STARTED** (unchanged, explicitly out of scope)
 
 ## 20. Source-aware defaults, attack-scale verification, RadioML end-to-end smoke matrix (round 11)
 
@@ -3046,7 +3045,7 @@ sample).
 value that drove the resolution, distinct from the existing `source_type`
 which further splits `"radioml"` into `"radioml"`/`"radioml_multi_burst"`).
 `alignment_policy`, `awn_preprocess`, `selected_segment_start/end`,
-`segment_captured_signal_ratio` (this round's requested
+`segment_captured_signal_ratio` (this section's requested
 "segment_level_captured_ratio" -- kept under its existing, already-tested
 name from section 18/19 rather than renamed, to avoid touching working
 code for a cosmetic difference; explicitly cross-referenced here),
@@ -3078,7 +3077,7 @@ minimal fix" did not trigger — verified, not assumed).
   machine epsilon) under `legacy-unit-power` too (`3.4e-7` absolute at
   that policy's ~50x larger scale) -- confirming this is a pre-existing,
   scale-independent property of `AttackAdapter`'s round-trip conversion
-  itself, not something this round's `awn_preprocess` change introduced or
+  itself, not something this section's `awn_preprocess` change introduced or
   worsened. **Predictions and top-class logits are unaffected** in every
   tested case (`pred_clean == pred_attacked` at `eps=0` throughout).
 - **FGSM/PGD perturbation magnitude vs. `--attack-eps`**: measured directly
@@ -3205,19 +3204,19 @@ requirements were verified directly against real command output, not
 assumed. No incompatibility was found requiring a fix in Part B.6 --
 verified, not skipped.
 
-### 20.6 Cross-reference to this round's required status labels
+### 20.6 Cross-reference to the required status labels
 
 - **Source-aware `--alignment-policy`/`--awn-preprocess` defaults**:
-  **PASS this round** (20.1) -- implemented, function tested (regression:
+  **PASS** (20.1) -- implemented, function tested (regression:
   synthetic/radioml/explicit-override all behave correctly), batch tested
   (72-combo smoke matrix, 20.4).
-- **New `iq_source` CSV field**: **PASS this round** (20.2).
-- **Attack-scale correctness (`radioml-native`)**: **PASS this round**
+- **New `iq_source` CSV field**: **PASS** (20.2).
+- **Attack-scale correctness (`radioml-native`)**: **PASS**
   (20.3) -- traced AND empirically verified (eps-to-IQ-units exact ratio
   1.0000, eval-mode restoration, no NaN/Inf); one real, non-blocking
   finding reported (eps=0 float32 round-trip imprecision, pre-existing,
   scale-independent, prediction-invariant).
-- **RadioML end-to-end smoke matrix**: **PASS this round** (20.4) --
+- **RadioML end-to-end smoke matrix**: **PASS** (20.4) --
   batch tested, 72/72 combos completed (0 errors, 0 sensing failures),
   direct AMC and sensed AMC accuracy now identical (5/6 each) on these 6
   samples -- the alignment (round 9) and preprocessing (round 10) fixes
@@ -3228,12 +3227,12 @@ verified, not skipped.
   recovery rates reported honestly but explicitly flagged as not
   statistically meaningful at this sample size.
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
-  STARTED** (unchanged, explicitly out of scope this round)
+  STARTED** (unchanged, explicitly out of scope)
 
 ## 21. Fair Top-K verification at scale under `radioml-native`, full CLI parameter inventory (round 12)
 
 New file: `experiments/run_fair_topk_matrix.py`. **No changes to `src/` or
-`external/AWN`/`external/adversarial-rf`** -- this round is a pure
+`external/AWN`/`external/adversarial-rf`** -- this section is a pure
 verification round; the matrix ran cleanly on the first attempt, so there
 was nothing to fix.
 
@@ -3330,7 +3329,7 @@ too, not just the single/few-step gradient attacks.
 
 ### 21.8 Bug investigation (Part 九)
 
-**No bugs found this round.** The 480-combo matrix, all verification
+**No bugs were found.** The 480-combo matrix, all verification
 checks, and the reproducibility check all passed on the first attempt --
 nothing required fixing, so nothing was fixed (per the instruction not to
 fabricate a fix for a problem that doesn't exist). One incidental,
@@ -3345,47 +3344,47 @@ documented one-segment-per-region design), `mean_segment_captured_signal_ratio
 ### 21.9 Full CLI parameter inventory: validation-depth gaps (Part 八)
 
 Cross-referenced against `docs/parameter_validation.csv`'s 77+ tracked
-rows and this session's actual round-by-round coverage (not assumed from
+rows and this document's actual round-by-round coverage (not assumed from
 category labels alone):
 
 | Parameter | Tested values (real backend) | Gap |
 |---|---|---|
 | `--dataset-snr` (RadioML SNR) | `-10,0,10,18` (round 8, sensing-only, `attack=none`); `0,18` (rounds 9-12, with real attack/Top-K) | RML2016.10a has SNR labels `-20..18` step `2` (20 levels total) -- only 4/20 ever tested at all, only 2/20 tested with real attack |
 | `--dataset-mod` (11 modulations) | All 11 tested in round 8 (sensing-only); only `QPSK, BPSK, QAM16` (3/11) tested with real attack/Top-K (rounds 11-12) | 8/11 modulations (`8PSK, AM-DSB, AM-SSB, CPFSK, GFSK, PAM4, QAM64, WBFM`) never tested with any real attack |
-| `--attack` | `none, fgsm, pgd, cw` all now tested at scale (this round, 480 combos) with fair Top-K reuse confirmed | This repo's `AttackAdapter` only implements these 4 (of `adversarial-rf`'s 17 available `torchattacks` attacks) -- a scope limitation, not an untested gap |
+| `--attack` | `none, fgsm, pgd, cw` all now tested at scale (this section, 480 combos) with fair Top-K reuse confirmed | This repo's `AttackAdapter` only implements these 4 (of `adversarial-rf`'s 17 available `torchattacks` attacks) -- a scope limitation, not an untested gap |
 | `--attack-eps` | Fixed `0.05` throughout rounds 11-12's batch matrices; `{0.01,0.03,0.1}` individually verified via direct (non-batch) diagnostic in round 11 | No `eps` **sweep** has ever run through the batch-aggregation pipeline -- explicitly deferred (would start approaching the formal batch) |
-| `--topk` | `10,20,30,40`, 600+ combo-appearances across rounds 11-12, reuse-correctness confirmed at scale (this round) | Values outside this set (very small `K<10`, very large `K` near/above 128) untested; `adaptive_k_defense`/`adaptive_k_v2_defense` (mentioned in `topk_adapter.py`'s own docstring) never wired at all |
+| `--topk` | `10,20,30,40`, 600+ combo-appearances across rounds 11-12, reuse-correctness confirmed at scale (this section) | Values outside this set (very small `K<10`, very large `K` near/above 128) untested; `adaptive_k_defense`/`adaptive_k_v2_defense` (mentioned in `topk_adapter.py`'s own docstring) never wired at all |
 | `--threshold-factor` | Boundary-swept `0.8-2.0` in round 7 (under `naive` alignment, dummy/no real AWN) | Fixed at `1.5` throughout rounds 9-12 (`max-energy`/`radioml-native`) -- never re-swept under the new defaults |
 | `--sensing-window-size` | Swept `16-256` in round 7 (found fragmentation at small values, under old defaults) | Fixed at `128` throughout rounds 9-12 -- never re-swept under `max-energy`/`radioml-native` |
 | `--min-region-len` | Swept `0,64,128` in round 7 (under old defaults) | Fixed at `0` throughout rounds 9-12 -- never re-swept under new defaults |
-| `--merge-gap` | Dedicated case studies in round 6 (single/multi-burst, `naive` alignment only) | Never tested with `max-energy` alignment at `merge_gap > 0` specifically -- this round's incidental multi-burst check (21.8) used `merge_gap=0` |
-| `--num-bursts`/`--dataset-mod-list`/`--dataset-snr-list`/`--sample-index-list`/`--min-burst-gap`/`--max-burst-gap`/`--burst-gap-list`/`--burst-power-scale-list` | Functionally tested in round 6 (`naive`/`legacy-unit-power` only); this round's 21.8 check confirms basic `max-energy` compatibility (2-burst case) | No comprehensive re-validation of the merge-gap/power-scale edge cases (round 15's 5 documented cases) under the new alignment/preprocess defaults, and none with real attack/Top-K in multi-burst mode |
-| `--embed-snr-margin` | Fixed at `20.0` throughout every real-backend round this session | Sensitivity sweep (`{-10..20}`) was done once, informally, in an earlier round's diagnostic context -- never through the batch pipeline with real attack |
+| `--merge-gap` | Dedicated case studies in round 6 (single/multi-burst, `naive` alignment only) | Never tested with `max-energy` alignment at `merge_gap > 0` specifically -- this section's incidental multi-burst check (21.8) used `merge_gap=0` |
+| `--num-bursts`/`--dataset-mod-list`/`--dataset-snr-list`/`--sample-index-list`/`--min-burst-gap`/`--max-burst-gap`/`--burst-gap-list`/`--burst-power-scale-list` | Functionally tested in round 6 (`naive`/`legacy-unit-power` only); this section's 21.8 check confirms basic `max-energy` compatibility (2-burst case) | No comprehensive re-validation of the merge-gap/power-scale edge cases (round 15's 5 documented cases) under the new alignment/preprocess defaults, and none with real attack/Top-K in multi-burst mode |
+| `--embed-snr-margin` | Fixed at `20.0` throughout every real-backend round documented here | Sensitivity sweep (`{-10..20}`) was done once, informally, in an earlier round's diagnostic context -- never through the batch pipeline with real attack |
 | `--segment-hop` | Fixed at `1` (every possible sliding offset) throughout | Larger hop values (for batch-cost reduction) implemented and validated, never empirically exercised |
 
-### 21.10 Cross-reference to this round's required status labels
+### 21.10 Cross-reference to the required status labels
 
-- **Fair Top-K reuse verification at scale**: **PASS this round** (21.3)
+- **Fair Top-K reuse verification at scale**: **PASS** (21.3)
   -- batch tested, 480 combos, 120 groups, 0 violations (vs. round 11's 18
   groups) -- the strongest evidence yet that Top-K never regenerates the
   attack.
-- **No-fallback verification**: **PASS this round** (21.2) -- explicitly
+- **No-fallback verification**: **PASS** (21.2) -- explicitly
   checked (not assumed), 0/480 fallback occurrences across all 3 real
   backends.
-- **CW at scale**: **PASS this round** (21.4/21.6/21.7) -- previously only
+- **CW at scale**: **PASS** (21.4/21.6/21.7) -- previously only
   spot-tested; now run through the full batch pipeline (120 combos) with
   reproducibility confirmed.
-- **Defense recovery rate, attack × Top-K**: **PASS this round as a smoke
+- **Defense recovery rate, attack × Top-K**: **PASS as a smoke
   measurement** (21.6) -- real, moderately-powered (25-29 samples/cell)
   result reported honestly, including the CW-specific K-dependent trend;
   explicitly **not** a formally-powered evaluation.
-- **Multi-burst + max-energy compatibility**: **PASS this round,
+- **Multi-burst + max-energy compatibility**: **PASS,
   incidental** (21.8) -- confirmed via one 2-burst case; not a
   comprehensive re-validation of round 15's full case set.
-- **Full CLI parameter inventory**: **compiled this round** (21.9) --
+- **Full CLI parameter inventory**: **compiled** (21.9) --
   gaps documented explicitly per parameter, not glossed over.
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
-  STARTED** (unchanged, explicitly out of scope this round)
+  STARTED** (unchanged, explicitly out of scope)
 
 ## 22. Spectrum-sensing parameter revalidation after the alignment/preprocessing fixes (round 13)
 
@@ -3400,7 +3399,7 @@ below). **No other `src/` changes. No changes to
 ### 22.1 Pre-flight (Part 一, verified via code trace, not documentation)
 
 1. `git status`/`git log` confirmed clean tree at `160dc1f` before this
-   round started.
+   section's work started.
 2. Full CLI parameter inventory re-read directly from
    `src/utils/config.py:build_arg_parser` (41 `add_argument` calls) --
    confirmed current names/defaults/validation rules, not assumed from
@@ -3432,7 +3431,7 @@ sensing behavior, per explicit instruction), modulations `{QPSK, BPSK,
 QAM16}`, `dataset_snr {0, 18}`, `sample_index {0,1,2,3,4}` (**30 unique
 samples**), `seed=42`, `window_size=128`, `alignment_policy=max-energy`,
 `awn_preprocess=radioml-native` (both **explicitly** set, not relying on
-the source-aware default, so this round's intent is unambiguous
+the source-aware default, so this section's intent is unambiguous
 regardless of future default changes), `device=cpu`.
 
 ### 22.3 Stage A: `threshold-factor` ∈ {0.8, 1.0, 1.2, 1.5, 2.0, 3.0, 5.0}
@@ -3456,7 +3455,7 @@ of this data (using only each combo's first segment) showed a mean ratio
 of exactly `0.0` at `threshold_factor∈{0.8,1.0}`, which looked like
 max-energy alignment systematically failing. Investigating the raw
 `summary.csv` for one such combo revealed **this was a bug in this
-round's own analysis script, not the pipeline**: at low threshold, a
+section's own analysis script, not the pipeline**: at low threshold, a
 region spanning most of the 8192-sample stream gets detected (severe
 false-alarm fragmentation, consistent with section 16.4/18.4's prior
 finding), and `max-energy` -- correctly, per its one-segment-per-region
@@ -3467,9 +3466,9 @@ a false-alarm region) has `segment_captured_signal_ratio=0.0`; segment 1
 `segment_captured_signal_ratio=1.0` -- **the true burst WAS found
 correctly**; the pipeline's own aggregate,
 `mean_segment_captured_signal_ratio=0.5`, correctly averages both. This
-round's analysis script has been corrected to use that aggregate; the
+section's analysis script has been corrected to use that aggregate; the
 underlying pipeline CSV/denominator logic was verified correct throughout
-(this is also the direct answer to this round's Part 七 stop-condition
+(this is also the direct answer to this section's Part 七 stop-condition
 check on CSV/denominator correctness -- confirmed NOT triggered, the flaw
 was in a one-off analysis script, not `src/`).
 
@@ -3580,14 +3579,14 @@ not just structurally assumed).
   confirmed via `grep`, only reachable via direct `ExperimentConfig(...)`
   construction). Tested `{2048, 8192, 16384}` directly via the API -- all
   3 succeeded.
-- **E3 burst-start reproducibility**: covered by this round's general
+- **E3 burst-start reproducibility**: covered by this section's general
   reproducibility checks (22.8) -- `long_iq_sha256` (which encodes the
   burst's exact position, since the embedding function draws the position
   via the seeded RNG) was confirmed bit-identical across independent
   processes for multiple combos, including a fragmented-mask case and a
   multi-burst case.
 - **E4 single-burst vs. multi-burst mode**: **found and fixed a bug in
-  this round's own test script**, not the pipeline -- `num_bursts=1` is,
+  this section's own test script**, not the pipeline -- `num_bursts=1` is,
   by explicit design (section 15.1), ALWAYS the single-burst code path
   using the singular `dataset_mod`/`dataset_snr`/`sample_index` fields;
   `validate_experiment_config` correctly rejects an attempt to set
@@ -3624,7 +3623,7 @@ every derived metric): (1) the corrected multi-segment
 multi-burst case at `merge_gap=64` (`num_filtered_regions=1`,
 `n_segments=1` both runs). Combined with section 20/21's prior
 reproducibility checks (single-burst, multi-burst, real attack, CW), this
-round confirms determinism holds specifically for the FRAGMENTED-mask
+section confirms determinism holds specifically for the FRAGMENTED-mask
 multi-segment case and the merge-gap-driven region-merging case, neither
 previously checked.
 
@@ -3641,7 +3640,7 @@ previously checked.
   + 4 (stage E5) sensing failures are present in their stage's
   `batch_summary.csv`/`failures.csv`, and no batch run aborted early.
 - CSV field / denominator errors: NOT found in `src/` -- the one
-  discrepancy found (22.3) was in this round's own analysis script, fixed
+  discrepancy found (22.3) was in this section's own analysis script, fixed
   before reporting.
 - Core experiment definition change needed: no -- the one script bug
   found (22.7, E4) required fixing the TEST script's invalid parameter
@@ -3657,7 +3656,7 @@ planned.**
 | `threshold_factor` | **1.5** (current default), safe range `[1.2, 5.0]` | `≤1.0` produces multiple false-alarm segments per combo despite `run_status="ok"` -- would silently pollute a formal batch's aggregate statistics |
 | `sensing_window_size` | **128** (current default), `256` viable alternative | `16-64` marginally more precise (0.9989 vs 0.9852 ratio) but with a small (1/30) failure rate; `128`/`256` are 0-failure |
 | `min_region_len` | **0-128** all equivalent in this regime | Must stay below the actual detected-region length (~140-250 samples here) or every combo fails outright |
-| `merge_gap` | **Not a general-purpose default** -- depends entirely on desired inter-burst spacing behavior; this round confirmed the mechanism works correctly with `max-energy`, transition point is data-dependent (measured 36 samples for this specific 2-burst setup) | Only relevant to multi-burst mode |
+| `merge_gap` | **Not a general-purpose default** -- depends entirely on desired inter-burst spacing behavior; this validation confirmed the mechanism works correctly with `max-energy`, transition point is data-dependent (measured 36 samples for this specific 2-burst setup) | Only relevant to multi-burst mode |
 | `embed_snr_margin` | **≥5.0** (well above the current default of 20.0) | `1.0` reliably fails; `20.0` (current default) is comfortably within the stable range |
 
 ### 22.11 Documentation status labels (Part 八.2)
@@ -3675,11 +3674,11 @@ planned.**
   full sweep); single-vs-multi-burst structural comparison (one sample
   pair only).
 - **尚未驗證 (not yet validated)**: any of these sensing parameters
-  combined with real attack/Top-K in the loop simultaneously (this round
+  combined with real attack/Top-K in the loop simultaneously (this section
   deliberately excluded both); `threshold_factor`/`sensing_window_size`/
   `min_region_len` interaction effects beyond the OFAT design (no 2D/3D
-  grid this round); sensing parameters under `naive` alignment for
-  comparison (this round only tested `max-energy`, the new default).
+  grid in this section); sensing parameters under `naive` alignment for
+  comparison (this section only tested `max-energy`, the new default).
 - **程式錯誤 (genuine program errors)**: **0** across all 6 stages (A-E,
   552 total pipeline combos + 2 direct-API calls) -- the one `ValueError`
   encountered (E4) was a correctly-functioning validation rejecting an
@@ -3691,28 +3690,28 @@ planned.**
   extreme `embed_snr_margin`, or `burst_len=1`) -- none silently ignored,
   none forced to pass by adjusting parameters.
 
-### 22.12 Cross-reference to this round's required status labels
+### 22.12 Cross-reference to the required status labels
 
 - **`threshold-factor`/`sensing-window-size`/`min-region-len` OFAT
-  revalidation under `max-energy`/`radioml-native`**: **PASS this round**
+  revalidation under `max-energy`/`radioml-native`**: **PASS**
   (22.3-22.5) -- batch tested, 510 combos, 0 genuine errors, stable ranges
   identified and documented, one analysis-script error found and corrected
   transparently.
 - **`merge-gap` revalidation with real multi-region data under
-  `max-energy`**: **PASS this round** (22.6) -- first time tested with the
+  `max-energy`**: **PASS** (22.6) -- first time tested with the
   new alignment policy, calibrated (not guessed), exact predicted
   transition confirmed.
 - **Burst/stream parameter checks**: **PARTIAL** (22.7) -- targeted, not
   comprehensive; one test-script bug found and fixed.
-- **Reproducibility**: **PASS this round** (22.8) -- 2 new scenario types
+- **Reproducibility**: **PASS** (22.8) -- 2 new scenario types
   confirmed bit-identical.
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
-  STARTED** (unchanged, explicitly out of scope this round)
+  STARTED** (unchanged, explicitly out of scope)
 
 ## 23. Full-parameter coverage completion (round 14)
 
 New file: `experiments/run_parameter_coverage_completion.py`. **No `src/`
-changes -- no bugs were found this round.** No changes to
+changes -- no bugs were found in this section.** No changes to
 `external/AWN`/`external/adversarial-rf`.
 
 ### 23.1 Pre-flight
@@ -3810,8 +3809,8 @@ the original 7-combo sweep (`0.001→0.00083`, `0.01→0.00135`,
 - **`--checkpoint` invalid path**: confirmed a clear, non-silent fallback
   -- `AWNModelAdapter` correctly falls back to `dummy_awn_inference` with
   `status="fallback"` and a specific `FileNotFoundError` message recorded
-  in `notes` (not an undetectable substitution -- any of this session's
-  many "no fallback" checks would catch this).
+  in `notes` (not an undetectable substitution -- any of the many
+  "no fallback" checks documented here would catch this).
 - **`--device`**: `cpu` is the only real-backend-testable option in this
   environment -- `torch.cuda.is_available()` confirmed `False`. `cuda`
   remains untestable here, a genuine environment limitation, not a gap in
@@ -3825,7 +3824,7 @@ the original 7-combo sweep (`0.001→0.00083`, `0.01→0.00135`,
 - **`--attack-diagnostics`**: confirmed `attack_gradient_nonzero_count`/
   `attack_gradient_total_count`/`attack_gradient_maxabs` populate
   correctly when enabled (`256/256/0.644` for one BPSK segment).
-- **`--segment-hop > 1`** (never tested before this round): `hop∈{1,4,16}`
+- **`--segment-hop > 1`** (never tested before this section): `hop∈{1,4,16}`
   all ran successfully; `candidate_count` scales exactly as
   `(region_len-128)//hop+1` (`12→3→1`), `selected_segment_start` and
   `segment_captured_signal_ratio` shift only slightly, confirming
@@ -3841,7 +3840,7 @@ the original 7-combo sweep (`0.001→0.00083`, `0.01→0.00135`,
 
 Two independent processes (`AM-SSB/snr=-14/idx0`, `cw` attack + real
 Top-K `K=30` -- an extreme-negative-SNR, real-attack, real-defense
-combination never exercised before this round) -- identical
+combination never exercised before this section) -- identical
 `pred_clean/attacked/defended`, `iq_linf_clean_attacked`, and
 `long_iq_sha256`.
 
@@ -3863,31 +3862,31 @@ combination never exercised before this round) -- identical
   combos (stages A-E) plus ~15 direct-API checks (stage F). One
   apparent anomaly (23.6, CW steps) was investigated and confirmed to be
   correct, expected behavior, not a defect.
-- **合理的 sensing failure**: 0 this round (every combo, across the full
+- **合理的 sensing failure**: 0 in this section (every combo, across the full
   11-modulation × 20-SNR × 4-attack space tested, succeeded) -- this
-  round's fixed sensing parameters (`threshold_factor=1.5,
+  section's fixed sensing parameters (`threshold_factor=1.5,
   sensing_window_size=128, min_region_len=0, merge_gap=0`) are exactly
   section 22.10's recommended stable range, so no failures were expected
   or found.
 
-### 23.10 Cross-reference to this round's required status labels
+### 23.10 Cross-reference to the required status labels
 
-- **11-modulation × attack real-backend coverage**: **PASS this round**
+- **11-modulation × attack real-backend coverage**: **PASS**
   (23.2) -- was the single largest named gap, now closed.
-- **Full RadioML SNR range coverage**: **PASS this round** (23.3) -- all
+- **Full RadioML SNR range coverage**: **PASS** (23.3) -- all
   20 values, both sensing-only and with real attack.
-- **Top-K full/boundary range + illegal-value handling**: **PASS this
-  round** (23.4).
-- **`attack-eps` sweep through the batch pipeline**: **PASS this round**
+- **Top-K full/boundary range + illegal-value handling**: **PASS**
+  (23.4).
+- **`attack-eps` sweep through the batch pipeline**: **PASS**
   (23.5).
-- **CW knob variation**: **PASS this round** (23.6) -- including
+- **CW knob variation**: **PASS** (23.6) -- including
   investigating and correctly resolving an initially-suspicious pattern
   without either dismissing it or overreacting to it.
 - **Remaining flags** (`attack-temperature`, `attack-diagnostics`,
   `segment-hop`, `burst-power-scale-list`, `num-bursts=3`, checkpoint
-  error path): **PASS this round** (23.7).
+  error path): **PASS** (23.7).
 - **Formal full SNR × modulation × attack × eps × topk batch**: **NOT
-  STARTED** (unchanged, explicitly out of scope this round)
+  STARTED** (unchanged, explicitly out of scope)
 
 ---
 
@@ -3919,7 +3918,7 @@ writing the script), setting `awn_status`/`attack_status`/`topk_status`
 literally to `"ok"` (never `"fallback"` -- that word is reserved for when a
 *real* backend was requested but failed at runtime, see `TopKAdapter.apply()`
 and `AWNModelAdapter.__init__`, an intentionally distinct code path this
-round does not exercise). This script only calls that already-wired path;
+section does not exercise). This script only calls that already-wired path;
 `external/AWN` and `external/adversarial-rf` were not touched.
 
 4 required combos, each run **twice** (same `--seed 42`) to check
@@ -3964,7 +3963,7 @@ spot-checked here via direct `csv.DictReader` reads:
   anywhere in any of the 4 combos' output. This is the correct,
   intentional distinction from a *real*-backend run that fails at call
   time and falls back (which would show `topk_status="fallback"` per
-  `TopKAdapter.apply()`'s own logic, section 8) -- this round's combos
+  `TopKAdapter.apply()`'s own logic, section 8) -- this section's combos
   never requested a real backend in the first place, so there is nothing
   to "fall back" from; `pipeline.py`'s own dummy-path notes say so
   explicitly ("--use-real-awn not passed; using placeholder AWN inference
@@ -4011,19 +4010,19 @@ results/dummy_fallback_smoke/radioml_run1/     (combo0000=none, combo0001=fgsm; 
 results/dummy_fallback_smoke/radioml_run2/     (identical combos, reproducibility check)
 ```
 
-### 24.4 Explicitly not done this round
+### 24.4 Explicitly not done in this section
 
-- No algorithm code was modified (per explicit instruction) -- this round
+- No algorithm code was modified (per explicit instruction) -- this section
   is pure verification of an already-wired path.
 - Does not test the *runtime-failure* fallback path (a real backend
   requested via `--use-real-*` that then fails mid-call and falls back
   with `status="fallback"`) -- that is a different, already-separately-
   documented code path (section 8's `topk=Inf`/`topk=NaN` findings, and
   round 14's invalid-checkpoint direct-API check, CSV row
-  `coverage_remaining_flags`). This round only covers the **intentional**
+  `coverage_remaining_flags`). This section only covers the **intentional**
   dummy path (`--use-real-*` never requested at all).
 - Does not re-run any of the 199/480/132-combo real-backend batches --
-  none needed re-verification; this round is additive, not corrective.
+  none needed re-verification; this section is additive, not corrective.
 - Formal full SNR × modulation × attack × eps × topk batch: still **NOT
   STARTED**, unchanged, still explicitly out of scope.
 

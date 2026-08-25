@@ -234,8 +234,8 @@ streaming/live deployment would need.**
 
 ## 9. Next-stage minimum implementation order, with a verification condition per step
 
-**Nothing below was implemented this round.** Each step lists what would
-need to be true before moving to the next one, so a future round can
+**Nothing below has been implemented.** Each step lists what would
+need to be true before moving to the next one, so a future revision can
 actually check rather than assume:
 
 1. **Wire `.cfile` into `run_full_experiment.py`** (section 7's concrete
@@ -280,7 +280,7 @@ actually check rather than assume:
 
 ---
 
-## 10. A candidate, scoped, ~30-minute gap -- proposed, NOT implemented this round
+## 10. A candidate, scoped, ~30-minute gap -- proposed, not yet implemented
 
 **Candidate** (unchanged from step 1 above, restated concretely): wire
 `iq_source="cfile"` into `ExperimentConfig` + `run_dry_run_experiment` +
@@ -314,7 +314,7 @@ checking `run_status=="ok"` and a real `awn_backend` string) -- no
 
 **This closes only step 1 of section 9's seven-step order** -- it does
 **not**, by itself, make any "ready for a real board" claim true; steps
-2-7 remain entirely open. **Not implemented this round.**
+2-7 remain entirely open. **Not yet implemented.**
 
 ---
 

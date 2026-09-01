@@ -115,6 +115,23 @@
 - **省掉功率計（省 ~US$400）**：用 RX SDR 自己量收到的功率反推 achieved PSR（`achieved_psr_db` 本來就這樣算）。
 - **不能省的**：位元深度。Tier 1 用 12-bit Pluto，必須把量化底噪當強制校準項（見 2.0）。若要移除量化混淆，RX 升 14-bit N210（+~US$1,700）。
 
+### 2.2 針對本 pipeline 的推薦：TX 省、RX 花
+
+完整目標是「RML replay → adversarial 注入 → 過硬體 → RX → sensing → segmentation → AMC → **adaptive-K Top-K 防禦**」。整條 pipeline **全跑在 RX 收到的 IQ 上** → RX 品質決定下游一切；TX 端擾動可事前數位驗證，Pluto 就夠。**所以錢花在 RX，不是 TX。**
+
+**新增的選型理由：adaptive-K 是頻域防禦。** 它挑 top-K 個 FFT bin；而 **Pluto 的 DC offset / LO 洩漏會在 DC bin 造出強假峰 → 被 Top-K 選中 → 污染防禦評估**（防禦到底在去攻擊，還是去你自家 spur？）。USRP（尤其 N210）DC 校準好、相位雜訊低、spur 少 → FFT 底乾淨、adaptive-K 結果才可信。這比 AMC 或攻擊單獨考量時，更強烈要求一台乾淨的 RX。
+
+| 配置 | 組成 | 花費 | 判定 |
+|---|---|---|---|
+| **預算地板** | 3× PlutoSDR | ~US$850 | ⚠️ 可跑，但必須軟體 notch DC + 校準量化 + 特徵化 spur，否則 Top-K 被 DC 假峰污染；confound 最多 |
+| **推薦（平衡）** | 2× Pluto（TX：合法+攻擊）+ 1× USRP B210（RX） | ~US$2,000 | ✅ 獨立 CFO；B210 RX 相位雜訊/DC/spur 遠優於 Pluto、有 UHD 時戳；仍 12-bit → 量化當校準項揭露 |
+| **乾淨科學** | 2× Pluto（TX）+ 1× USRP N210（RX, 14-bit） | ~US$2,200 | ⭐ 同時移除量化 confound + 最乾淨 FFT 底 → adaptive-K 最站得住；審稿人質疑防禦評估時的最佳解 |
+
+**推薦：2× PlutoSDR（TX）+ 1× USRP（RX）**，RX 有預算直接上 N210（14-bit），沒有就 B210。理由：
+- **TX 用 Pluto** —— 擾動可事前數位驗證，只是一跳，不必花錢。
+- **RX 用 USRP** —— (a) 弱擾動在此重建給 AMC（bit 深度）、(b) **adaptive-K 的 FFT top-K 在此跑，最怕 DC 假峰/spur（Pluto 最弱處）**、(c) achieved PSR 在此量。
+- 預算卡死 → 3× Pluto 也能做，但報告需明講已控制三件事：**DC notch、量化底噪校準、spur 特徵化**，否則 adaptive-K 的 recover 會被質疑是去了硬體假峰而非攻擊。
+
 ---
 
 ## 3. 省錢階梯 — 這是最省的嗎？

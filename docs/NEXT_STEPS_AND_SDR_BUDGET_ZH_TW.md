@@ -174,6 +174,49 @@ RML2016 的一個 sample 就是 `[2,128]` 的**基頻複數 IQ**（128 個複數
 
 ---
 
+## 5. 相關工作、硬體選擇與定位
+
+### 5.1 三層相關工作 — 我們的 gap 在哪
+
+| 層 | 有沒有人做 | 代表工作 |
+|---|---|---|
+| **(a) 用真實 SDR 打調變訊號做 OTA AMC** | ✅ 成熟、走爛的路 | DeepSig 2018 OTA 版（USRP 發射再錄回）；CNN-LSTM OTA AMC using SDR（arXiv 2511.21040, 2025） |
+| **(b) 對 AMC 的 OTA adversarial 攻擊** | 🟡 熱門，但多半只「建模通道」（Rayleigh + path loss），非真發射 | Kim/Sagduyu/Davaslioglu/Erpek/Ulukus 系列（arXiv 2002.02400、2005.05321、2007.16204） |
+| **(c) 硬體在環：adversarial 擾動撐過真實 DAC 量化 + literal RML replay** | 🔴 幾乎沒人做 ← **我們的貢獻位置** | RadioShock、Robust Adversarial Attacks（arXiv 2102.00918）較接近，但少；未見 byte-for-byte replay RML2016.10a 過硬體 |
+
+> **定位一句話**：(a) 成熟、(b) 多半只模擬通道、(c) 真的驗證擾動撐過實體量化幾乎沒人做 → 前面談的 12-bit 量化、resample、對齊，正是別人跳過、我們正面處理的 gap。
+
+**References**
+- Kim et al., *Over-the-Air Adversarial Attacks on Deep Learning Based Modulation Classifier over Wireless Channels*, CISS 2020 — arXiv:2002.02400
+- Kim et al., *Channel-Aware Adversarial Attacks Against Deep Learning-Based Wireless Signal Classifiers* — arXiv:2005.05321
+- Kim et al., *Adversarial Attacks with Multiple Antennas Against Deep Learning-Based Modulation Classifiers* — arXiv:2007.16204
+- *Robust Adversarial Attacks Against DNN-Based Wireless Communication Systems* — arXiv:2102.00918
+- *CNN-LSTM Hybrid Architecture for Over-the-Air AMC Using SDR* — arXiv:2511.21040
+- RadioML 2016.10a（DeepSig，O'Shea & West, GRCon 2016）— Zenodo: zenodo.org/records/18397070
+
+> 註：以上為 2026-09 查得之文獻，正式引用前請再核對標題/年份/出處。
+
+### 5.2 為什麼學界多用 USRP —— 不是 bit，是生態
+
+常見誤解是「因為 ADC/DAC bit 和取樣率限制才用 USRP」。**最強反證：DeepSig 與多數人用的入門款 USRP B210 也才 12-bit，跟 Pluto 一樣。** 若純為 bit 就不會選 B210。真正主因依重要性排：
+
+| 原因 | 說明 | Pluto |
+|---|---|---|
+| **1. 同步生態系** | 10 MHz / PPS、OctoClock、GPSDO、MIMO、多通道相干 | ❌ 原生沒有（OTA/可重現的命脈） |
+| **2. UHD 驅動 + 時戳成熟度** | sample-accurate timestamp、timed commands | ⚠️ libiio 較陽春 |
+| **3. 校準 + 振盪器品質** | 出廠校準、配 GPSDO 頻率準、相位雜訊低 | ⚠️ TCXO ±25 ppm |
+| **4. 可重現性 / 引用慣例** | 審稿人信任、路徑依賴 | — |
+| **5. 取樣率範圍 + 瞬時頻寬** | X310 到 100 MHz、可經 DDC 下探 kSa/s | ⚠️ ~520 kHz–56 MHz |
+| **6. ADC/DAC 位元深度** | N210/X310 為 14–16 bit（B210 仍 12-bit） | ❌ 12-bit（ENOB ~10–11） |
+
+**位元深度排在最後**：只有跳到 N210/X310 高階才有差，入門 B210 沒贏 Pluto 這點。大部分人選 USRP 是為了 1–4 項（同步、時戳、校準、可重現），不是 bit。
+
+**但對本專案，bit 深度剛好是少數真重要的地方**：一般 AMC 訊號夠強、遠高於底噪，不在乎那 2 bit；而我們的核心是**弱 adversarial 擾動要撐過量化**，這正是 14-bit 有意義的少數場景。因此：
+- 只做 cabled、短時間、軟體對齊 → **Pluto 就能滿足**大家用 USRP 的那些理由（同步可省）。
+- 想「乾淨分離通道 vs 量化」→ 才把 **RX 升 14-bit N210**，且只當 robustness 附錄，其餘維持 Pluto。
+
+---
+
 ## 一句話結論
 
 > 最省 = **先問實驗室有沒有現成 SDR**：有的話只花被動件 ~NT$5k；完全沒有、又要保留「攻擊者獨立 CFO」這個真實條件，硬體地板是 **2 台 PlutoSDR ≈ US$610 / NT$20k**。工作面主打 **B 對齊 ablation、A 的 G1–G5 曲線、C 的 adaptive attack 繞過 Top-K**。

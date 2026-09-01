@@ -199,14 +199,19 @@ RML2016 的一個 sample 就是 `[2,128]` 的**基頻複數 IQ**（128 個複數
 |---|---|---|
 | **(a) 用真實 SDR 打調變訊號做 OTA AMC** | ✅ 成熟、走爛的路 | DeepSig 2018 OTA 版（USRP 發射再錄回）；CNN-LSTM OTA AMC using SDR（arXiv 2511.21040, 2025） |
 | **(b) 對 AMC 的 OTA adversarial 攻擊** | 🟡 熱門，但多半只「建模通道」（Rayleigh + path loss），非真發射 | Kim/Sagduyu/Davaslioglu/Erpek/Ulukus 系列（arXiv 2002.02400、2005.05321、2007.16204） |
-| **(c) 硬體在環：adversarial 擾動撐過真實 DAC 量化 + literal RML replay** | 🔴 幾乎沒人做 ← **我們的貢獻位置** | RadioShock、Robust Adversarial Attacks（arXiv 2102.00918）較接近，但少；未見 byte-for-byte replay RML2016.10a 過硬體 |
+| **(b′) 竊聽/感測式攻擊者（先竊聽推斷 → 再過空中攻擊）** | ✅ **已做、還上過真硬體 USRP N210** | Shi/Sagduyu spectrum data poisoning（arXiv 1901.09247、1911.00500）；即時版 arXiv 2202.11197、IEEE 10074421 |
+| **(c) 硬體在環：擾動撐過真實 DAC 量化 + literal RML replay + adaptive-K 防禦評估** | 🔴 幾乎沒人做 ← **我們的貢獻位置** | RadioShock、Robust Adversarial Attacks（arXiv 2102.00918）較接近，但少；未見 byte-for-byte replay RML2016.10a 過硬體、也少見在感測式 OTA 攻擊者下評估頻域 adaptive-K 防禦的 recover |
 
-> **定位一句話**：(a) 成熟、(b) 多半只模擬通道、(c) 真的驗證擾動撐過實體量化幾乎沒人做 → 前面談的 12-bit 量化、resample、對齊，正是別人跳過、我們正面處理的 gap。
+> **定位一句話（已修正）**：竊聽→攻擊本身 **(b′) 別人做過、還上過 USRP N210 硬體，不是我們的新意**。我們的 gap 應移到 **(c) 防禦側** —— 「在感測式/竊聽式 OTA 攻擊者下，literal RML replay + **adaptive-K Top-K 防禦到底 recover 多少、什麼條件下失效**，並正面處理 12-bit 量化 / resample / DC 假峰等硬體真實性」。故事定位：**不是宣稱發明攻擊，而是把一個已知的真實攻擊拿來壓測我們的防禦。**
 
 **References**
 - Kim et al., *Over-the-Air Adversarial Attacks on Deep Learning Based Modulation Classifier over Wireless Channels*, CISS 2020 — arXiv:2002.02400
 - Kim et al., *Channel-Aware Adversarial Attacks Against Deep Learning-Based Wireless Signal Classifiers* — arXiv:2005.05321
 - Kim et al., *Adversarial Attacks with Multiple Antennas Against Deep Learning-Based Modulation Classifiers* — arXiv:2007.16204
+- Shi, Sagduyu, Davaslioglu, Li, *Spectrum Data Poisoning with Adversarial Deep Learning* — arXiv:1901.09247（竊聽/感測式攻擊者，USRP N210 硬體）
+- *Adversarial Deep Learning for Over-the-Air Spectrum Poisoning Attacks* — arXiv:1911.00500
+- *Real-time Over-the-air Adversarial Perturbations for Digital Communications* — arXiv:2202.11197
+- *Implementation of Real-Time Adversarial Attacks on DNN-based Modulation Classifier* — IEEE Xplore doc 10074421
 - *Robust Adversarial Attacks Against DNN-Based Wireless Communication Systems* — arXiv:2102.00918
 - *CNN-LSTM Hybrid Architecture for Over-the-Air AMC Using SDR* — arXiv:2511.21040
 - RadioML 2016.10a（DeepSig，O'Shea & West, GRCon 2016）— Zenodo: zenodo.org/records/18397070

@@ -108,6 +108,45 @@ Tier 1 還不是地板。真正最省有四階，但**每往下省一階，就�
 
 ---
 
+## 4. TX/RX 可行性：RML 與 adversarial 訊號能否用 PlutoSDR 完整收發
+
+這藏了兩個要分開回答的子問題：**「打得出來嗎」→ 可以**、**「完整送到嗎」→ 不會 bit-exact，而且這正是 Stage 3 要驗的重點**。
+
+### 4.1 打得出來嗎？ → 可以
+
+RML2016 的一個 sample 就是 `[2,128]` 的**基頻複數 IQ**（128 個複數點），adversarial 擾動也是同樣的基頻 IQ。PlutoSDR 的 TX 就是把任意複數 IQ 灌進 DAC，所以：
+
+- RML burst：可直接當 TX 波形送出。
+- 乾淨訊號 + adversarial 擾動疊加（對應 `inject_additive_waveform` 的輸出）：也是一段 IQ，一樣送得出去。
+
+### 4.2 完整送到嗎？ → 不會逐點一致，且要分兩種失真
+
+過真實 TX→線纜/空中→RX，收到的 IQ **一定不等於**發出去的。差異分兩類，意義完全不同：
+
+**(A) 你「想要」的損傷 —— 這正是用硬體不用純模擬的理由**
+- CFO（Pluto 各自振盪器不同步）、gain error、timing jitter、相位雜訊。
+- 這些就是威脅模型要驗的東西（`normalized_cfo` / `gain_error_db` 模擬的就是它）。收到的不一樣，是特意要的。
+
+**(B) 你「不想要」的破壞 —— 可能直接殺掉 adversarial 擾動**
+- **12-bit 量化**：Pluto DAC/ADC 只有 12 bit，擾動若小於約 1 LSB → 消失。adversarial 擾動常很小很脆弱，這是最大風險。
+- **LO 洩漏 / DC offset**：中心頻率有載波洩漏，burst 在 DC 附近會被污染 → 一定要偏頻發射。
+- **PA 非線性、AGC、重採樣**：都會改變波形與絕對振幅。
+
+> **所以「adversarial 攻擊在真實 RF 下還有沒有效」不是已知前提，而是 Stage 3 要回答的問題本身。** 數位模擬 100% 成功，過真實鏈路可能掉很多 —— 這正是有科學價值的地方。
+
+### 4.3 要「確實送到」必須先處理的坑
+
+| 項目 | 為什麼 |
+|---|---|
+| **重採樣到 Pluto 速率** | RML 是 200 kHz 取樣；Pluto 最低約 520 kSPS → 必須 resample |
+| **偏頻發射（別放在 DC）** | 避開 LO 洩漏污染 burst |
+| **檢查擾動 ≥ 12-bit LSB** | 否則量化直接吃掉攻擊 |
+| **振幅校準到 RadioML 慣例** | `radioml-native` 前處理**不做 rescale** → 硬體 AGC/gain 改了絕對振幅就會讓 AMC 輸入分布飄掉 |
+| **128 樣本太短 → 加 preamble / 迴圈** | RX 端要能偵測、對齊這段 burst（回到對齊問題 B） |
+| **用 RX 量到的功率反推 achieved PSR** | 對照 `achieved_psr_db`，確認真的打到目標 PSR |
+
+---
+
 ## 一句話結論
 
 > 最省 = **先問實驗室有沒有現成 SDR**：有的話只花被動件 ~NT$5k；完全沒有、又要保留「攻擊者獨立 CFO」這個真實條件，硬體地板是 **2 台 PlutoSDR ≈ US$610 / NT$20k**。工作面主打 **B 對齊 ablation、A 的 G1–G5 曲線、C 的 adaptive attack 繞過 Top-K**。

@@ -1,0 +1,289 @@
+{
+  "clean": {
+    "n": 2200,
+    "cpu_correct": 1298,
+    "npu_correct": 1202,
+    "cpu_acc_pct": 59.0,
+    "npu_acc_pct": 54.63636363636363,
+    "diff_pp": -4.363636363636367,
+    "agree": 1996,
+    "agreement_pct": 90.72727272727273,
+    "both_correct": 1172,
+    "cpu_only": 126,
+    "npu_only": 30,
+    "both_wrong": 872,
+    "mcnemar_exact_p": 3.3909644797850766e-15
+  },
+  "phase_a_clean_comparison_keys": [
+    "accuracy_diff_pp_npu_minus_cpu",
+    "both_correct",
+    "both_wrong",
+    "cpu_clean_accuracy_pct",
+    "cpu_correct_npu_wrong",
+    "cpu_wrong_npu_correct",
+    "disagreement_count",
+    "n",
+    "npu_clean_accuracy_pct",
+    "prediction_agreement_count",
+    "prediction_agreement_pct"
+  ],
+  "pipeline_residual_ms": {
+    "CPU": {
+      "attack_mean": 0.1605356599834188,
+      "attack_max": 0.33435300065320916,
+      "defense_mean": 0.04004987537098221,
+      "defense_max": 0.7802079962857533
+    },
+    "NPU": {
+      "attack_mean": 0.1491684177203227,
+      "attack_max": 0.4320349980844185,
+      "defense_mean": 0.029415635489857754,
+      "defense_max": 0.10518100043555023
+    }
+  },
+  "latency_crosscheck_max_rel_err": 9.81765778540357e-16,
+  "gfsk_to_wbfm_clean": {
+    "CPU": 5,
+    "NPU": 62
+  },
+  "topk_top4_pred_share_pct": {
+    "CPU_K10": 86.68181818181819,
+    "CPU_K20": 65.4090909090909,
+    "CPU_K30": 53.36363636363636,
+    "CPU_K40": 59.68181818181818,
+    "NPU_K10": 86.45454545454545,
+    "NPU_K20": 67.95454545454545,
+    "NPU_K30": 54.77272727272727,
+    "NPU_K40": 57.45454545454545
+  },
+  "recovered_share_qam64_pam4_amdsb_pct": {
+    "CPU_K10": 79.0994504520475,
+    "CPU_K20": 61.112117370041666,
+    "CPU_K30": 51.28523311469597,
+    "CPU_K40": 44.811237928007024,
+    "NPU_K10": 86.7816091954023,
+    "NPU_K20": 65.90589887640449,
+    "NPU_K30": 51.491053677932406,
+    "NPU_K40": 42.311365807067816
+  },
+  "amdsb_identical_inputs": {
+    "n_rows": 1936,
+    "cpu_attacked_pred_wbfm_pct": 73.19214876033058,
+    "npu_attacked_pred_wbfm_pct": 2.479338842975207,
+    "cpu_attacked_pred_amdsb_pct": 20.764462809917354,
+    "npu_attacked_pred_amdsb_pct": 92.87190082644628
+  },
+  "clean_acc_excl_gfsk_pct": {
+    "CPU": 58.050000000000004,
+    "NPU": 56.45
+  },
+  "pooled_asr_all24_pct": {
+    "CPU": 67.19632768361582,
+    "NPU": 51.65002773155852
+  },
+  "attack_zero_success_profiles": {
+    "CPU": [],
+    "NPU": []
+  },
+  "defense_undefined_recovery_rows": 0,
+  "adv_identical_all_profiles": [
+    "fgsm/eps0.005",
+    "fgsm/eps0.01",
+    "fgsm/eps0.03",
+    "fgsm/eps0.05",
+    "bim/eps0.03_default",
+    "mifgsm/eps0.03_default",
+    "difgsm/eps0.03_default",
+    "cw/c1_steps20_lr0.01",
+    "deepfool/package_default",
+    "fab/eps0.005",
+    "fab/eps0.01",
+    "fab/eps0.03",
+    "square/eps0.03_default",
+    "apgd/eps0.03_default",
+    "apgdt/eps0.03_default",
+    "ead/package_default"
+  ],
+  "adv_not_identical_profiles": [
+    "pgd/eps0.005",
+    "pgd/eps0.01",
+    "pgd/eps0.03",
+    "vmifgsm/eps0.03_default",
+    "vnifgsm/eps0.03_default",
+    "rfgsm/eps0.03_default",
+    "tpgd/eps0.03_default",
+    "autoattack/eps0.03_standard"
+  ],
+  "clean_topk": [
+    {
+      "backend": "CPU",
+      "topk": 10,
+      "n": 2200,
+      "n_clean_correct": 1298,
+      "clean_topk_acc_pct": 27.0,
+      "clean_acc_pct": 59.0,
+      "n_clean_degraded": 822,
+      "clean_degradation_pct": 63.32819722650231,
+      "n_clean_improved": 118,
+      "acc_change_pp": -32.0
+    },
+    {
+      "backend": "CPU",
+      "topk": 20,
+      "n": 2200,
+      "n_clean_correct": 1298,
+      "clean_topk_acc_pct": 45.54545454545455,
+      "clean_acc_pct": 59.0,
+      "n_clean_degraded": 426,
+      "clean_degradation_pct": 32.81972265023113,
+      "n_clean_improved": 130,
+      "acc_change_pp": -13.454545454545453
+    },
+    {
+      "backend": "CPU",
+      "topk": 30,
+      "n": 2200,
+      "n_clean_correct": 1298,
+      "clean_topk_acc_pct": 50.04545454545455,
+      "clean_acc_pct": 59.0,
+      "n_clean_degraded": 307,
+      "clean_degradation_pct": 23.651771956856702,
+      "n_clean_improved": 110,
+      "acc_change_pp": -8.954545454545453
+    },
+    {
+      "backend": "CPU",
+      "topk": 40,
+      "n": 2200,
+      "n_clean_correct": 1298,
+      "clean_topk_acc_pct": 55.04545454545454,
+      "clean_acc_pct": 59.0,
+      "n_clean_degraded": 165,
+      "clean_degradation_pct": 12.711864406779661,
+      "n_clean_improved": 78,
+      "acc_change_pp": -3.9545454545454604
+    },
+    {
+      "backend": "NPU",
+      "topk": 10,
+      "n": 2200,
+      "n_clean_correct": 1202,
+      "clean_topk_acc_pct": 24.227272727272727,
+      "clean_acc_pct": 54.63636363636364,
+      "n_clean_degraded": 793,
+      "clean_degradation_pct": 65.97337770382696,
+      "n_clean_improved": 124,
+      "acc_change_pp": -30.409090909090914
+    },
+    {
+      "backend": "NPU",
+      "topk": 20,
+      "n": 2200,
+      "n_clean_correct": 1202,
+      "clean_topk_acc_pct": 43.0,
+      "clean_acc_pct": 54.63636363636364,
+      "n_clean_degraded": 401,
+      "clean_degradation_pct": 33.36106489184692,
+      "n_clean_improved": 145,
+      "acc_change_pp": -11.63636363636364
+    },
+    {
+      "backend": "NPU",
+      "topk": 30,
+      "n": 2200,
+      "n_clean_correct": 1202,
+      "clean_topk_acc_pct": 46.77272727272727,
+      "clean_acc_pct": 54.63636363636364,
+      "n_clean_degraded": 296,
+      "clean_degradation_pct": 24.625623960066555,
+      "n_clean_improved": 123,
+      "acc_change_pp": -7.863636363636367
+    },
+    {
+      "backend": "NPU",
+      "topk": 40,
+      "n": 2200,
+      "n_clean_correct": 1202,
+      "clean_topk_acc_pct": 51.68181818181819,
+      "clean_acc_pct": 54.63636363636364,
+      "n_clean_degraded": 159,
+      "clean_degradation_pct": 13.227953410981698,
+      "n_clean_improved": 94,
+      "acc_change_pp": -2.9545454545454533
+    }
+  ],
+  "pooled_defense": [
+    {
+      "backend": "CPU",
+      "topk": 10,
+      "recovery_pct": 26.94788133569006,
+      "clean_degradation_pct": 63.32819722650231,
+      "retention_pct": 30.903312788906007,
+      "retention_nodef_pct": 32.80367231638418,
+      "retention_gain_pp": -1.900359527478173
+    },
+    {
+      "backend": "CPU",
+      "topk": 20,
+      "recovery_pct": 26.374623799742036,
+      "clean_degradation_pct": 32.81972265023113,
+      "retention_pct": 43.41294298921417,
+      "retention_nodef_pct": 32.80367231638418,
+      "retention_gain_pp": 10.609270672829993
+    },
+    {
+      "backend": "CPU",
+      "topk": 30,
+      "recovery_pct": 26.94788133569006,
+      "clean_degradation_pct": 23.651771956856702,
+      "retention_pct": 46.14149974319466,
+      "retention_nodef_pct": 32.80367231638418,
+      "retention_gain_pp": 13.337827426810478
+    },
+    {
+      "backend": "CPU",
+      "topk": 40,
+      "recovery_pct": 27.20584722686667,
+      "clean_degradation_pct": 12.711864406779661,
+      "retention_pct": 48.725603492552644,
+      "retention_nodef_pct": 32.80367231638418,
+      "retention_gain_pp": 15.921931176168464
+    },
+    {
+      "backend": "NPU",
+      "topk": 10,
+      "recovery_pct": 22.18791946308725,
+      "clean_degradation_pct": 65.97337770382696,
+      "retention_pct": 32.62617859123683,
+      "retention_nodef_pct": 48.34997226844149,
+      "retention_gain_pp": -15.723793677204661
+    },
+    {
+      "backend": "NPU",
+      "topk": 20,
+      "recovery_pct": 19.114093959731544,
+      "clean_degradation_pct": 33.36106489184692,
+      "retention_pct": 46.21810870770937,
+      "retention_nodef_pct": 48.34997226844149,
+      "retention_gain_pp": -2.1318635607321212
+    },
+    {
+      "backend": "NPU",
+      "topk": 30,
+      "recovery_pct": 20.255033557046982,
+      "clean_degradation_pct": 24.625623960066555,
+      "retention_pct": 49.642956184137546,
+      "retention_nodef_pct": 48.34997226844149,
+      "retention_gain_pp": 1.2929839156960554
+    },
+    {
+      "backend": "NPU",
+      "topk": 40,
+      "recovery_pct": 21.080536912751676,
+      "clean_degradation_pct": 13.227953410981696,
+      "retention_pct": 53.17872989462008,
+      "retention_nodef_pct": 48.34997226844149,
+      "retention_gain_pp": 4.828757626178593
+    }
+  ]
+}

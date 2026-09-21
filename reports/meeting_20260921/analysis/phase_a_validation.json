@@ -1,0 +1,856 @@
+{
+  "verdict": "FORMAL DATA VALIDATION: PASS",
+  "n_checks": 113,
+  "n_mandatory_failed": 0,
+  "n_informational_failed": 0,
+  "checks": [
+    {
+      "id": "A1.NPU.base_rows",
+      "name": "NPU base rows == 2200",
+      "pass": true,
+      "detail": "observed 2200",
+      "mandatory": true
+    },
+    {
+      "id": "A1.NPU.attack_rows",
+      "name": "NPU attack rows == 52800",
+      "pass": true,
+      "detail": "observed 52800",
+      "mandatory": true
+    },
+    {
+      "id": "A1.NPU.defense_rows",
+      "name": "NPU defense rows == 211200",
+      "pass": true,
+      "detail": "observed 211200",
+      "mandatory": true
+    },
+    {
+      "id": "A1.NPU.manifest_counts",
+      "name": "NPU manifest completed_* rows match expected",
+      "pass": true,
+      "detail": "manifest completed=(2200,52800,211200) run_status=complete",
+      "mandatory": true
+    },
+    {
+      "id": "A1.NPU.summary_counts",
+      "name": "NPU summary.json counts match CSV row counts",
+      "pass": true,
+      "detail": "summary counts={'base_rows': 2200, 'attack_rows': 52800, 'defense_rows': 211200}",
+      "mandatory": true
+    },
+    {
+      "id": "A2.NPU.config_grid",
+      "name": "NPU manifest config grid matches expected",
+      "pass": true,
+      "detail": "n_mod=11 n_snr=20 n_idx=10 topk=[10, 20, 30, 40] profiles=24",
+      "mandatory": true
+    },
+    {
+      "id": "A2.NPU.profile_count",
+      "name": "NPU manifest lists 24 unique attack profiles",
+      "pass": true,
+      "detail": "24 listed",
+      "mandatory": true
+    },
+    {
+      "id": "A2.NPU.base_keys",
+      "name": "NPU base key set == 11x20x10 grid",
+      "pass": true,
+      "detail": "missing=0 unexpected=0",
+      "mandatory": true
+    },
+    {
+      "id": "A2.NPU.attack_keys",
+      "name": "NPU attack key set == base grid x 24 profiles",
+      "pass": true,
+      "detail": "missing=0 unexpected=0",
+      "mandatory": true
+    },
+    {
+      "id": "A2.NPU.defense_keys",
+      "name": "NPU defense key set == attack grid x TopK{10,20,30,40}",
+      "pass": true,
+      "detail": "missing=0 unexpected=0",
+      "mandatory": true
+    },
+    {
+      "id": "A2.NPU.samples_per_cell",
+      "name": "NPU 10 samples per modulation x SNR cell",
+      "pass": true,
+      "detail": "cells=220 min=10 max=10",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.base_dup",
+      "name": "NPU base duplicate keys / duplicate rows = 0",
+      "pass": true,
+      "detail": "dup_keys=0 dup_rows=0",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.base_nan",
+      "name": "NPU base NaN only in structurally-empty columns",
+      "pass": true,
+      "detail": "NaN columns={'missed_signal_samples': 2200, 'false_occupied_samples': 2200}; unexpected={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.base_inf",
+      "name": "NPU base Inf = 0",
+      "pass": true,
+      "detail": "Inf columns={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.base_bool",
+      "name": "NPU base boolean columns strictly True/False",
+      "pass": true,
+      "detail": "dtypes={'clean_correct': 'bool'}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.base_status",
+      "name": "NPU base status columns all 'ok'",
+      "pass": true,
+      "detail": "non-ok counts={'run_status': 0}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.base.hilo_backend",
+      "name": "NPU base.hilo_backend: single expected backend, no dummy/fallback",
+      "pass": true,
+      "detail": "values=['Hailo-8:awn_2016_10a_c5.hef']",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.base_strings",
+      "name": "NPU base no dummy/fallback/error text in string columns",
+      "pass": true,
+      "detail": "hits={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.attack_dup",
+      "name": "NPU attack duplicate keys / duplicate rows = 0",
+      "pass": true,
+      "detail": "dup_keys=0 dup_rows=0",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.attack_nan",
+      "name": "NPU attack NaN = 0",
+      "pass": true,
+      "detail": "NaN columns={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.attack_inf",
+      "name": "NPU attack Inf = 0",
+      "pass": true,
+      "detail": "Inf columns={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.attack_bool",
+      "name": "NPU attack boolean columns strictly True/False",
+      "pass": true,
+      "detail": "dtypes={'clean_correct': 'bool', 'attacked_correct': 'bool', 'attack_success': 'bool'}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.attack_status",
+      "name": "NPU attack status columns all 'ok'",
+      "pass": true,
+      "detail": "non-ok counts={'attack_status': 0, 'run_status': 0}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.attack.attack_backend",
+      "name": "NPU attack.attack_backend: single expected backend, no dummy/fallback",
+      "pass": true,
+      "detail": "values=['external/adversarial-rf/util/adv_attack.py:Model01Wrapper + torchattacks']",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.attack.hilo_backend",
+      "name": "NPU attack.hilo_backend: single expected backend, no dummy/fallback",
+      "pass": true,
+      "detail": "values=['Hailo-8:awn_2016_10a_c5.hef']",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.attack_strings",
+      "name": "NPU attack no dummy/fallback/error text in string columns",
+      "pass": true,
+      "detail": "hits={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.defense_dup",
+      "name": "NPU defense duplicate keys / duplicate rows = 0",
+      "pass": true,
+      "detail": "dup_keys=0 dup_rows=0",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.defense_nan",
+      "name": "NPU defense NaN = 0",
+      "pass": true,
+      "detail": "NaN columns={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.defense_inf",
+      "name": "NPU defense Inf = 0",
+      "pass": true,
+      "detail": "Inf columns={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.defense_bool",
+      "name": "NPU defense boolean columns strictly True/False",
+      "pass": true,
+      "detail": "dtypes={'clean_correct': 'bool', 'attacked_correct': 'bool', 'attack_success': 'bool', 'clean_topk_correct': 'bool', 'clean_degraded': 'bool', 'defended_correct': 'bool', 'recovered': 'bool'}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.defense_status",
+      "name": "NPU defense status columns all 'ok'",
+      "pass": true,
+      "detail": "non-ok counts={'topk_status': 0, 'run_status': 0}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.defense.topk_backend",
+      "name": "NPU defense.topk_backend: single expected backend, no dummy/fallback",
+      "pass": true,
+      "detail": "values=['external/adversarial-rf/util/defense.py:fft_topk_denoise']",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.defense.hilo_backend",
+      "name": "NPU defense.hilo_backend: single expected backend, no dummy/fallback",
+      "pass": true,
+      "detail": "values=['Hailo-8:awn_2016_10a_c5.hef']",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.defense_strings",
+      "name": "NPU defense no dummy/fallback/error text in string columns",
+      "pass": true,
+      "detail": "hits={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.latency_positive",
+      "name": "NPU all latency columns finite and > 0",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.shape",
+      "name": "NPU selected segment length == 128 and true region length == 128 for all rows",
+      "pass": true,
+      "detail": "seg_len unique=[np.int64(128)] true_len unique=[np.int64(128)]",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.label_map",
+      "name": "NPU modulation<->label one-to-one",
+      "pass": true,
+      "detail": "{'8PSK': 2, 'AM-DSB': 6, 'AM-SSB': 10, 'BPSK': 4, 'CPFSK': 5, 'GFSK': 7, 'PAM4': 8, 'QAM16': 0, 'QAM64': 1, 'QPSK': 9, 'WBFM': 3}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.pred_range",
+      "name": "NPU predictions in class range [0,10], no missing",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.hash_format",
+      "name": "NPU sha256 fields well-formed (64 hex)",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.label_consistent",
+      "name": "NPU labels consistent across base/attack/defense",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.correct_flags",
+      "name": "NPU *_correct flags agree with pred==label",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.metric_defs",
+      "name": "NPU attack_success = clean_correct & ~attacked_correct; clean_degraded = clean_correct & ~clean_topk_correct; recovered = attack_success & defended_correct",
+      "pass": true,
+      "detail": "attack_success=True clean_degraded=True recovered=True",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.attack_vs_base",
+      "name": "NPU attack.clean_pred/clean_correct == base",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.defense_vs_attack",
+      "name": "NPU defense clean/attacked/success flags and adversarial hash == attack table",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.perturbation",
+      "name": "NPU iq_linf/iq_l2/iq_l1 finite and non-negative",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.latency_recompute",
+      "name": "NPU latency_summary.csv recomputed from raw CSV (mean/median/p95/p99/min/max/std, population std ddof=0)",
+      "pass": true,
+      "detail": "12 stages match",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.summary_latency",
+      "name": "NPU summary.json latency == latency_summary.csv",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A1.CPU.base_rows",
+      "name": "CPU base rows == 2200",
+      "pass": true,
+      "detail": "observed 2200",
+      "mandatory": true
+    },
+    {
+      "id": "A1.CPU.attack_rows",
+      "name": "CPU attack rows == 52800",
+      "pass": true,
+      "detail": "observed 52800",
+      "mandatory": true
+    },
+    {
+      "id": "A1.CPU.defense_rows",
+      "name": "CPU defense rows == 211200",
+      "pass": true,
+      "detail": "observed 211200",
+      "mandatory": true
+    },
+    {
+      "id": "A1.CPU.manifest_counts",
+      "name": "CPU manifest completed_* rows match expected",
+      "pass": true,
+      "detail": "manifest completed=(2200,52800,211200) run_status=complete",
+      "mandatory": true
+    },
+    {
+      "id": "A1.CPU.summary_counts",
+      "name": "CPU summary.json counts match CSV row counts",
+      "pass": true,
+      "detail": "summary counts={'base_rows': 2200, 'attack_rows': 52800, 'defense_rows': 211200}",
+      "mandatory": true
+    },
+    {
+      "id": "A2.CPU.config_grid",
+      "name": "CPU manifest config grid matches expected",
+      "pass": true,
+      "detail": "n_mod=11 n_snr=20 n_idx=10 topk=[10, 20, 30, 40] profiles=24",
+      "mandatory": true
+    },
+    {
+      "id": "A2.CPU.profile_count",
+      "name": "CPU manifest lists 24 unique attack profiles",
+      "pass": true,
+      "detail": "24 listed",
+      "mandatory": true
+    },
+    {
+      "id": "A2.CPU.base_keys",
+      "name": "CPU base key set == 11x20x10 grid",
+      "pass": true,
+      "detail": "missing=0 unexpected=0",
+      "mandatory": true
+    },
+    {
+      "id": "A2.CPU.attack_keys",
+      "name": "CPU attack key set == base grid x 24 profiles",
+      "pass": true,
+      "detail": "missing=0 unexpected=0",
+      "mandatory": true
+    },
+    {
+      "id": "A2.CPU.defense_keys",
+      "name": "CPU defense key set == attack grid x TopK{10,20,30,40}",
+      "pass": true,
+      "detail": "missing=0 unexpected=0",
+      "mandatory": true
+    },
+    {
+      "id": "A2.CPU.samples_per_cell",
+      "name": "CPU 10 samples per modulation x SNR cell",
+      "pass": true,
+      "detail": "cells=220 min=10 max=10",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.base_dup",
+      "name": "CPU base duplicate keys / duplicate rows = 0",
+      "pass": true,
+      "detail": "dup_keys=0 dup_rows=0",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.base_nan",
+      "name": "CPU base NaN only in structurally-empty columns",
+      "pass": true,
+      "detail": "NaN columns={'missed_signal_samples': 2200, 'false_occupied_samples': 2200}; unexpected={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.base_inf",
+      "name": "CPU base Inf = 0",
+      "pass": true,
+      "detail": "Inf columns={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.base_bool",
+      "name": "CPU base boolean columns strictly True/False",
+      "pass": true,
+      "detail": "dtypes={'clean_correct': 'bool'}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.base_status",
+      "name": "CPU base status columns all 'ok'",
+      "pass": true,
+      "detail": "non-ok counts={'run_status': 0}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.base.inference_backend",
+      "name": "CPU base.inference_backend: single expected backend, no dummy/fallback",
+      "pass": true,
+      "detail": "values=['external/adversarial-rf/models/model.py:AWN']",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.base_strings",
+      "name": "CPU base no dummy/fallback/error text in string columns",
+      "pass": true,
+      "detail": "hits={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.attack_dup",
+      "name": "CPU attack duplicate keys / duplicate rows = 0",
+      "pass": true,
+      "detail": "dup_keys=0 dup_rows=0",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.attack_nan",
+      "name": "CPU attack NaN = 0",
+      "pass": true,
+      "detail": "NaN columns={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.attack_inf",
+      "name": "CPU attack Inf = 0",
+      "pass": true,
+      "detail": "Inf columns={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.attack_bool",
+      "name": "CPU attack boolean columns strictly True/False",
+      "pass": true,
+      "detail": "dtypes={'clean_correct': 'bool', 'attacked_correct': 'bool', 'attack_success': 'bool'}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.attack_status",
+      "name": "CPU attack status columns all 'ok'",
+      "pass": true,
+      "detail": "non-ok counts={'attack_status': 0, 'run_status': 0}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.attack.attack_backend",
+      "name": "CPU attack.attack_backend: single expected backend, no dummy/fallback",
+      "pass": true,
+      "detail": "values=['external/adversarial-rf/util/adv_attack.py:Model01Wrapper + torchattacks']",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.attack.inference_backend",
+      "name": "CPU attack.inference_backend: single expected backend, no dummy/fallback",
+      "pass": true,
+      "detail": "values=['external/adversarial-rf/models/model.py:AWN']",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.attack_strings",
+      "name": "CPU attack no dummy/fallback/error text in string columns",
+      "pass": true,
+      "detail": "hits={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.defense_dup",
+      "name": "CPU defense duplicate keys / duplicate rows = 0",
+      "pass": true,
+      "detail": "dup_keys=0 dup_rows=0",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.defense_nan",
+      "name": "CPU defense NaN = 0",
+      "pass": true,
+      "detail": "NaN columns={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.defense_inf",
+      "name": "CPU defense Inf = 0",
+      "pass": true,
+      "detail": "Inf columns={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.defense_bool",
+      "name": "CPU defense boolean columns strictly True/False",
+      "pass": true,
+      "detail": "dtypes={'clean_correct': 'bool', 'attacked_correct': 'bool', 'attack_success': 'bool', 'clean_topk_correct': 'bool', 'clean_degraded': 'bool', 'defended_correct': 'bool', 'recovered': 'bool'}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.defense_status",
+      "name": "CPU defense status columns all 'ok'",
+      "pass": true,
+      "detail": "non-ok counts={'topk_status': 0, 'run_status': 0}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.defense.topk_backend",
+      "name": "CPU defense.topk_backend: single expected backend, no dummy/fallback",
+      "pass": true,
+      "detail": "values=['external/adversarial-rf/util/defense.py:fft_topk_denoise']",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.defense.inference_backend",
+      "name": "CPU defense.inference_backend: single expected backend, no dummy/fallback",
+      "pass": true,
+      "detail": "values=['external/adversarial-rf/models/model.py:AWN']",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.defense_strings",
+      "name": "CPU defense no dummy/fallback/error text in string columns",
+      "pass": true,
+      "detail": "hits={}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.latency_positive",
+      "name": "CPU all latency columns finite and > 0",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.shape",
+      "name": "CPU selected segment length == 128 and true region length == 128 for all rows",
+      "pass": true,
+      "detail": "seg_len unique=[np.int64(128)] true_len unique=[np.int64(128)]",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.label_map",
+      "name": "CPU modulation<->label one-to-one",
+      "pass": true,
+      "detail": "{'8PSK': 2, 'AM-DSB': 6, 'AM-SSB': 10, 'BPSK': 4, 'CPFSK': 5, 'GFSK': 7, 'PAM4': 8, 'QAM16': 0, 'QAM64': 1, 'QPSK': 9, 'WBFM': 3}",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.pred_range",
+      "name": "CPU predictions in class range [0,10], no missing",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.hash_format",
+      "name": "CPU sha256 fields well-formed (64 hex)",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.label_consistent",
+      "name": "CPU labels consistent across base/attack/defense",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.correct_flags",
+      "name": "CPU *_correct flags agree with pred==label",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.metric_defs",
+      "name": "CPU attack_success = clean_correct & ~attacked_correct; clean_degraded = clean_correct & ~clean_topk_correct; recovered = attack_success & defended_correct",
+      "pass": true,
+      "detail": "attack_success=True clean_degraded=True recovered=True",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.attack_vs_base",
+      "name": "CPU attack.clean_pred/clean_correct == base",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.defense_vs_attack",
+      "name": "CPU defense clean/attacked/success flags and adversarial hash == attack table",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.perturbation",
+      "name": "CPU iq_linf/iq_l2/iq_l1 finite and non-negative",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.latency_recompute",
+      "name": "CPU latency_summary.csv recomputed from raw CSV (mean/median/p95/p99/min/max/std, population std ddof=0)",
+      "pass": true,
+      "detail": "12 stages match",
+      "mandatory": true
+    },
+    {
+      "id": "A3.CPU.summary_latency",
+      "name": "CPU summary.json latency == latency_summary.csv",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A4.rows",
+      "name": "CPU/NPU base merge on (modulation,snr,sample_index) is one-to-one, 2200 rows",
+      "pass": true,
+      "detail": "merged=2200",
+      "mandatory": true
+    },
+    {
+      "id": "A4.fields",
+      "name": "CPU/NPU sensing fields identical row-by-row (label, seed, true_start/end, selected segment start/end, detected region, clean_input_sha256, ...)",
+      "pass": true,
+      "detail": "mismatch counts={'label': 0, 'seed': 0, 'true_start': 0, 'true_end': 0, 'region_count': 0, 'selected_segment_start': 0, 'selected_segment_end': 0, 'detected_region_start': 0, 'detected_region_end': 0, 'captured_signal_ratio': 0, 'start_boundary_error': 0, 'end_boundary_error': 0, 'clean_input_sha256': 0}",
+      "mandatory": true
+    },
+    {
+      "id": "A6.CPU.dataset_hash",
+      "name": "CPU manifest dataset_sha256 == recomputed sha256 of data/RML2016.10a_dict.pkl",
+      "pass": true,
+      "detail": "manifest=b29ccc25b00d0718cd3b70ffa9158662ec83f6d9b63ffd845c7bcbe3b3096e8c",
+      "mandatory": true
+    },
+    {
+      "id": "A6.CPU.checkpoint_hash",
+      "name": "CPU manifest checkpoint_sha256 == recomputed sha256 of external/adversarial-rf/2016.10a_AWN.pkl",
+      "pass": true,
+      "detail": "manifest=8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695",
+      "mandatory": true
+    },
+    {
+      "id": "A6.NPU.dataset_hash",
+      "name": "NPU manifest dataset_sha256 == recomputed sha256 of data/RML2016.10a_dict.pkl",
+      "pass": true,
+      "detail": "manifest=b29ccc25b00d0718cd3b70ffa9158662ec83f6d9b63ffd845c7bcbe3b3096e8c",
+      "mandatory": true
+    },
+    {
+      "id": "A6.NPU.checkpoint_hash",
+      "name": "NPU manifest checkpoint_sha256 == recomputed sha256 of external/adversarial-rf/2016.10a_AWN.pkl",
+      "pass": true,
+      "detail": "manifest=8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695",
+      "mandatory": true
+    },
+    {
+      "id": "A6.NPU.hef_hash",
+      "name": "NPU manifest hef_sha256 == recomputed sha256 of HEF",
+      "pass": true,
+      "detail": "manifest=6e54266f7e5931e432d4e5e67cd8e4a6e14863c16a94ff02a1946d21abc73dbb",
+      "mandatory": true
+    },
+    {
+      "id": "A6.NPU.hef_backend_col",
+      "name": "NPU per-row hilo_backend names the manifest HEF file",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A6.CPU.no_hef_hash",
+      "name": "CPU manifest has no hef_sha256 (CPU backend does not deploy a HEF)",
+      "pass": true,
+      "detail": "CPU manifest contains 'hef_path' in config only as inherited config text",
+      "mandatory": false
+    },
+    {
+      "id": "A6.CPU.backend",
+      "name": "CPU manifest inference_backend == 'PyTorch CPU AWN'",
+      "pass": true,
+      "detail": "PyTorch CPU AWN",
+      "mandatory": true
+    },
+    {
+      "id": "A6.NPU.threat_model",
+      "name": "NPU manifest threat_model states PyTorch-surrogate generation and quantized Hailo-8 evaluation",
+      "pass": true,
+      "detail": "A0 digital classifier-input attack; adversarial examples generated with differentiable PyTorch AWN surrogate and evaluated on deployed quantized Hailo-8 AWN.",
+      "mandatory": true
+    },
+    {
+      "id": "A6.CPU.threat_model",
+      "name": "CPU manifest threat_model states generation and evaluation on original PyTorch AWN",
+      "pass": true,
+      "detail": "A0 digital classifier-input attack; adversarial examples generated and evaluated on the original differentiable PyTorch AWN.",
+      "mandatory": true
+    },
+    {
+      "id": "A6.config_equal",
+      "name": "CPU and NPU manifest 'config' blocks identical",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A6.hashes_equal",
+      "name": "CPU and NPU manifests share dataset/checkpoint hashes",
+      "pass": true,
+      "detail": "",
+      "mandatory": true
+    },
+    {
+      "id": "A6.config_on_disk",
+      "name": "configs/hailo_full_matrix.json (current working tree) == manifest config",
+      "pass": true,
+      "detail": "config file is untracked in git; compared for reference",
+      "mandatory": false
+    },
+    {
+      "id": "A6.seed",
+      "name": "manifest sensing.base_seed == 42 and per-row seeds identical across CPU/NPU",
+      "pass": true,
+      "detail": "base_seed CPU=42 NPU=42; unique per-row seeds=2200",
+      "mandatory": true
+    },
+    {
+      "id": "A3.NPU.nohup.log",
+      "name": "NPU nohup.log: no traceback/exception/fallback/dummy/error/failed lines",
+      "pass": true,
+      "detail": "lines=563129 flagged=0 samples=[]",
+      "mandatory": false
+    },
+    {
+      "id": "A3.CPU.nohup.log",
+      "name": "CPU nohup.log: no traceback/exception/fallback/dummy/error/failed lines",
+      "pass": true,
+      "detail": "lines=563139 flagged=0 samples=[]",
+      "mandatory": false
+    },
+    {
+      "id": "A3.CPU.run.log",
+      "name": "CPU run.log: no traceback/exception/fallback/dummy/error/failed lines",
+      "pass": true,
+      "detail": "lines=563138 flagged=0 samples=[]",
+      "mandatory": false
+    }
+  ],
+  "notes": [
+    "NPU base_results: columns ['false_occupied_samples', 'missed_signal_samples'] are empty in all 2200 rows (not used in any analysis).",
+    "CPU base_results: columns ['false_occupied_samples', 'missed_signal_samples'] are empty in all 2200 rows (not used in any analysis).",
+    "Both manifests carry config.experiment_name='hailo_full_matrix_20260919' (name inherited from the shared config file); backends are distinguished by the results directory names and by the manifest fields 'inference_backend' / 'hef_sha256'.",
+    "Manifests record base_seed=42 and per-row seeds but no git commit hash / software versions."
+  ],
+  "clean_comparison": {
+    "n": 2200,
+    "prediction_agreement_count": 1996,
+    "prediction_agreement_pct": 90.72727272727273,
+    "disagreement_count": 204,
+    "both_correct": 1172,
+    "cpu_correct_npu_wrong": 126,
+    "cpu_wrong_npu_correct": 30,
+    "both_wrong": 872,
+    "cpu_clean_accuracy_pct": 59.0,
+    "npu_clean_accuracy_pct": 54.63636363636364,
+    "accuracy_diff_pp_npu_minus_cpu": -4.363636363636358
+  },
+  "provenance": {
+    "dataset_path_exists": true,
+    "checkpoint_path_exists": true,
+    "hef_path_exists": true,
+    "dataset_sha256_recomputed": "b29ccc25b00d0718cd3b70ffa9158662ec83f6d9b63ffd845c7bcbe3b3096e8c",
+    "checkpoint_sha256_recomputed": "8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695",
+    "hef_sha256_recomputed": "6e54266f7e5931e432d4e5e67cd8e4a6e14863c16a94ff02a1946d21abc73dbb"
+  },
+  "log_scan": {
+    "NPU/nohup.log": {
+      "lines": 563129,
+      "flagged_lines": 0,
+      "samples": []
+    },
+    "CPU/nohup.log": {
+      "lines": 563139,
+      "flagged_lines": 0,
+      "samples": []
+    },
+    "CPU/run.log": {
+      "lines": 563138,
+      "flagged_lines": 0,
+      "samples": []
+    }
+  },
+  "cpu_npu_adversarial_identity": {
+    "attack_rows_merged": 52800,
+    "adversarial_sha256_identical_rows": 35384,
+    "adversarial_sha256_differing_rows": 17416,
+    "iq_linf_max_abs_diff": 0.0010769548825918635,
+    "iq_l2_max_abs_diff": 0.0172312612610605,
+    "clean_pred_identical_in_attack_table": 47904,
+    "differing_by_attack_profile": "{('autoattack', 'eps0.03_standard'): 2022, ('pgd', 'eps0.005'): 2200, ('pgd', 'eps0.01'): 2200, ('pgd', 'eps0.03'): 2200, ('rfgsm', 'eps0.03_default'): 2200, ('tpgd', 'eps0.03_default'): 2200, ('vmifgsm', 'eps0.03_default'): 2200, ('vnifgsm', 'eps0.03_default'): 2194}"
+  },
+  "sources": {
+    "NPU": "results/hailo_full_matrix_20260920_seedaligned",
+    "CPU": "results/cpu_full_matrix_20260921_seedaligned"
+  }
+}

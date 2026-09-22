@@ -237,6 +237,29 @@ RML2016 的一個 sample 就是 `[2,128]` 的**基頻複數 IQ**（128 個複數
 - 只做 cabled、短時間、軟體對齊 → **Pluto 就能滿足**大家用 USRP 的那些理由（同步可省）。
 - 想「乾淨分離通道 vs 量化」→ 才把 **RX 升 14-bit N210**，且只當 robustness 附錄，其餘維持 Pluto。
 
+### 5.3 為什麼要 sensing —— 文獻依據（釐清 sensing ≠ AMC）
+
+**先釐清一個常見誤解**：spectrum sensing 本身**不判斷調變**。它回答「**哪裡/何時有訊號**」（占用偵測、時/頻定位，modulation-agnostic）；判斷「是什麼調變」是 **AMC** 的工作。流程是 `sensing 圈出占用 segment → 擷取/downconvert → 餵 AMC 才分類`。專案裡的 `energy_detect` 就是與調變無關的能量偵測。
+
+**(1) 兩階段「先偵測 → 再分類」是標準且有研究的架構**
+- *Joint Signal Detection and Automatic Modulation Classification via Deep Learning*（arXiv 2405.00736）：明講兩階段順序流程 —— 先偵測中心頻率/頻寬，分類模組再拿 detection 的 **proposals** 把資料處理成「**只含單一訊號的乾淨頻譜**」才分類。
+- 認知無線電經典：第一階段（改良）能量偵測判斷有無 PU，第二階段才分類調變。
+
+**(2) 「sensing 能減少 pipeline 資料量/算力」也有量化證據**
+- 隔離單一訊號段 → **AMC 只吃被圈出的小段、不吃整條 wideband**（即上者的 detection→proposals→純單一訊號頻譜），這本身就是資料縮減。
+- 偵測階段計算效率被量化：**IPFSCNN** 比 DeepSense **少 15% 參數、只用 1/3 MAC** 仍更準；wideband bounding-box 偵測做「更精簡、更有效率」的辨識。
+
+> 但書：文獻更常說成「隔離單一訊號讓分類更乾淨 + 偵測階段更省算」，字面少用 "reduce data"，但兩者是同一件事。代價是**切不準會傷 AMC**（對齊誤差 → 準確率掉，即 §1-B 的 1.68pp gap）——「減資料」與「切不準的風險」是同一枚硬幣的兩面。
+
+**新增 References**
+- *Joint Signal Detection and Automatic Modulation Classification via Deep Learning* — arXiv:2405.00736
+- *IPFSCNN: A Time–Frequency Fusion CNN for Wideband Spectrum Sensing* — PMC12694085
+- *Deep Learning-Based Wideband Spectrum Sensing* — arXiv:2504.07427
+- *Signal Detection and AMC Based Spectrum Sensing Using PCA-ANN with Real World Signals*（ResearchGate 283715665）
+- *Leveraging Time–Frequency Priors for Wideband Signal Detection and Recognition* — PMC12736833
+
+> 註：以上為 2026-09 查得之文獻，正式引用前請再核對標題/年份/出處。
+
 ---
 
 ## 一句話結論

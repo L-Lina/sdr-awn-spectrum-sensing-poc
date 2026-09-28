@@ -1,0 +1,23 @@
+類別,指標,backend,防禦,n,中位 (ms),p95 (ms),p99 (ms),來源檔
+measured,A_sensing_evaluation_path_wall_ms,host,不適用,2640,3.081,3.225,3.249,formal_latency_20260928d/primary_metrics_measured.csv
+measured,B_host_fixedk_defense_ms,host,topk40,2640,0.289,0.303,0.326,formal_latency_20260928d/primary_metrics_measured.csv
+measured,C_host_adaptive_production_ms,host,adaptive_k_v2,2640,0.588,1.118,1.137,formal_latency_20260928d/primary_metrics_measured.csv
+measured,E_cpu_awn_adapter_ms,cpu,none,2640,2.415,2.575,9.559,formal_latency_20260928d/primary_metrics_measured.csv
+measured,F_hailo_adapter_roundtrip_ms,hailo,none,2640,0.656,0.688,0.707,formal_latency_20260928d/primary_metrics_measured.csv
+measured,G_clean_pipeline_evaluation_path_measured_ms,cpu,none,528,5.600,5.792,13.045,formal_latency_20260928d/primary_metrics_measured.csv
+measured,G_clean_pipeline_evaluation_path_measured_ms,cpu,adaptive_k_v2,528,6.064,6.585,8.942,formal_latency_20260928d/primary_metrics_measured.csv
+measured,G_clean_pipeline_evaluation_path_measured_ms,hailo,none,528,3.791,3.876,3.905,formal_latency_20260928d/primary_metrics_measured.csv
+measured,G_clean_pipeline_evaluation_path_measured_ms,hailo,adaptive_k_v2,528,4.385,4.919,4.962,formal_latency_20260928d/primary_metrics_measured.csv
+measured_composite,H_attacked_pipeline_attackgen_excluded_evaluation_path_measured_ms,cpu,none,2112,5.594,5.792,11.815,formal_latency_20260928d/primary_metrics_measured.csv
+measured_composite,H_attacked_pipeline_attackgen_excluded_evaluation_path_measured_ms,hailo,none,2112,3.784,3.871,3.899,formal_latency_20260928d/primary_metrics_measured.csv
+measured_composite,H_attacked_pipeline_attackgen_excluded_evaluation_path_measured_ms,hailo,adaptive_k_v2,2112,4.380,4.912,4.954,formal_latency_20260928d/primary_metrics_measured.csv
+derived,A_sensing_core_derived_ms,host,不適用,2640,2.971,3.104,3.129,formal_latency_20260928d/deployment_estimates_derived.csv
+derived,G_clean_pipeline_deployment_estimate_ms,cpu,none,528,5.416,5.569,12.786,formal_latency_20260928d/deployment_estimates_derived.csv
+derived,G_clean_pipeline_deployment_estimate_ms,cpu,adaptive_k_v2,528,6.017,6.590,13.116,formal_latency_20260928d/deployment_estimates_derived.csv
+derived,G_clean_pipeline_deployment_estimate_ms,hailo,none,528,3.630,3.775,3.798,formal_latency_20260928d/deployment_estimates_derived.csv
+derived,G_clean_pipeline_deployment_estimate_ms,hailo,adaptive_k_v2,528,4.328,4.868,4.903,formal_latency_20260928d/deployment_estimates_derived.csv
+derived_paired,F−E 分類器（none）,hailo−cpu,none,440 對,-1.759（CI −1.763 至 −1.756）,不適用,不適用,formal_latency_20260928d/paired_statistics.csv
+derived_paired,G Hailo−CPU（none）,hailo−cpu,none,88 對,-1.836（CI −1.883 至 −1.768）,不適用,不適用,formal_latency_20260928d/paired_statistics.csv
+derived_paired,G Hailo−CPU（adaptive_k_v2）,hailo−cpu,adaptive_k_v2,88 對,-1.651（CI −1.660 至 −1.641）,不適用,不適用,formal_latency_20260928d/paired_statistics.csv
+auxiliary,HailoRT HW Latency（合成輸入、非配對）,hailo,不適用,2000 frames,0.17,不適用,不適用,formal_latency_20260928d/hw_latency_auxiliary.json
+auxiliary,HailoRT Overall Latency（合成輸入、非配對）,hailo,不適用,2000 frames,0.22,不適用,不適用,formal_latency_20260928d/hw_latency_auxiliary.json

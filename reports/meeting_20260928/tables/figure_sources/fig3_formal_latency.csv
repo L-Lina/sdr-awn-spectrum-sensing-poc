@@ -1,0 +1,7 @@
+﻿"label","component","metric_class","backend","defense","configuration_role","n","median_ms","p05_ms","p95_ms","source"
+"Clean pipeline：CPU，無防禦","G_clean_pipeline_evaluation_path_measured_ms","measured","cpu","none","PRIMARY_FORMAL","528","5.6002","5.4261","5.7923","formal_latency_20260928d/primary_metrics_measured.csv"
+"Clean pipeline：CPU，Adaptive-K","G_clean_pipeline_evaluation_path_measured_ms","measured","cpu","adaptive_k_v2","PRIMARY_FORMAL","528","6.0638","5.9022","6.5850","formal_latency_20260928d/primary_metrics_measured.csv"
+"Clean pipeline：Hailo-8，無防禦","G_clean_pipeline_evaluation_path_measured_ms","measured","hailo","none","PRIMARY_FORMAL","528","3.7913","3.6615","3.8763","formal_latency_20260928d/primary_metrics_measured.csv"
+"Clean pipeline：Hailo-8，Adaptive-K","G_clean_pipeline_evaluation_path_measured_ms","measured","hailo","adaptive_k_v2","PRIMARY_FORMAL","528","4.3847","4.2745","4.9194","formal_latency_20260928d/primary_metrics_measured.csv"
+"分類器 adapter：CPU","E_cpu_awn_adapter_ms","measured","cpu","none","PRIMARY_FORMAL","2640","2.4151","2.3527","2.5752","formal_latency_20260928d/primary_metrics_measured.csv"
+"分類器 adapter：Hailo-8","F_hailo_adapter_roundtrip_ms","measured","hailo","none","PRIMARY_FORMAL","2640","0.6562","0.4758","0.6884","formal_latency_20260928d/primary_metrics_measured.csv"

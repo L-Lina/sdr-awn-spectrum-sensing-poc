@@ -1,0 +1,7 @@
+研究項目,直接來源,本次 evidence,目前狀態
+Pi 5 上 B=1 攻擊生成加速（PGD／BIM）,本週研究主線；背景為 0921 報告 §8 第 4 點,Phase 1 各 run；accel_phase1_final_integration_20260927_153520 overall = PASS,方法研究與整合驗證完成；b1_pgd_bim_mkldnn_off 為 opt-in（預設 False）；正式 CPU full matrix 尚未使用此選項重跑
+Adaptive-K 之 parity、CPU effectiveness、Hailo 配對評估,0921 報告 §10 第 7 點,adaptive_k_parity_20260927_162249；adaptive_k_effectiveness_20260927_164906；adaptive_k_hailo_paired_20260928（皆 PASS）,本次完成（digital A0、surrogate transfer）
+正式、具熱控制之延遲量測,0921 報告 §10 第 8 點,formal_latency_20260928d（PRIMARY_FORMAL，10/10，PASS）,本次完成（5 個 block、B=1、不含攻擊生成）
+Adaptive-K 整合至 main pipeline,docs/PROJECT_STATUS.md Part 2 §4（adaptive_k_v2_defense 未接入 TopKAdapter）,本機 src/adapters/topk_adapter.py 註明 not wired yet；src/utils/pipeline.py 僅固定 K；benchmark 直接呼叫 production 函式不構成整合證據,演算法與實驗驗證完成；最終 production／main-pipeline integration 尚待完成
+Hailo-8 與 sensing／攻擊／Top-K pipeline 之整合,docs/weekly_progress_20260915.md §12 第 8 點,0921 由 experiments/run_hailo_full_matrix.py 產生；本機 src/utils/pipeline.py 無 Hailo backend,實驗 runner 層級已完成（0921）；main pipeline 未見 Hailo 整合
+Recovery-rate baseline comparison（Top-K、Signal Filter、Adversarial Training）,本次新增待辦,repository 未見 signal filter 與 adversarial training 實作,尚未開始

@@ -1,0 +1,7 @@
+防禦,CPU clean degradation (%),CPU recovery (%),CPU retention (%),CPU retention 淨增益 (pp),Hailo clean degradation (%),Hailo recovery (%),Hailo retention (%),Hailo retention 淨增益 (pp),來源檔
+無防禦,0.00,0.00,32.72,0.00,0.00,0.00,48.34,0.00,adaptive_k_hailo_paired_20260928/defense_summary_paired.csv（scope=overall）
+固定 K=10,63.33,27.00,30.91,-1.80,65.97,22.24,32.65,-15.69,同上
+固定 K=20,32.82,26.34,43.32,10.60,33.36,19.24,46.31,-2.03,同上
+固定 K=30,23.65,26.96,46.17,13.45,24.63,20.24,49.73,1.39,同上
+固定 K=40,12.71,27.27,48.72,16.01,13.23,21.17,53.29,4.95,同上
+Adaptive-K v2,5.24,27.08,49.57,16.85,4.91,14.11,51.50,3.16,同上

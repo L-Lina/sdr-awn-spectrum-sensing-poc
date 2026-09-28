@@ -1,0 +1,5 @@
+run,階段,configuration_role,planned,accepted,overall,判定,來源檔
+formal_latency_20260928,dry-run,PRIMARY_FORMAL,2,0,FAIL（abort: FileNotFoundError）,不採用,formal_latency_20260928/dry_run/validation.json
+formal_latency_20260928b,run,PRIMARY_FORMAL,10,3,FAIL（7 cells START_GATE_REJECTED）,不採用,formal_latency_20260928b/validation.json; cell_start_failures.csv
+formal_latency_20260928c,run,PRIMARY_FORMAL,10,9,FAIL（00_r0_clean START_GATE_REJECTED）,不採用,formal_latency_20260928c/validation.json; cell_start_failures.csv
+formal_latency_20260928d,run,PRIMARY_FORMAL,10,10,PASS（全部 gates true；全部 THERMAL_CLEAN）,採用,formal_latency_20260928d/validation.json; cells.csv

@@ -1,0 +1,23 @@
+階段,攻擊,條件,指標,數值,單位,n或對數,正確性,來源檔
+1a,PGD,intra1/interop1,adapter_apply total_ms 中位,46.78,ms,528,PGD 為 informational（random_start）,accel_phase1a_formal_20260926_152737/summary.csv
+1a,PGD,intra4/interop1,adapter_apply total_ms 中位,47.68,ms,528,同上,accel_phase1a_formal_20260926_152737/summary.csv
+1a,BIM,intra1/interop1,adapter_apply total_ms 中位,47.97,ms,528,264/264 sha 相符,accel_phase1a_formal_20260926_152737/summary.csv
+1a,BIM,intra4/interop1,adapter_apply total_ms 中位,48.89,ms,528,264/264 sha 相符,accel_phase1a_formal_20260926_152737/summary.csv
+1b,PGD,baseline intra1,total_ms 中位,46.95,ms,264,264/264 bit-identical,accel_phase1b_20260926_155342/summary.csv
+1b,PGD,reuse_clean_pred+freeze,total_ms 中位,44.37,ms,264,264/264 bit-identical,accel_phase1b_20260926_155342/summary.csv
+1b,BIM,baseline intra1,total_ms 中位,48.13,ms,264,264/264 bit-identical,accel_phase1b_20260926_155342/summary.csv
+1b,BIM,reuse_clean_pred+freeze,total_ms 中位,45.57,ms,264,264/264 bit-identical,accel_phase1b_20260926_155342/summary.csv
+1d0b,PGD,intra1 合併,B=1 單次呼叫中位,44.85,ms,1056,全部 bit-identical,accel_phase1d0b_pair_20260927_111224/validation.json
+1d0b,PGD,intra4 合併,B=1 單次呼叫中位,43.04,ms,1056,全部 bit-identical,accel_phase1d0b_pair_20260927_111224/validation.json
+1d0b,PGD,intra4−intra1,配對差中位,-1.82,ms,4 對（4/4 intra4 較快；p=0.125）,不適用,accel_phase1d0b_pair_20260927_111224/validation.json
+1d0b,BIM,intra1 合併,B=1 單次呼叫中位,46.15,ms,1056,全部 bit-identical,accel_phase1d0b_pair_20260927_111224/validation.json
+1d0b,BIM,intra4 合併,B=1 單次呼叫中位,44.24,ms,1056,全部 bit-identical,accel_phase1d0b_pair_20260927_111224/validation.json
+1d0b,BIM,intra4−intra1,配對差中位,-1.90,ms,4 對（4/4 intra4 較快；p=0.125）,不適用,accel_phase1d0b_pair_20260927_111224/validation.json
+1d3,PGD,mkldnn ON,B=1 中位,42.53,ms,2112,88/88 BIT_IDENTICAL,accel_phase1d3_mkldnn_b1_20260927_135420/validation.json
+1d3,PGD,mkldnn OFF,B=1 中位,36.33,ms,2112,SEMANTIC_DIFFERENT 0,accel_phase1d3_mkldnn_b1_20260927_135420/validation.json
+1d3,PGD,OFF−ON,配對差中位,-6.20,ms,8 對（8/8；p=0.0078）,不適用,accel_phase1d3_mkldnn_b1_20260927_135420/validation.json
+1d3,BIM,mkldnn ON,B=1 中位,43.84,ms,2112,87 BIT_IDENTICAL + 1 semantic same,accel_phase1d3_mkldnn_b1_20260927_135420/validation.json
+1d3,BIM,mkldnn OFF,B=1 中位,37.63,ms,2112,SEMANTIC_DIFFERENT 0,accel_phase1d3_mkldnn_b1_20260927_135420/validation.json
+1d3,BIM,OFF−ON,配對差中位,-6.19,ms,8 對（8/8；p=0.0078）,不適用,accel_phase1d3_mkldnn_b1_20260927_135420/validation.json
+整合,PGD,option_off → option_on,完整 apply() 中位,46.76 → 39.52,ms,88 對（全部 option_on 較快）,88/88 BIT_IDENTICAL,accel_phase1_final_integration_20260927_153520/validation.json
+整合,BIM,option_off → option_on,完整 apply() 中位,48.04 → 40.80,ms,88 對（全部 option_on 較快）,87 + 1 semantic same,accel_phase1_final_integration_20260927_153520/validation.json

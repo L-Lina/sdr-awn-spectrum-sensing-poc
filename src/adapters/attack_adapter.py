@@ -20,9 +20,9 @@ reads from the latter (adds its path to sys.path for the duration of the
 import attempt).
 
 Supported attack names: none, fgsm, pgd, cw (original, backward-compatible
-set -- every prior formal round, docs/formal_experiment_plan.md phases 0-4,
+set -- every formal experiment in docs/formal_experiment_plan.md phases 0-4
 depends on these three's exact existing default parameter values, which are
-UNCHANGED below), plus (this round) bim, mifgsm, difgsm, vmifgsm, vnifgsm,
+UNCHANGED below), plus the extended set bim, mifgsm, difgsm, vmifgsm, vnifgsm,
 rfgsm, tpgd, deepfool, fab, square, apgd, apgdt, autoattack, ead (=
 torchattacks.EADL1, see _ATTACK_CLASS_MAP). Every constructor kwarg name and
 default below was read directly from the INSTALLED torchattacks==3.5.1
@@ -57,6 +57,7 @@ it is never used for clean/attacked/defended AWN inference anywhere else.
 
 from __future__ import annotations
 
+import contextlib
 import sys
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -84,7 +85,7 @@ _NO_OP_ATTACKS = {"", "none"}
 # deliberate mismatch test.
 _AWN_N_CLASSES = 11
 
-# Every constructor kwarg name below, per attack, verified this round via
+# Every constructor kwarg name below, per attack, is verified via
 # inspect.signature(torchattacks.<Class>.__init__) against the INSTALLED
 # torchattacks==3.5.1 -- see docs/ATTACK_NAME_MAPPING.md for the raw
 # introspection transcript. "eps" is included only for attacks whose real
@@ -115,7 +116,7 @@ _ATTACK_ACCEPTED_PARAMS: Dict[str, set] = {
 }
 _SUPPORTED_ATTACKS = {"none"} | set(_ATTACK_ACCEPTED_PARAMS)
 
-# forward(images, labels) -- confirmed this round via inspect.getsource() on
+# forward(images, labels) -- confirmed via inspect.getsource() on
 # every class's .forward(): every attack except tpgd requires real labels
 # (this adapter always passes the model's OWN clean prediction, y_pred, as
 # an untargeted "move away from this" label -- the same convention the
@@ -126,11 +127,11 @@ _SUPPORTED_ATTACKS = {"none"} | set(_ATTACK_ACCEPTED_PARAMS)
 # special-casing is needed at the call site.
 _ATTACK_NEEDS_LABELS = {name: (name != "tpgd") for name in _SUPPORTED_ATTACKS if name != "none"}
 
-# Empirically verified this round via atk.supported_mode on a constructed
+# Empirically verified via atk.supported_mode on a constructed
 # instance of each class (torchattacks==3.5.1) -- not assumed from
 # documentation. 'targeted' present means .set_mode_targeted_by_label()
-# etc. work; this adapter only ever uses 'default' (untargeted) mode this
-# round (matches every prior formal experiment's convention) -- this table
+# etc. work; this adapter only ever uses 'default' (untargeted) mode
+# (matches every formal experiment's convention) -- this table
 # is for docs/ATTACK_NAME_MAPPING.md's record, not exercised by targeted
 # calls here.
 _ATTACK_TARGETED_SUPPORT: Dict[str, list] = {
@@ -207,6 +208,31 @@ else:
     TemperatureLogitsWrapper = None  # torch unavailable -- apply() falls back to dummy_attack before this is ever used
 
 
+# Phase 1 attack acceleration (Raspberry Pi 5 / torch 2.14.0+cpu; docs/research/
+# PERFORMANCE_AND_LATENCY_ANALYSIS_ZH_TW.md section 17): at B=1 oneDNN only runs AWN's four
+# forward GEMMs (plus a weight reorder per call), and disabling it around the attack call alone
+# measured -6.2 ms per PGD/BIM call with attack semantics preserved. Measured ONLY for these two
+# attacks at B=1; at B=32 the same switch made the forward >4x slower, so it must never be applied
+# to batches. Opt-in via AttackAdapter(b1_pgd_bim_mkldnn_off=True); default behavior unchanged.
+_B1_MKLDNN_OFF_ATTACKS = frozenset({"pgd", "bim"})
+
+
+@contextlib.contextmanager
+def mkldnn_disabled_scope(torch_module):
+    """Disable oneDNN (mkldnn) for the enclosed block only; restore the previous state in
+    `finally` (also on exceptions) and verify the restoration."""
+    get_enabled = torch_module._C._get_mkldnn_enabled
+    set_enabled = torch_module._C._set_mkldnn_enabled
+    previous = bool(get_enabled())
+    set_enabled(False)
+    try:
+        yield
+    finally:
+        set_enabled(previous)
+        if bool(get_enabled()) != previous:
+            raise RuntimeError("mkldnn state was not restored after the scoped attack call")
+
+
 def _validate_attack_name(attack: str) -> str:
     attack_name = (attack or "none").lower()
     if attack_name not in _SUPPORTED_ATTACKS:
@@ -240,7 +266,7 @@ def _build_torchattacks(
 ):
     """
     fgsm/pgd/cw: EXACT pre-existing hardcoded defaults, unchanged, so every
-    prior formal round's behavior is bit-for-bit reproduced when
+    earlier formal experiment's behavior is bit-for-bit reproduced when
     attack_params is None/empty (pgd: alpha=eps/4, steps=10; cw: c/steps/lr
     from cw_c/cw_steps/cw_lr) -- attack_params may still override individual
     values for these three (e.g. an explicit {"steps": 20} for pgd), but an
@@ -251,7 +277,7 @@ def _build_torchattacks(
     via _ATTACK_ACCEPTED_PARAMS -- only keys that class's real constructor
     accepts are passed; a key absent from attack_params (or explicitly None)
     is simply never passed, letting torchattacks' OWN installed default
-    apply (verified via inspect.signature this round, not duplicated/
+    apply (verified via inspect.signature, not duplicated/
     hardcoded here, so it can never drift from the installed version).
     fab/apgdt/autoattack default n_classes to _AWN_N_CLASSES (11) unless
     attack_params explicitly overrides it -- torchattacks' own default of 10
@@ -303,8 +329,14 @@ class AttackAdapter:
     returned meta always reflect what actually ran.
     """
 
-    def __init__(self, awn_model=None, device: str = "cpu") -> None:
-        """awn_model: the real torch nn.Module from AWNModelAdapter, or None if it's running dummy."""
+    def __init__(self, awn_model=None, device: str = "cpu", b1_pgd_bim_mkldnn_off: bool = False) -> None:
+        """awn_model: the real torch nn.Module from AWNModelAdapter, or None if it's running dummy.
+
+        b1_pgd_bim_mkldnn_off: opt-in Phase 1 acceleration (default False = legacy behavior). When
+        True, apply() disables mkldnn ONLY around atk(x, y) and ONLY for pgd/bim with N == 1; clean
+        prediction, pre/post-processing, diagnostics, other attacks and N > 1 are unaffected.
+        """
+        self.b1_pgd_bim_mkldnn_off = bool(b1_pgd_bim_mkldnn_off)
         self.device = device
         self.wrapped_model = None
         self.backend_name = "dummy_attack"
@@ -315,7 +347,7 @@ class AttackAdapter:
             self.notes = (
                 f"Real attack import failed ({type(_import_error).__name__}: {_import_error}); "
                 f"falling back to dummy_attack. {_REAL_ATTACK_SOURCE} requires torch and the "
-                "third-party torchattacks package, neither of which is installed in this phase "
+                "third-party torchattacks package, and at least one of them could not be imported in the current environment "
                 "-- see docs/integration_plan.md."
             )
             return
@@ -337,6 +369,9 @@ class AttackAdapter:
             self.backend_name = "dummy_attack"
             self.status = "fallback"
             self.notes = f"Model01Wrapper construction failed ({type(exc).__name__}: {exc}); using dummy fallback."
+
+    def _b1_mkldnn_off_applies(self, attack_name: str, batch_size: int) -> bool:
+        return self.b1_pgd_bim_mkldnn_off and attack_name in _B1_MKLDNN_OFF_ATTACKS and batch_size == 1
 
     def apply(
         self,
@@ -362,14 +397,14 @@ class AttackAdapter:
         model, same clean-prediction label) purely to report gradient
         nonzero-count/maxabs in the returned meta; never affects x_adv.
 
-        cw_c/cw_steps/cw_lr: CW-only strength knobs (unchanged from prior
-        rounds). attack_params: generic dict of extra per-attack kwargs (see
+        cw_c/cw_steps/cw_lr: CW-only strength knobs (unchanged from earlier
+        formal experiments). attack_params: generic dict of extra per-attack kwargs (see
         _ATTACK_ACCEPTED_PARAMS / docs/ATTACK_NAME_MAPPING.md) for every
         attack beyond fgsm/pgd/cw's original three-attack surface; also
         usable to override individual fgsm/pgd/cw defaults if explicitly
         needed (never changes their default behavior when omitted).
 
-        Batching (N>1) safety classification -- verified this round for
+        Batching (N>1) safety classification -- verified for
         fgsm/pgd/cw only via a 60-sample paired batch_size=1 vs batch_size=16
         test (docs/research/PERFORMANCE_AND_LATENCY_ANALYSIS_ZH_TW.md
         section 15.1/15.2); the other 14 supported attacks (bim, mifgsm,
@@ -446,6 +481,7 @@ class AttackAdapter:
         gradient_nonzero_count = None
         gradient_total_count = None
         gradient_maxabs = None
+        mkldnn_b1_off_applied = False
 
         if self.wrapped_model is not None:
             training_before = self.wrapped_model.training
@@ -467,7 +503,12 @@ class AttackAdapter:
                     attack_name, attack_model, eps,
                     cw_c=cw_c, cw_steps=cw_steps, cw_lr=cw_lr, attack_params=attack_params,
                 )
-                x_ta_adv = atk(x_ta, y_pred)
+                if self._b1_mkldnn_off_applies(attack_name, x.shape[0]):
+                    with mkldnn_disabled_scope(torch):
+                        x_ta_adv = atk(x_ta, y_pred)
+                    mkldnn_b1_off_applied = True
+                else:
+                    x_ta_adv = atk(x_ta, y_pred)
                 iq_linf_normalized = (
                     (x_ta_adv - x_ta).abs().amax(dim=(1, 2, 3)).detach().cpu().numpy().astype(np.float32)
                 )
@@ -509,7 +550,7 @@ class AttackAdapter:
                 status = "fallback"
                 notes = f"Real attack call failed at runtime ({type(exc).__name__}: {exc}); used numpy fallback."
             finally:
-                # Full state restoration (item 6 of this round's instruction):
+                # Full state restoration, applied on every call:
                 # model.eval(), original train/eval flag (recorded, not
                 # silently kept), requires_grad per-parameter, and device --
                 # unconditionally, whether the attack succeeded or the
@@ -535,7 +576,7 @@ class AttackAdapter:
             raise RuntimeError(f"AttackAdapter output dtype {x_adv.dtype} != input dtype {input_dtype}")
 
         print(f"[attack_adapter] backend={backend} status={status} input={input_shape} output={x_adv.shape}")
-        return x_adv, {
+        meta = {
             "attack_backend": backend,
             "attack_status": status,
             "attack_notes": notes,
@@ -554,3 +595,6 @@ class AttackAdapter:
             "attack_gradient_maxabs": gradient_maxabs,
             "cw_c": cw_c, "cw_steps": cw_steps, "cw_lr": cw_lr,
         }
+        if self.b1_pgd_bim_mkldnn_off:  # key only exists when opted in, so legacy meta is unchanged
+            meta["attack_b1_pgd_bim_mkldnn_off_applied"] = mkldnn_b1_off_applied
+        return x_adv, meta

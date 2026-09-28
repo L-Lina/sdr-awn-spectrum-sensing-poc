@@ -1,0 +1,188 @@
+{
+  "experiment_name": "hailo_full_matrix_20260919",
+  "dataset_path": "data/RML2016.10a_dict.pkl",
+  "checkpoint_path": "external/adversarial-rf/2016.10a_AWN.pkl",
+  "hef_path": "/home/lina/hailo_pi_candidate5_ready_20260914/awn_2016_10a_c5.hef",
+
+  "modulations": [
+    "8PSK",
+    "AM-DSB",
+    "AM-SSB",
+    "BPSK",
+    "CPFSK",
+    "GFSK",
+    "PAM4",
+    "QAM16",
+    "QAM64",
+    "QPSK",
+    "WBFM"
+  ],
+
+  "snrs": [
+    -20, -18, -16, -14, -12,
+    -10, -8, -6, -4, -2,
+    0, 2, 4, 6, 8,
+    10, 12, 14, 16, 18
+  ],
+
+  "sample_indices": [0,1,2,3,4,5,6,7,8,9],
+
+  "topk_values": [10,20,30,40],
+
+  "sensing": {
+    "n_samples": 8192,
+    "embed_snr_margin": 20.0,
+    "threshold_factor": 1.5,
+    "sensing_window_size": 128,
+    "min_region_len": 0,
+    "merge_gap": 0,
+    "segment_len": 128,
+    "segment_hop": 1,
+    "alignment_policy": "max-energy",
+    "awn_preprocess": "radioml-native",
+    "base_seed": 42
+  },
+
+  "attacks": [
+    {
+      "name": "fgsm",
+      "profiles": [
+        {"id":"eps0.005","eps":0.005,"params":{}},
+        {"id":"eps0.01","eps":0.01,"params":{}},
+        {"id":"eps0.03","eps":0.03,"params":{}},
+        {"id":"eps0.05","eps":0.05,"params":{}}
+      ]
+    },
+
+    {
+      "name": "bim",
+      "profiles": [
+        {"id":"eps0.03_default","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "pgd",
+      "profiles": [
+        {"id":"eps0.005","eps":0.005,"params":{}},
+        {"id":"eps0.01","eps":0.01,"params":{}},
+        {"id":"eps0.03","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "mifgsm",
+      "profiles": [
+        {"id":"eps0.03_default","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "difgsm",
+      "profiles": [
+        {"id":"eps0.03_default","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "vmifgsm",
+      "profiles": [
+        {"id":"eps0.03_default","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "vnifgsm",
+      "profiles": [
+        {"id":"eps0.03_default","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "rfgsm",
+      "profiles": [
+        {"id":"eps0.03_default","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "tpgd",
+      "profiles": [
+        {"id":"eps0.03_default","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "cw",
+      "profiles": [
+        {
+          "id":"c1_steps20_lr0.01",
+          "eps":0.03,
+          "cw_c":1.0,
+          "cw_steps":20,
+          "cw_lr":0.01,
+          "params":{"kappa":0.0}
+        }
+      ]
+    },
+
+    {
+      "name": "deepfool",
+      "profiles": [
+        {
+          "id":"package_default",
+          "eps":0.03,
+          "params":{}
+        }
+      ]
+    },
+
+    {
+      "name": "fab",
+      "profiles": [
+        {"id":"eps0.005","eps":0.005,"params":{}},
+        {"id":"eps0.01","eps":0.01,"params":{}},
+        {"id":"eps0.03","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "square",
+      "profiles": [
+        {"id":"eps0.03_default","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "apgd",
+      "profiles": [
+        {"id":"eps0.03_default","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "apgdt",
+      "profiles": [
+        {"id":"eps0.03_default","eps":0.03,"params":{}}
+      ]
+    },
+
+    {
+      "name": "autoattack",
+      "profiles": [
+        {"id":"eps0.03_standard","eps":0.03,"params":{"version":"standard"}}
+      ]
+    },
+
+    {
+      "name": "ead",
+      "profiles": [
+        {
+          "id":"package_default",
+          "eps":0.03,
+          "params":{}
+        }
+      ]
+    }
+  ]
+}

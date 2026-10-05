@@ -48,13 +48,13 @@
 | APGD-T | 66.48 → 57.58 | −8.97 | 8/8 | 整合（extended） |
 | AutoAttack（targeted rerun） | 64.90 → 57.94 | −7.50 | 8/8 | 整合（extended） |
 | EAD | 1422.14 → 1223.23 | −207.60 | 8/8 | 整合（extended） |
-| FGSM（4 個 eps） | 5.28–5.36 → 4.68–4.86 | −0.49 至 −0.62 | 8/8 | 不整合 |
-| DeepFool | 不適用（pre-validation 未通過） | 不適用 | 不適用 | 不整合 |
+| FGSM（4 個 eps） | 5.28–5.36 → 4.68–4.86 | −0.49 至 −0.62 | 8/8 | 保留原執行路徑（收益低於整合門檻） |
+| DeepFool | 不適用（pre-validation 未通過） | 不適用 | 不適用 | 保留原執行路徑（未通過語意一致性門檻） |
 
 整合之 profile 其 sign test 雙尾 p 值均為 0.0078（8/8）。
 
-- **FGSM**：OFF 在 8/8 配對中較快，但配對中位減少量為 0.49–0.62 ms，低於 1 ms 實用門檻，因此不整合。
-- **DeepFool**：pre-validation 之 88 個樣本中，1 個 bit-identical、85 個位元不同但攻擊後預測與 attack success 相同、2 個 SEMANTIC_DIFFERENT，full run 與 targeted rerun 結果相同。兩個樣本為 `sample_pos` 25（BPSK、snr_db −20、sample_index 1）與 `sample_pos` 37（CPFSK、snr_db 6、sample_index 1）；ON 輸出之 top-1 與 top-2 logit 差分別為 5.96×10⁻⁸ 與 4.77×10⁻⁷，ON／OFF 輸出最大絕對差為 1.86×10⁻⁹。由實驗紀錄可知，這兩個輸出位於極接近分類決策邊界的數值敏感區域，切換 mkldnn 後攻擊後預測不同，不符合整合條件，因此排除。
+- **FGSM**：OFF 在 8/8 配對中較快，但配對中位減少量為 0.49–0.62 ms，低於 1 ms 實用門檻，因此不納入 mkldnn-off 加速路徑，維持原執行方式。
+- **DeepFool**：pre-validation 之 88 個樣本中，1 個 bit-identical、85 個位元不同但攻擊後預測與 attack success 相同、2 個 SEMANTIC_DIFFERENT，full run 與 targeted rerun 結果相同。兩個樣本為 `sample_pos` 25（BPSK、snr_db −20、sample_index 1）與 `sample_pos` 37（CPFSK、snr_db 6、sample_index 1）；ON 輸出之 top-1 與 top-2 logit 差分別為 5.96×10⁻⁸ 與 4.77×10⁻⁷，ON／OFF 輸出最大絕對差為 1.86×10⁻⁹。由實驗紀錄可知，這兩個輸出位於極接近分類決策邊界的數值敏感區域，切換 mkldnn 後攻擊後預測不同，不符合整合條件，因此不納入 mkldnn-off 加速路徑，維持原執行方式。
 - **FAB／AutoAttack targeted rerun**：full run 中 FAB eps0.005／eps0.01 因溫度條件未能取得足夠 THERMAL_CLEAN cell；AutoAttack 因未指定 seed 時子攻擊 seed 取自系統時間，production 與 benchmark 路徑輸出僅 87/88 一致。Targeted rerun 以相同方法僅重跑這些 profile，AutoAttack 並於 benchmark 範圍內以每列 formal seed 固定上述 seed；實驗結果為三個 profile 各 16 個 planned cell 全部為 THERMAL_CLEAN、anchor 一致性 88/88、SEMANTIC_DIFFERENT 0、INVALID 0。
 
 **適用範圍**：上述延遲數值僅適用於目前 Raspberry Pi 5、B=1、intra 4／interop 1、torch 2.14.0+cpu 之執行設定。AutoAttack 延遲分佈具重尾（p95 為 15932.7 → 12301.1 ms），表中以中位數表示。
@@ -169,7 +169,7 @@ Adaptive-K 與 Hailo-8 兩組 pipeline 驗證為 interactive validation，於 Ra
 
 ## 9. 目前研究結論
 
-1. 在 Raspberry Pi 5、B=1 之目前設定下，僅於攻擊呼叫期間停用 mkldnn，15 個攻擊（PGD、BIM 與 13 個 extended attacks）之生成延遲中位數降低 4.9%（FAB eps0.01）至 22.4%（Square），且驗證結果未出現攻擊語意改變；FGSM 之收益低於實用門檻，DeepFool 因位於決策邊界附近之數值敏感性而排除。
+1. 在 Raspberry Pi 5、B=1 之目前設定下，僅於攻擊呼叫期間停用 mkldnn，15 個攻擊（PGD、BIM 與 13 個 extended attacks）之生成延遲中位數降低 4.9%（FAB eps0.01）至 22.4%（Square），且驗證結果未出現攻擊語意改變；FGSM 之收益低於實用門檻，DeepFool 未通過語意一致性門檻（位於決策邊界附近之數值敏感區域），兩者皆不納入 mkldnn-off 加速路徑，維持原執行方式。
 2. 在 CPU 數位域評估中，Adaptive-K 之 recovery 與固定 K 相近，而 clean degradation 為訊號處理類防禦中最低；五種傳統濾波器在預設參數下之 net gain 介於 −16.93 至 +3.39 pp。
 3. Leakage-free adversarial training 在 transfer 評估下之 recovery 與 net gain 高於 Adaptive-K，但伴隨較高之 clean degradation 與較低之 clean accuracy；兩者呈 recovery 與 clean cost 之取捨。
 4. Hailo-8 backend 上之防禦排序與 CPU 不完全一致，防禦效果可能具有 backend 相依性，需進一步分析。
@@ -184,10 +184,3 @@ Adaptive-K 與 Hailo-8 兩組 pipeline 驗證為 interactive validation，於 Ra
 6. **延遲範圍**：latency 結果僅適用於目前 Raspberry Pi 5、B=1 與 thread／backend 設定。
 7. **擾動量不可換算為 RF 量**：數位域擾動大小（eps）不可直接換算為 RF 功率、SIR 或 SNR。
 8. **傳統濾波器參數**：五種濾波器使用原始實作之預設參數，未針對本管線調整。
-
-## 11. 下一階段
-
-1. **Backend-specific defense behavior analysis**：分析 Adaptive-K 在 Hailo-8 上 recovery 下降之原因，比較量化前後之頻譜決策與分類邊界差異。
-2. **Adaptive／defense-aware attack evaluation**：設計已知防禦存在之攻擊（含針對 AT 模型之 white-box 攻擊與針對 Adaptive-K 之 defense-aware 攻擊），評估各防禦在 adaptive 威脅模型下之表現。
-3. **Cable-injection／shielded OTA validation**：在受控之有線注入或屏蔽環境下，檢驗數位域結果在實體訊號鏈中的適用程度。
-4. **Latency／deployment trade-off**：視需要延伸評估防禦與攻擊在部署設定下之延遲與準確度取捨。

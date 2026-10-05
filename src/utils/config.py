@@ -7,6 +7,17 @@ import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+# Top-K defense modes (src/adapters/topk_adapter.py:TopKAdapter). "fixed" is the
+# legacy fixed-K fft_topk_denoise path; "adaptive" calls the production
+# external/adversarial-rf/util/defense.py:adaptive_k_v2_snr_defense.
+TOPK_MODES = ("fixed", "adaptive")
+
+# AWN evaluation inference backends (clean / attacked / defended classification).
+# "cpu" is the PyTorch AWNModelAdapter; "hailo" is src/adapters/hailo_awn_adapter.py:
+# HailoAWNAdapter running a compiled HEF. Attack generation always uses the
+# differentiable CPU AWN as its surrogate, whichever backend evaluates.
+INFERENCE_BACKENDS = ("cpu", "hailo")
+
 
 @dataclass
 class ExperimentConfig:
@@ -290,6 +301,15 @@ class ExperimentConfig:
     # meaningful thread count. This does not change Phase 0-4 default
     # behavior (all of them omit --torch-threads, which stays None).
     torch_num_threads: Optional[int] = None
+    # Top-K defense mode. "fixed" (default) keeps every prior code path unchanged
+    # (fixed K = topk, dummy or real per use_real_topk). "adaptive" is opt-in: it
+    # requires use_real_topk=True, ignores topk, and has no dummy/fixed-K fallback.
+    topk_mode: str = "fixed"
+    # AWN evaluation backend. "cpu" (default) keeps every prior code path unchanged.
+    # "hailo" is opt-in: requires use_real_awn=True (the CPU AWN checkpoint remains the
+    # attack surrogate) and an explicit hef_path; there is no CPU fallback.
+    inference_backend: str = "cpu"
+    hef_path: Optional[str] = None
 
 
 def build_attack_params(cfg: "ExperimentConfig") -> Dict[str, object]:
@@ -602,6 +622,25 @@ def validate_experiment_config(cfg: ExperimentConfig) -> None:
     # never meaningful for torch.set_num_threads().
     if cfg.torch_num_threads is not None:
         require_positive_int("torch_num_threads", cfg.torch_num_threads)
+    if cfg.topk_mode not in TOPK_MODES:
+        raise ValueError(f"topk_mode must be one of {TOPK_MODES}, got {cfg.topk_mode!r}")
+    if cfg.topk_mode == "adaptive" and not cfg.use_real_topk:
+        raise ValueError(
+            "topk_mode='adaptive' requires use_real_topk=True (--use-real-topk): Adaptive-K has no "
+            "dummy/placeholder implementation and is never replaced by fixed-K"
+        )
+    if cfg.inference_backend not in INFERENCE_BACKENDS:
+        raise ValueError(f"inference_backend must be one of {INFERENCE_BACKENDS}, got {cfg.inference_backend!r}")
+    if cfg.inference_backend == "hailo":
+        if not cfg.hef_path:
+            raise ValueError("inference_backend='hailo' requires hef_path (--hef-path); there is no default HEF")
+        if not cfg.use_real_awn:
+            raise ValueError(
+                "inference_backend='hailo' requires use_real_awn=True (--use-real-awn): the CPU AWN checkpoint "
+                "is the differentiable attack surrogate; Hailo is used for evaluation inference only"
+            )
+    elif cfg.hef_path is not None:
+        raise ValueError("hef_path is only valid with inference_backend='hailo'")
 
 
 def resolve_sensing_window_size(window_size: int, sensing_window_size: Optional[int]) -> int:
@@ -752,6 +791,16 @@ def build_arg_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument("--use-real-topk", action="store_true",
                         help="Route the Top-K defense through TopKAdapter (real fft_topk_denoise if torch is "
                              "available, else falls back to the numpy dummy with notes in summary.csv)")
+    parser.add_argument("--topk-mode", choices=TOPK_MODES, default="fixed",
+                        help="Top-K defense mode. fixed (default): fixed K = --topk, unchanged behavior. "
+                             "adaptive: production adaptive_k_v2_snr_defense (per-sample K, --topk ignored); "
+                             "requires --use-real-topk and raises instead of falling back if unavailable.")
+    parser.add_argument("--inference-backend", choices=INFERENCE_BACKENDS, default="cpu",
+                        help="AWN evaluation backend for clean/attacked/defended inference. cpu (default): "
+                             "PyTorch AWN, unchanged behavior. hailo: HailoAWNAdapter on --hef-path; requires "
+                             "--use-real-awn (CPU AWN stays the attack surrogate); no CPU fallback.")
+    parser.add_argument("--hef-path", type=str, default=None,
+                        help="Compiled AWN HEF for --inference-backend hailo (required there, rejected otherwise)")
     parser.add_argument("--use-real-awn", action="store_true",
                         help="Route AWN inference through AWNModelAdapter (real AWN model + checkpoint if "
                              "torch is available, else falls back to the numpy dummy with notes in summary.csv)")
@@ -1073,6 +1122,9 @@ def args_to_config(args: argparse.Namespace) -> ExperimentConfig:
         burst_insert_position_index=args.burst_insert_position_index,
         batch_size=args.batch_size,
         torch_num_threads=args.torch_num_threads,
+        topk_mode=args.topk_mode,
+        inference_backend=args.inference_backend,
+        hef_path=args.hef_path,
         experiment_name=sanitize_experiment_name(args.experiment_name),
         overwrite=args.overwrite,
         input_path=args.input_path,

@@ -18,6 +18,7 @@ import numpy as np
 from src.adapters.attack_adapter import AttackAdapter, dummy_attack
 from src.adapters.awn_adapter import AWNModelAdapter, dummy_awn_inference
 from src.adapters.defense_adapter import dummy_topk_defense
+from src.adapters.hailo_awn_adapter import HailoAWNAdapter
 from src.adapters.topk_adapter import TopKAdapter
 from src.io.iq_file_source import load_iq_file
 from src.sensing.energy_detection import (
@@ -78,6 +79,14 @@ def _seed_everything(seed: int) -> None:
         _torch.manual_seed(seed)
         if _torch.cuda.is_available():
             _torch.cuda.manual_seed_all(seed)
+
+
+def _sha256_file(path: str) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 22), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
@@ -449,85 +458,123 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "multi_burst_result": multi_burst_result,
         }
 
+    # Two roles, kept separate:
+    #   attack surrogate  -- awn_adapter (CPU PyTorch AWN); the only model AttackAdapter
+    #                        differentiates through, whichever backend evaluates.
+    #   evaluation backend -- eval_adapter, used by run_awn() for clean / attacked /
+    #                        defended classification: awn_adapter (cpu) or HailoAWNAdapter (hailo).
+    # inference_backend="cpu" (default) makes both the same object, i.e. the prior behavior.
     awn_adapter = None
     if cfg.use_real_awn:
         awn_adapter = AWNModelAdapter(checkpoint_path=cfg.checkpoint, device=cfg.device)
+    hailo_adapter = None
+    hef_sha256 = None
+    if cfg.inference_backend == "hailo":
+        # validate_experiment_config enforced hef_path and use_real_awn. No CPU fallback:
+        # a missing HEF / HailoRT / device raises here.
+        if awn_adapter is None or awn_adapter.status != "ok" or awn_adapter.model is None:
+            raise RuntimeError(
+                f"inference_backend='hailo' requires the real CPU AWN as attack surrogate, got "
+                f"{getattr(awn_adapter, 'backend_name', None)} (status={getattr(awn_adapter, 'status', None)})"
+            )
+        hailo_adapter = HailoAWNAdapter(cfg.hef_path)
+        hef_sha256 = _sha256_file(hailo_adapter.hef_path)
+    eval_adapter = hailo_adapter if hailo_adapter is not None else awn_adapter
+    backend_meta = {
+        "inference_backend": cfg.inference_backend,
+        "attack_surrogate_backend": awn_adapter.backend_name if awn_adapter is not None else "dummy_awn_inference",
+        "hef_path": hailo_adapter.hef_path if hailo_adapter is not None else None,
+        "hef_sha256": hef_sha256,
+        # adaptive | fixed (real fft_topk_denoise) | placeholder (legacy default dummy_topk_defense)
+        "defense_mode": "adaptive" if cfg.topk_mode == "adaptive" else ("fixed" if cfg.use_real_topk else "placeholder"),
+        "defense_topk": None if cfg.topk_mode == "adaptive" else cfg.topk,
+    }
 
-        def run_awn(x):
-            # batch_size (this round): chunk x into sub-batches of at most
-            # cfg.batch_size segments per real AWNModelAdapter.infer() call,
-            # instead of one call covering all of x's segments at once.
-            # cfg.batch_size=1 (the default) makes every chunk a single
-            # segment; when x.shape[0] <= cfg.batch_size (the overwhelming
-            # majority of existing single-combo/single-region calls), this
-            # is exactly one call, byte-identical to before. Never silently
-            # drops or reorders segments -- logits are concatenated back in
-            # the original order.
-            n = x.shape[0]
-            if n <= cfg.batch_size:
-                return awn_adapter.infer(x, seed=cfg.seed)
-            all_logits = []
-            metas = []
-            for start in range(0, n, cfg.batch_size):
-                chunk = x[start:start + cfg.batch_size]
-                chunk_logits, chunk_meta = awn_adapter.infer(chunk, seed=cfg.seed)
-                all_logits.append(chunk_logits)
-                metas.append(chunk_meta)
-            for m in metas[1:]:
-                if m["awn_backend"] != metas[0]["awn_backend"] or m["awn_status"] != metas[0]["awn_status"]:
-                    raise RuntimeError(
-                        f"batch_size={cfg.batch_size} chunking produced inconsistent backend/status across "
-                        f"chunks: {metas[0]} vs {m} -- refusing to silently merge inconsistent results."
-                    )
-            logits = np.concatenate(all_logits, axis=0)
-            return logits, metas[0]
-    else:
-        def run_awn(x):
-            logits = dummy_awn_inference(x, seed=cfg.seed)
-            meta = {
-                "awn_backend": "dummy_awn_inference",
-                "awn_status": "ok",
-                "awn_notes": "--use-real-awn not passed; using placeholder AWN inference by default.",
+    try:
+        if eval_adapter is not None:
+            def run_awn(x):
+                # batch_size (this round): chunk x into sub-batches of at most
+                # cfg.batch_size segments per real AWNModelAdapter.infer() call,
+                # instead of one call covering all of x's segments at once.
+                # cfg.batch_size=1 (the default) makes every chunk a single
+                # segment; when x.shape[0] <= cfg.batch_size (the overwhelming
+                # majority of existing single-combo/single-region calls), this
+                # is exactly one call, byte-identical to before. Never silently
+                # drops or reorders segments -- logits are concatenated back in
+                # the original order.
+                n = x.shape[0]
+                if n <= cfg.batch_size:
+                    return eval_adapter.infer(x, seed=cfg.seed)
+                all_logits = []
+                metas = []
+                for start in range(0, n, cfg.batch_size):
+                    chunk = x[start:start + cfg.batch_size]
+                    chunk_logits, chunk_meta = eval_adapter.infer(chunk, seed=cfg.seed)
+                    all_logits.append(chunk_logits)
+                    metas.append(chunk_meta)
+                for m in metas[1:]:
+                    if m["awn_backend"] != metas[0]["awn_backend"] or m["awn_status"] != metas[0]["awn_status"]:
+                        raise RuntimeError(
+                            f"batch_size={cfg.batch_size} chunking produced inconsistent backend/status across "
+                            f"chunks: {metas[0]} vs {m} -- refusing to silently merge inconsistent results."
+                        )
+                logits = np.concatenate(all_logits, axis=0)
+                return logits, metas[0]
+        else:
+            def run_awn(x):
+                logits = dummy_awn_inference(x, seed=cfg.seed)
+                meta = {
+                    "awn_backend": "dummy_awn_inference",
+                    "awn_status": "ok",
+                    "awn_notes": "--use-real-awn not passed; using placeholder AWN inference by default.",
+                }
+                return logits, meta
+
+        logits_clean, awn_meta = run_awn(x_clean)
+
+        attack_input_shape = x_clean.shape
+        if cfg.use_real_attack:
+            # Attack surrogate: always the CPU PyTorch AWN, never eval_adapter (a Hailo HEF has no gradient).
+            real_model = awn_adapter.model if awn_adapter is not None else None
+            x_adv, attack_meta = AttackAdapter(awn_model=real_model, device=cfg.device).apply(
+                x_clean, attack=cfg.attack, eps=cfg.attack_eps, temperature=cfg.attack_temperature,
+                seed=cfg.seed, diagnostics=cfg.attack_diagnostics,
+                cw_c=cfg.cw_c, cw_steps=cfg.cw_steps, cw_lr=cfg.cw_lr,
+                attack_params=build_attack_params(cfg),
+            )
+        else:
+            x_adv = dummy_attack(x_clean, attack=cfg.attack, epsilon=cfg.attack_eps, seed=cfg.seed)
+            attack_meta = {
+                "attack_backend": "dummy_attack",
+                "attack_status": "ok",
+                "attack_notes": "--use-real-attack not passed; using placeholder attack by default.",
             }
-            return logits, meta
+        if x_adv.shape != attack_input_shape:
+            raise RuntimeError(f"Attack output shape {x_adv.shape} != input shape {attack_input_shape}")
 
-    logits_clean, awn_meta = run_awn(x_clean)
+        logits_attacked, _ = run_awn(x_adv)
 
-    attack_input_shape = x_clean.shape
-    if cfg.use_real_attack:
-        real_model = awn_adapter.model if awn_adapter is not None else None
-        x_adv, attack_meta = AttackAdapter(awn_model=real_model, device=cfg.device).apply(
-            x_clean, attack=cfg.attack, eps=cfg.attack_eps, temperature=cfg.attack_temperature,
-            seed=cfg.seed, diagnostics=cfg.attack_diagnostics,
-            cw_c=cfg.cw_c, cw_steps=cfg.cw_steps, cw_lr=cfg.cw_lr,
-            attack_params=build_attack_params(cfg),
-        )
-    else:
-        x_adv = dummy_attack(x_clean, attack=cfg.attack, epsilon=cfg.attack_eps, seed=cfg.seed)
-        attack_meta = {
-            "attack_backend": "dummy_attack",
-            "attack_status": "ok",
-            "attack_notes": "--use-real-attack not passed; using placeholder attack by default.",
-        }
-    if x_adv.shape != attack_input_shape:
-        raise RuntimeError(f"Attack output shape {x_adv.shape} != input shape {attack_input_shape}")
+        input_shape = x_adv.shape
+        if cfg.topk_mode == "adaptive":
+            # Opt-in Adaptive-K (validate_experiment_config already enforced use_real_topk=True).
+            # Any import/call failure raises; there is no dummy or fixed-K fallback on this path.
+            x_defended, topk_meta = TopKAdapter(mode="adaptive").apply(x_adv)
+        elif cfg.use_real_topk:
+            x_defended, topk_meta = TopKAdapter().apply(x_adv, topk=cfg.topk)
+        else:
+            x_defended = dummy_topk_defense(x_adv, topk=cfg.topk)
+            topk_meta = {
+                "topk_backend": "dummy_topk_defense",
+                "topk_status": "ok",
+                "topk_notes": "--use-real-topk not passed; using placeholder Top-K defense by default.",
+            }
+        if x_defended.shape != input_shape:
+            raise RuntimeError(f"Top-K defense output shape {x_defended.shape} != input shape {input_shape}")
 
-    logits_attacked, _ = run_awn(x_adv)
-
-    input_shape = x_adv.shape
-    if cfg.use_real_topk:
-        x_defended, topk_meta = TopKAdapter().apply(x_adv, topk=cfg.topk)
-    else:
-        x_defended = dummy_topk_defense(x_adv, topk=cfg.topk)
-        topk_meta = {
-            "topk_backend": "dummy_topk_defense",
-            "topk_status": "ok",
-            "topk_notes": "--use-real-topk not passed; using placeholder Top-K defense by default.",
-        }
-    if x_defended.shape != input_shape:
-        raise RuntimeError(f"Top-K defense output shape {x_defended.shape} != input shape {input_shape}")
-
-    logits_defended, _ = run_awn(x_defended)
+        logits_defended, _ = run_awn(x_defended)
+    finally:
+        if hailo_adapter is not None:
+            hailo_adapter.close()
 
     pred_clean = np.argmax(logits_clean, axis=1)
     pred_attacked = np.argmax(logits_attacked, axis=1)
@@ -772,6 +819,17 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
             "attack_status": attack_meta["attack_status"],
             "attack_notes": attack_meta["attack_notes"],
         })
+    if cfg.topk_mode == "adaptive":
+        # Adaptive-K ignores cfg.topk, so the topk column is cleared and the mode is recorded
+        # explicitly. Fixed-mode rows keep their exact legacy columns.
+        for row in rows:
+            row["topk"] = None
+            row["topk_mode"] = "adaptive"
+    if cfg.inference_backend != "cpu":
+        # Non-default evaluation backend: record backend, surrogate and HEF identity per row.
+        # CPU rows keep their exact legacy columns (awn_backend already names the CPU model).
+        for row in rows:
+            row.update(backend_meta)
 
     summary_csv_path = output_dir / "summary.csv"
     write_summary_csv(summary_csv_path, rows)
@@ -888,6 +946,7 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
         **topk_meta,
         **awn_meta,
         **attack_meta,
+        **backend_meta,
     }
 
     print("\n--- Dry-run summary ---")
@@ -922,6 +981,8 @@ def run_dry_run_experiment(cfg: ExperimentConfig) -> Dict:
     print(f"Attack backend:     {attack_meta['attack_backend']} (status={attack_meta['attack_status']})")
     print(f"Attack shape check: input={result['attack_input_shape']} -> output={result['attack_output_shape']}")
     print(f"Top-K backend:      {topk_meta['topk_backend']} (status={topk_meta['topk_status']})")
+    print(f"Inference backend:  {backend_meta['inference_backend']} (attack surrogate: "
+          f"{backend_meta['attack_surrogate_backend']}; defense_mode={backend_meta['defense_mode']})")
     print(f"Top-K shape check:  input={result['topk_input_shape']} -> output={result['topk_output_shape']}")
     print(f"summary.csv:        {summary_csv_path}")
     print(f"sensing plot:       {result['plot_path'] or '(skipped, matplotlib not installed)'}")

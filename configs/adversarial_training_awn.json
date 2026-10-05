@@ -1,0 +1,24 @@
+{
+  "formal_config": "configs/hailo_full_matrix.json",
+  "dataset_path": null,
+  "warm_start_checkpoint": null,
+  "train_attacks": [
+    {"attack": "fgsm", "profile_id": "eps0.03"},
+    {"attack": "pgd", "profile_id": "eps0.03"}
+  ],
+  "robust_val_attack": {"attack": "fgsm", "profile_id": "eps0.03"},
+  "alpha_adversarial": 0.5,
+  "val_weight_clean": 0.5,
+  "epochs": 30,
+  "batch_size": 256,
+  "lr": 0.0001,
+  "lr_plateau_factor": 0.5,
+  "lr_plateau_patience": 4,
+  "early_stop_patience": 8,
+  "val_ratio": 0.15,
+  "seed": 42,
+  "snr_min": 0,
+  "clean_only_modulations": ["WBFM", "AM-DSB", "AM-SSB"],
+  "exclude_formal_eval_samples": true,
+  "torch_num_threads": null
+}

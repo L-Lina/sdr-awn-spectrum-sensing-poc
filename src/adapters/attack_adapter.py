@@ -216,6 +216,19 @@ else:
 # to batches. Opt-in via AttackAdapter(b1_pgd_bim_mkldnn_off=True); default behavior unchanged.
 _B1_MKLDNN_OFF_ATTACKS = frozenset({"pgd", "bim"})
 
+# Extended B=1 set (results/attack_b1_accel_full_20261004_100032, experiments/
+# benchmark_attack_b1_acceleration_full_pi5.py, Raspberry Pi 5, intra 4 / interop 1, 88-sample formal subset):
+# each attack's formal profile had mkldnn OFF faster in 8/8 thermally clean pairs (sign test p = 0.0078),
+# 0 SEMANTIC_DIFFERENT / 0 INVALID / 0 exceptions, benchmark ON path bit-identical to apply() on 88/88.
+# fab (all three formal profiles) and autoattack were added after the targeted rerun of the same
+# benchmark (--profiles fab/eps0.005,fab/eps0.01,autoattack/eps0.03_standard; autoattack with its
+# otherwise wall-clock sub-attack seed fixed per sample), which classified them SPEEDUP_CANDIDATE.
+# Explicit list -- an attack is added only after that evidence. Not included: fgsm (no material benefit),
+# deepfool (2/88 deterministic SEMANTIC_DIFFERENT). Opt-in via AttackAdapter(b1_mkldnn_off_extended=True).
+_B1_MKLDNN_OFF_EXTENDED_ATTACKS = frozenset({
+    "mifgsm", "difgsm", "vmifgsm", "vnifgsm", "rfgsm", "tpgd", "cw", "fab", "square", "apgd", "apgdt",
+    "autoattack", "ead"})
+
 
 @contextlib.contextmanager
 def mkldnn_disabled_scope(torch_module):
@@ -329,14 +342,20 @@ class AttackAdapter:
     returned meta always reflect what actually ran.
     """
 
-    def __init__(self, awn_model=None, device: str = "cpu", b1_pgd_bim_mkldnn_off: bool = False) -> None:
+    def __init__(self, awn_model=None, device: str = "cpu", b1_pgd_bim_mkldnn_off: bool = False,
+                 b1_mkldnn_off_extended: bool = False) -> None:
         """awn_model: the real torch nn.Module from AWNModelAdapter, or None if it's running dummy.
 
         b1_pgd_bim_mkldnn_off: opt-in Phase 1 acceleration (default False = legacy behavior). When
         True, apply() disables mkldnn ONLY around atk(x, y) and ONLY for pgd/bim with N == 1; clean
         prediction, pre/post-processing, diagnostics, other attacks and N > 1 are unaffected.
+
+        b1_mkldnn_off_extended: independent opt-in (default False) with the same scope, for the
+        attacks in _B1_MKLDNN_OFF_EXTENDED_ATTACKS only. It never affects pgd/bim, which stay governed
+        by b1_pgd_bim_mkldnn_off alone.
         """
         self.b1_pgd_bim_mkldnn_off = bool(b1_pgd_bim_mkldnn_off)
+        self.b1_mkldnn_off_extended = bool(b1_mkldnn_off_extended)
         self.device = device
         self.wrapped_model = None
         self.backend_name = "dummy_attack"
@@ -370,8 +389,18 @@ class AttackAdapter:
             self.status = "fallback"
             self.notes = f"Model01Wrapper construction failed ({type(exc).__name__}: {exc}); using dummy fallback."
 
+    def _b1_mkldnn_off_rule(self, attack_name: str, batch_size: int) -> Optional[str]:
+        """Which opt-in rule disables mkldnn for this call: 'pgd_bim', 'extended' or None."""
+        if batch_size != 1:
+            return None
+        if self.b1_pgd_bim_mkldnn_off and attack_name in _B1_MKLDNN_OFF_ATTACKS:
+            return "pgd_bim"
+        if self.b1_mkldnn_off_extended and attack_name in _B1_MKLDNN_OFF_EXTENDED_ATTACKS:
+            return "extended"
+        return None
+
     def _b1_mkldnn_off_applies(self, attack_name: str, batch_size: int) -> bool:
-        return self.b1_pgd_bim_mkldnn_off and attack_name in _B1_MKLDNN_OFF_ATTACKS and batch_size == 1
+        return self._b1_mkldnn_off_rule(attack_name, batch_size) is not None
 
     def apply(
         self,
@@ -482,6 +511,7 @@ class AttackAdapter:
         gradient_total_count = None
         gradient_maxabs = None
         mkldnn_b1_off_applied = False
+        mkldnn_b1_off_extended_applied = False
 
         if self.wrapped_model is not None:
             training_before = self.wrapped_model.training
@@ -503,10 +533,12 @@ class AttackAdapter:
                     attack_name, attack_model, eps,
                     cw_c=cw_c, cw_steps=cw_steps, cw_lr=cw_lr, attack_params=attack_params,
                 )
-                if self._b1_mkldnn_off_applies(attack_name, x.shape[0]):
+                mkldnn_rule = self._b1_mkldnn_off_rule(attack_name, x.shape[0])
+                if mkldnn_rule is not None:
                     with mkldnn_disabled_scope(torch):
                         x_ta_adv = atk(x_ta, y_pred)
-                    mkldnn_b1_off_applied = True
+                    mkldnn_b1_off_applied = mkldnn_rule == "pgd_bim"
+                    mkldnn_b1_off_extended_applied = mkldnn_rule == "extended"
                 else:
                     x_ta_adv = atk(x_ta, y_pred)
                 iq_linf_normalized = (
@@ -597,4 +629,6 @@ class AttackAdapter:
         }
         if self.b1_pgd_bim_mkldnn_off:  # key only exists when opted in, so legacy meta is unchanged
             meta["attack_b1_pgd_bim_mkldnn_off_applied"] = mkldnn_b1_off_applied
+        if self.b1_mkldnn_off_extended:  # likewise only present when the extended option is opted in
+            meta["attack_b1_mkldnn_off_extended_applied"] = mkldnn_b1_off_extended_applied
         return x_adv, meta

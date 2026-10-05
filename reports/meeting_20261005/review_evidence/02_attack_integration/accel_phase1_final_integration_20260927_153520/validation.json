@@ -1,0 +1,104 @@
+{
+  "overall": "PASS",
+  "section_A_option_off_vs_prechange": {
+    "fgsm": {
+      "n": 88,
+      "n_identical": 88,
+      "status": "PASS"
+    },
+    "pgd": {
+      "n": 88,
+      "n_identical": 88,
+      "status": "PASS"
+    },
+    "bim": {
+      "n": 88,
+      "n_identical": 88,
+      "status": "PASS"
+    }
+  },
+  "section_B_option_on": {
+    "fgsm": {
+      "counts": {
+        "BIT_IDENTICAL": 88,
+        "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+        "SEMANTIC_DIFFERENT": 0,
+        "INVALID": 0
+      },
+      "semantic_same_samples": [],
+      "applied_flag_ok": 88,
+      "rng_state_equal": 88,
+      "consistent_with_phase1d3": null,
+      "status": "PASS"
+    },
+    "pgd": {
+      "counts": {
+        "BIT_IDENTICAL": 88,
+        "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+        "SEMANTIC_DIFFERENT": 0,
+        "INVALID": 0
+      },
+      "semantic_same_samples": [],
+      "applied_flag_ok": 88,
+      "rng_state_equal": 88,
+      "consistent_with_phase1d3": true,
+      "status": "PASS"
+    },
+    "bim": {
+      "counts": {
+        "BIT_IDENTICAL": 87,
+        "BITWISE_DIFFERENT_SEMANTIC_SAME": 1,
+        "SEMANTIC_DIFFERENT": 0,
+        "INVALID": 0
+      },
+      "semantic_same_samples": [
+        [
+          "PAM4",
+          6,
+          1
+        ]
+      ],
+      "applied_flag_ok": 88,
+      "rng_state_equal": 88,
+      "consistent_with_phase1d3": true,
+      "status": "PASS"
+    }
+  },
+  "section_C_scope_checks_all_pass": true,
+  "section_E_latency_sanity": {
+    "pgd": {
+      "option_off_median_ms": 46.76493250008207,
+      "option_on_median_ms": 39.516595998065895,
+      "option_off_p95_ms": 47.61156124932313,
+      "option_on_p95_ms": 40.243046300747665,
+      "n_pairs": 88,
+      "median_paired_delta_ms": -7.245073999001761,
+      "share_pairs_option_on_faster": 1.0,
+      "phase1d3_median_paired_delta_ms": -6.2015,
+      "outputs_reproduced_bitwise": true,
+      "thermal_status": "THERMAL_CLEAN",
+      "direction": "CONFIRMED",
+      "note": "full apply() wall time incl. its in-path clean forward and status print; absolute values are not comparable to the Phase 1D-3 benchmark path"
+    },
+    "bim": {
+      "option_off_median_ms": 48.04167149995919,
+      "option_on_median_ms": 40.799391999826184,
+      "option_off_p95_ms": 48.625791899030446,
+      "option_on_p95_ms": 41.436310350036365,
+      "n_pairs": 88,
+      "median_paired_delta_ms": -7.266746501045418,
+      "share_pairs_option_on_faster": 1.0,
+      "phase1d3_median_paired_delta_ms": -6.194,
+      "outputs_reproduced_bitwise": true,
+      "thermal_status": "THERMAL_CLEAN",
+      "direction": "CONFIRMED",
+      "note": "full apply() wall time incl. its in-path clean forward and status print; absolute values are not comparable to the Phase 1D-3 benchmark path"
+    }
+  },
+  "latency_direction_confirmed_all": true,
+  "failures": [],
+  "rules": {
+    "fail_on": "any SEMANTIC_DIFFERENT or INVALID for PGD/BIM B=1 with the option ON; any option-OFF deviation from the pre-change path; any scope-guard failure",
+    "latency": "sanity only; direction reported, not a new performance study"
+  }
+}

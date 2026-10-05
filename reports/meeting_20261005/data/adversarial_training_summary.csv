@@ -1,0 +1,38 @@
+source_result_dir,source_file,attack,profile,defense,metric_name,raw_count,denominator,value,unit,notes
+results/adversarial_training_20261004_230802,manifest.json,,,leakage_free_at,status,,,complete,label,
+results/adversarial_training_20261004_230802,manifest.json,,,leakage_free_at,n_rows,108900,,108900,count,"SNR >= 0 dB, formal sample_indices excluded"
+results/adversarial_training_20261004_230802,manifest.json,,,leakage_free_at,n_train,92565,,92565,count,
+results/adversarial_training_20261004_230802,manifest.json,,,leakage_free_at,n_val,16335,,16335,count,
+results/adversarial_training_20261004_230802,manifest.json,,,leakage_free_at,excluded_sample_indices,,,0 1 2 3 4 5 6 7 8 9,list,all modulations x SNRs
+results/adversarial_training_20261004_230802,best_model.config.json,,,leakage_free_at,formal_eval_samples_excluded,,,True,bool,
+results/adversarial_training_20261004_230802,best_model.config.json,,,leakage_free_at,functional_check_only,,,False,bool,
+results/adversarial_training_20261004_230802,best_model.config.json,,,leakage_free_at,train_profiles,,,fgsm/eps0.03 pgd/eps0.03,list,
+results/adversarial_training_20261004_230802,training_log.csv,,,leakage_free_at,epochs_trained,27,,27,count,early stop
+results/adversarial_training_20261004_230802,best_model.config.json,,,leakage_free_at,best_epoch,,,19,epoch,
+results/adversarial_training_20261004_230802,training_log.csv,,,leakage_free_at,best_epoch_val_clean_acc,,16335,0.8950107131925313,fraction,
+results/adversarial_training_20261004_230802,training_log.csv,,,leakage_free_at,best_epoch_val_robust_acc,,16335,0.6891337618610346,fraction,FGSM eps0.03 on validation split
+results/adversarial_training_20261004_230802,best_model.config.json,,,leakage_free_at,best_val_weighted,,,0.792072237526783,score,0.5 clean + 0.5 robust
+results/adversarial_training_20261004_230802,manifest.json,,,leakage_free_at,best_model_sha256,,,e3cdc7dd108a905c8cb98b90732200211bd626ee41ecd73348aa97f275bffc15,sha256,
+results/adversarial_training_20261004_230802,manifest.json,,,leakage_free_at,warm_start_sha256,,,8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695,sha256,formal AWN checkpoint
+results/defense_recovery_full_20261005_152728,manifest.json,,,adversarial_training_transfer_leakage_free,provenance,,,leakage_free,label,
+results/defense_recovery_full_20261005_152728,manifest.json,,,adversarial_training_transfer_leakage_free,eval_samples_in_at_train,0,2200,0,count,
+results/defense_recovery_full_20261004_215947,manifest.json,,,adversarial_training_transfer_exploratory,provenance,,,exploratory,label,adv_train.py random split over SNR >= snr_min rows; formal evaluation samples can be training samples (see in_at_train / at_train_overlap.csv)
+results/defense_recovery_full_20261004_215947,manifest.json,,,adversarial_training_transfer_exploratory,eval_samples_in_at_train,928,2200,928,count,external/adversarial-rf/awn_fpga/2016.10a_AWN_at.pkl
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,recovery_pct,11877,20960,56.66507633587786,%,transfer evaluation
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,recovery_ci95_lo_pct,,,55.99304715341067,%,
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,recovery_ci95_hi_pct,,,57.33466278311165,%,
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,clean_degradation_pct,5784,31152,18.567026194144837,%,
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,retention_pct,21376,31152,68.61838726245506,%,
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,net_gain_pp,,,35.901386748844374,pp,
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,defended_acc_pct,24633,52800,46.65340909090909,%,
+results/defense_recovery_full_20261005_152728,clean_degradation.csv,,unique_clean,adversarial_training_transfer_leakage_free,at_model_clean_acc_pct,1116,2200,50.72727272727273,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,recovery_pct,11219,20960,53.525763358778626,%,transfer evaluation
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,recovery_ci95_lo_pct,,,52.84995462649501,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,recovery_ci95_hi_pct,,,54.20027990685502,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,clean_degradation_pct,4968,31152,15.947611710323574,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,retention_pct,20807,31152,66.79185927067283,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,net_gain_pp,,,34.074858757062145,pp,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,defended_acc_pct,24131,52800,45.702651515151516,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,adversarial_training_transfer_exploratory,at_model_clean_acc_pct,1148,2200,52.18181818181818,%,
+results/defense_recovery_full_20261004_215947,at_train_overlap.csv,,ALL_24,adversarial_training_transfer_exploratory,recovery_pct_in_at_train_False,3995,9190,43.47116430903156,%,split confounded with SNR range; not a leakage-effect estimate
+results/defense_recovery_full_20261004_215947,at_train_overlap.csv,,ALL_24,adversarial_training_transfer_exploratory,recovery_pct_in_at_train_True,7224,11770,61.37638062871708,%,split confounded with SNR range; not a leakage-effect estimate

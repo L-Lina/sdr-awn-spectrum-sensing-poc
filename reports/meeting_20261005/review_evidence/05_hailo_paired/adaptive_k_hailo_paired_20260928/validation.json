@@ -1,0 +1,263 @@
+{
+  "gates": {
+    "row_counts": true,
+    "all_profiles_present": true,
+    "hailo_matches_formal_where_identical": true,
+    "cpu_recompute_matches_phaseB": true,
+    "cpu_recompute_complete": true,
+    "adaptive_defended_sha_matches_phaseB": true,
+    "wideband_rows_have_no_k": true,
+    "narrowband_rows_have_k": true,
+    "hailo_predictions_nonconstant": true,
+    "no_attack_generation": true,
+    "evaluate_parts_recorded_no_failures": true,
+    "completed_without_abort": true,
+    "no_phaseB_modification": true,
+    "no_writes_outside_phaseC_dir": true
+  },
+  "part_failures": {
+    "clean": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "fgsm/eps0.005": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "fgsm/eps0.01": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "fgsm/eps0.03": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "fgsm/eps0.05": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "bim/eps0.03_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "pgd/eps0.005": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "pgd/eps0.01": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "pgd/eps0.03": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "mifgsm/eps0.03_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "difgsm/eps0.03_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "vmifgsm/eps0.03_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "vnifgsm/eps0.03_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "rfgsm/eps0.03_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "tpgd/eps0.03_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "cw/c1_steps20_lr0.01": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "deepfool/package_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "fab/eps0.005": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "fab/eps0.01": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "fab/eps0.03": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "square/eps0.03_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "apgd/eps0.03_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "apgdt/eps0.03_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "autoattack/eps0.03_standard": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    },
+    "ead/package_default": {
+      "sample_identity_ok": 0,
+      "cpu_rows_found": 0,
+      "defense_semantics_ok": 0,
+      "hailo_matches_formal_where_identical": 0,
+      "wideband_rows_have_no_k": 0,
+      "adaptive_semantics_ok": 0,
+      "narrowband_rows_have_k": 0
+    }
+  },
+  "counts": {
+    "clean_rows": 13200,
+    "attacked_rows": 316800,
+    "hailo_formal_comparisons": 187905
+  },
+  "write_guard": {
+    "protected_dirs_unchanged": true,
+    "protected_changes": {},
+    "watched_files_unchanged": true,
+    "watched_changes": [],
+    "git_status_unchanged": true,
+    "git_diff_unchanged": true
+  },
+  "write_guard_scope": "stat of every file in results/adaptive_k_effectiveness_20260927_164906, results/hailo_full_matrix_20260920_seedaligned, results/cpu_full_matrix_20260921_seedaligned, results/adaptive_k_parity_20260927_162249; sha256 of watched sources and repo-root HailoRT logs; git status --porcelain and git diff (results/ is git-ignored, so writes elsewhere under results/ are not covered)",
+  "overall": "PASS",
+  "stage": "summarize",
+  "utc": "2026-09-28T03:32:37.666425+00:00",
+  "note": "spectral_ratio thresholds 3 and 10 are linear, not dB"
+}

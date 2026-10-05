@@ -1,0 +1,4 @@
+attack,family,n_profiles,profiles,profile_classifications,attack_conclusion
+deepfool,optimization_boundary_search,1,package_default,NEEDS_INVESTIGATION,NEEDS_INVESTIGATION
+fab,optimization_boundary_search,2,eps0.005 eps0.01,SPEEDUP_CANDIDATE SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)
+autoattack,composite,1,eps0.03_standard,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)

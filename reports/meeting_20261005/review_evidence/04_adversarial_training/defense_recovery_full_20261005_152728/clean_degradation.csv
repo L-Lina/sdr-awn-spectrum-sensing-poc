@@ -1,0 +1,3 @@
+defense,defense_family,n_clean,n_clean_correct,n_clean_defended_correct,n_clean_degraded,n_clean_improved,clean_acc_pct,clean_defended_acc_pct,clean_degradation_pct,clean_improved_pct_of_incorrect
+none,no_defense,2200,1298,1298,0,0,59.0,59.0,0.0,0.0
+adversarial_training_transfer_leakage_free,adversarial_training,2200,1298,1116,241,59,59.0,50.72727272727273,18.567026194144837,6.541019955654102

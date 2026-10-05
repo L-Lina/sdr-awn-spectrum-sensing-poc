@@ -1,0 +1,155 @@
+{
+  "benchmark": "defense_recovery_comparison",
+  "mode": "full",
+  "run_key": {
+    "mode": "full",
+    "defenses": [
+      "none",
+      "adversarial_training_transfer_leakage_free"
+    ],
+    "profiles": [
+      "fgsm/eps0.005",
+      "fgsm/eps0.01",
+      "fgsm/eps0.03",
+      "fgsm/eps0.05",
+      "bim/eps0.03_default",
+      "pgd/eps0.005",
+      "pgd/eps0.01",
+      "pgd/eps0.03",
+      "mifgsm/eps0.03_default",
+      "difgsm/eps0.03_default",
+      "vmifgsm/eps0.03_default",
+      "vnifgsm/eps0.03_default",
+      "rfgsm/eps0.03_default",
+      "tpgd/eps0.03_default",
+      "cw/c1_steps20_lr0.01",
+      "deepfool/package_default",
+      "fab/eps0.005",
+      "fab/eps0.01",
+      "fab/eps0.03",
+      "square/eps0.03_default",
+      "apgd/eps0.03_default",
+      "apgdt/eps0.03_default",
+      "autoattack/eps0.03_standard",
+      "ead/package_default"
+    ],
+    "at_checkpoint_sha256": "e3cdc7dd108a905c8cb98b90732200211bd626ee41ecd73348aa97f275bffc15",
+    "at_whitebox": false,
+    "adv_store_dir": "results/adaptive_k_effectiveness_20260927_164906",
+    "config_sha256": "6c1a33e8acffa29aa210ea2de95f0854a451dbaceb0fc1d25dd60d65046716f8"
+  },
+  "command": [
+    "/home/lina/sdr-awn-spectrum-sensing-poc/.venv/bin/python",
+    "experiments/benchmark_defense_recovery_comparison_pi5.py",
+    "--full",
+    "--defenses",
+    "adversarial_training",
+    "--attack-temperature",
+    "1.0",
+    "--adv-store-dir",
+    "results/adaptive_k_effectiveness_20260927_164906",
+    "--at-checkpoint",
+    "results/adversarial_training_20261004_230802/best_model.pkl"
+  ],
+  "started_utc": "2026-10-05T07:27:33.430545+00:00",
+  "evaluation_backend": "cpu",
+  "hashes": {
+    "dataset_sha256": "b29ccc25b00d0718cd3b70ffa9158662ec83f6d9b63ffd845c7bcbe3b3096e8c",
+    "checkpoint_sha256": "8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695",
+    "config_sha256": "6c1a33e8acffa29aa210ea2de95f0854a451dbaceb0fc1d25dd60d65046716f8"
+  },
+  "sources": {
+    "reference_sha256": "f818dd0229ae3a02271a6bc546593d3d5df2857e4ac63a6d2f26bc8ddf81a891",
+    "reference_ok": true,
+    "defense_py_sha256": "291a4ae4b5da17c91c52b8db345259b76134799f717975630464c961dfbfc528",
+    "defense_py_ok": true,
+    "adversarial_rf_commit": "ced705ed861bde352841b0b8bd038a6449e0fa4d",
+    "adversarial_rf_commit_ok": true,
+    "phase_a_dir": "results/adaptive_k_parity_20260927_162249",
+    "phase_a_overall": "PASS",
+    "phase_a_ok": true,
+    "util/defense_baselines.py_sha256": "845013e3b5fd38126216fdbb74084dca2c44a61bac064d1aa19aded7307fbf4d",
+    "util/defense_registry.py_sha256": "207f08105f1c8fc1da14167fc9a6d3a44410284912bcb4c2dc435fc3623de44d"
+  },
+  "defenses": [
+    {
+      "name": "none",
+      "family": "no_defense",
+      "kind": "transform",
+      "source": "identity"
+    },
+    {
+      "name": "adversarial_training_transfer_leakage_free",
+      "family": "adversarial_training",
+      "kind": "model",
+      "source": "results/adversarial_training_20261004_230802/best_model.pkl [leakage_free: train_adversarial_awn: formal evaluation samples excluded from train and validation]"
+    }
+  ],
+  "unavailable": {},
+  "adversarial_training": {
+    "status": "ok",
+    "path": "results/adversarial_training_20261004_230802/best_model.pkl",
+    "sha256": "e3cdc7dd108a905c8cb98b90732200211bd626ee41ecd73348aa97f275bffc15",
+    "config_json": {
+      "split_method": "train_adversarial_awn",
+      "formal_eval_samples_excluded": true,
+      "excluded_sample_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "snr_min": 0,
+      "seed": 42,
+      "val_ratio": 0.15,
+      "train_profiles": [
+        {
+          "attack": "fgsm",
+          "profile_id": "eps0.03",
+          "eps": 0.03,
+          "attack_params": {},
+          "cw_c": 1.0,
+          "cw_steps": 20,
+          "cw_lr": 0.01
+        },
+        {
+          "attack": "pgd",
+          "profile_id": "eps0.03",
+          "eps": 0.03,
+          "attack_params": {},
+          "cw_c": 1.0,
+          "cw_steps": 20,
+          "cw_lr": 0.01
+        }
+      ],
+      "alpha_adversarial": 0.5,
+      "best_epoch": 19,
+      "best_val_weighted": 0.792072237526783,
+      "warm_start_sha256": "8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695",
+      "split_digest": "ca82afe4bc49f45ee4c9665cd02ba1df3abe48402c4509e3a6c84b6f6966d698",
+      "functional_check_only": false
+    },
+    "config_json_path": "results/adversarial_training_20261004_230802/best_model.config.json",
+    "provenance": "leakage_free",
+    "provenance_reason": "train_adversarial_awn: formal evaluation samples excluded from train and validation",
+    "train_split_reproduced": true,
+    "eval_samples_in_at_train": 0
+  },
+  "metric_definitions": "see module docstring; experiments/benchmark_adaptive_k_effectiveness_pi5.py:defense_metrics",
+  "denominator": "identical for all defenses: standard-AWN clean_correct / attack_success on the same stored adversarial IQ; no shared-success definition exists in the repository; AT white-box uses its own denominators and is reported separately",
+  "signal_filter_note": "registry default parameters from external/adversarial-rf/util/defense_registry.py:_apply_filter; the filters assume raw RadioML IQ scale, which is what the formal radioml-native preprocessing feeds AWN",
+  "status": "complete",
+  "finished_utc": "2026-10-05T07:29:38.167484+00:00",
+  "invalid_defenses": {},
+  "n_attack_rows": 105600,
+  "n_clean_rows": 4400,
+  "n_whitebox_rows": 0,
+  "at_eval_samples_in_at_train": 0,
+  "at_eval_samples_total": 2200
+}

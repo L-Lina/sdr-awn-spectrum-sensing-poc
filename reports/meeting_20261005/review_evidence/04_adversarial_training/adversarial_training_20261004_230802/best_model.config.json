@@ -1,0 +1,45 @@
+{
+  "split_method": "train_adversarial_awn",
+  "formal_eval_samples_excluded": true,
+  "excluded_sample_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "snr_min": 0,
+  "seed": 42,
+  "val_ratio": 0.15,
+  "train_profiles": [
+    {
+      "attack": "fgsm",
+      "profile_id": "eps0.03",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01
+    },
+    {
+      "attack": "pgd",
+      "profile_id": "eps0.03",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01
+    }
+  ],
+  "alpha_adversarial": 0.5,
+  "best_epoch": 19,
+  "best_val_weighted": 0.792072237526783,
+  "warm_start_sha256": "8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695",
+  "split_digest": "ca82afe4bc49f45ee4c9665cd02ba1df3abe48402c4509e3a6c84b6f6966d698",
+  "functional_check_only": false
+}

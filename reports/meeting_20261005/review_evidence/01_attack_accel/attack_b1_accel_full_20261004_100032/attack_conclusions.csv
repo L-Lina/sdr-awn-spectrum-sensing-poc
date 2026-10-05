@@ -1,0 +1,16 @@
+attack,family,n_profiles,profiles,profile_classifications,attack_conclusion
+fgsm,one_step_gradient,4,eps0.005 eps0.01 eps0.03 eps0.05,NO_MKLDNN_OR_THREAD_BENEFIT NO_MKLDNN_OR_THREAD_BENEFIT NO_MKLDNN_OR_THREAD_BENEFIT NO_MKLDNN_OR_THREAD_BENEFIT,NO_SAFE_SPEEDUP_FOUND
+mifgsm,iterative_gradient,1,eps0.03_default,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)
+difgsm,iterative_gradient,1,eps0.03_default,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)
+vmifgsm,iterative_gradient,1,eps0.03_default,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)
+vnifgsm,iterative_gradient,1,eps0.03_default,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)
+rfgsm,iterative_gradient,1,eps0.03_default,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)
+tpgd,iterative_gradient,1,eps0.03_default,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)
+cw,optimization_boundary_search,1,c1_steps20_lr0.01,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)
+deepfool,optimization_boundary_search,1,package_default,NEEDS_INVESTIGATION,NEEDS_INVESTIGATION
+fab,optimization_boundary_search,3,eps0.005 eps0.01 eps0.03,NEEDS_INVESTIGATION NEEDS_INVESTIGATION SPEEDUP_CANDIDATE,NEEDS_INVESTIGATION
+square,score_query_based,1,eps0.03_default,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)
+apgd,iterative_gradient,1,eps0.03_default,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)
+apgdt,iterative_gradient,1,eps0.03_default,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)
+autoattack,composite,1,eps0.03_standard,NEEDS_INVESTIGATION,NEEDS_INVESTIGATION
+ead,optimization_boundary_search,1,package_default,SPEEDUP_CANDIDATE,SPEEDUP_CANDIDATE (mkldnn_OFF)

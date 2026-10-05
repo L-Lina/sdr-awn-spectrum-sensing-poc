@@ -1,0 +1,297 @@
+{
+  "overall": "PASS",
+  "gates": {
+    "sources_hashes_commit_phaseA": true,
+    "dataset_checkpoint_hash": true,
+    "all_24_profiles_present": true,
+    "row_counts": true,
+    "iq_logits_defense_outputs_finite": true,
+    "adaptive_instrumentation_bit_identical": true,
+    "attack_reproduction_no_unexplained_mismatch": true,
+    "fixed_k_reproduction_no_unexplained_mismatch": true
+  },
+  "row_counts": {
+    "clean_samples": 2200,
+    "attack_profiles": 24,
+    "attacked_samples": 52800,
+    "clean_eval_rows": 13200,
+    "attacked_eval_rows": 316800,
+    "adaptive_decision_rows": 55000
+  },
+  "expected_row_counts": {
+    "clean_samples": 2200,
+    "attack_profiles": 24,
+    "attacked_samples": 52800,
+    "clean_eval_rows": 13200,
+    "attacked_eval_rows": 316800,
+    "adaptive_decision_rows": 55000
+  },
+  "schema_note": "defense 'none' is materialised as its own row (defended = attacked) so attacked rows = 52,800 x 6 and clean rows = 2,200 x 6",
+  "attack_reproduction": [
+    {
+      "profile": "fgsm/eps0.005",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 0.0,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "fgsm/eps0.01",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 0.0,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "fgsm/eps0.03",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 1.1641532182693481e-10,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "fgsm/eps0.05",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 4.656612873077393e-10,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "bim/eps0.03_default",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 5.820766091346741e-11,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "pgd/eps0.005",
+      "reproducibility_class": "HISTORICALLY_NON_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 0,
+      "pct_sha_match": 0.0,
+      "n_attacked_pred_match_formal": 2174,
+      "max_abs_diff_iq_linf_vs_formal": 2.7939677238464355e-09,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXPECTED_MISMATCH_RECORDED"
+    },
+    {
+      "profile": "pgd/eps0.01",
+      "reproducibility_class": "HISTORICALLY_NON_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 0,
+      "pct_sha_match": 0.0,
+      "n_attacked_pred_match_formal": 2148,
+      "max_abs_diff_iq_linf_vs_formal": 1.862645149230957e-09,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXPECTED_MISMATCH_RECORDED"
+    },
+    {
+      "profile": "pgd/eps0.03",
+      "reproducibility_class": "HISTORICALLY_NON_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 0,
+      "pct_sha_match": 0.0,
+      "n_attacked_pred_match_formal": 1870,
+      "max_abs_diff_iq_linf_vs_formal": 2.7939677238464355e-09,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXPECTED_MISMATCH_RECORDED"
+    },
+    {
+      "profile": "mifgsm/eps0.03_default",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 5.820766091346741e-11,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "difgsm/eps0.03_default",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 1.1641532182693481e-10,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "vmifgsm/eps0.03_default",
+      "reproducibility_class": "HISTORICALLY_NON_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 0,
+      "pct_sha_match": 0.0,
+      "n_attacked_pred_match_formal": 2110,
+      "max_abs_diff_iq_linf_vs_formal": 1.3969838619232178e-09,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXPECTED_MISMATCH_RECORDED"
+    },
+    {
+      "profile": "vnifgsm/eps0.03_default",
+      "reproducibility_class": "HISTORICALLY_NON_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 5,
+      "pct_sha_match": 0.22727272727272727,
+      "n_attacked_pred_match_formal": 2099,
+      "max_abs_diff_iq_linf_vs_formal": 1.3969838619232178e-09,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXPECTED_MISMATCH_RECORDED"
+    },
+    {
+      "profile": "rfgsm/eps0.03_default",
+      "reproducibility_class": "HISTORICALLY_NON_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 0,
+      "pct_sha_match": 0.0,
+      "n_attacked_pred_match_formal": 1950,
+      "max_abs_diff_iq_linf_vs_formal": 1.8044374883174896e-09,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXPECTED_MISMATCH_RECORDED"
+    },
+    {
+      "profile": "tpgd/eps0.03_default",
+      "reproducibility_class": "HISTORICALLY_NON_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 0,
+      "pct_sha_match": 0.0,
+      "n_attacked_pred_match_formal": 1077,
+      "max_abs_diff_iq_linf_vs_formal": 2.3283064365386963e-09,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXPECTED_MISMATCH_RECORDED"
+    },
+    {
+      "profile": "cw/c1_steps20_lr0.01",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 2.3283064365386963e-10,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "deepfool/package_default",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 2.3283064365386963e-10,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "fab/eps0.005",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 0.0,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "fab/eps0.01",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 0.0,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "fab/eps0.03",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 2.9103830456733704e-11,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "square/eps0.03_default",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 1.1641532182693481e-10,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "apgd/eps0.03_default",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 2.3283064365386963e-10,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "apgdt/eps0.03_default",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 5.820766091346741e-11,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    },
+    {
+      "profile": "autoattack/eps0.03_standard",
+      "reproducibility_class": "HISTORICALLY_NON_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 176,
+      "pct_sha_match": 8.0,
+      "n_attacked_pred_match_formal": 1915,
+      "max_abs_diff_iq_linf_vs_formal": 0.001067853532731533,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXPECTED_MISMATCH_RECORDED"
+    },
+    {
+      "profile": "ead/package_default",
+      "reproducibility_class": "EXPECTED_BIT_IDENTICAL",
+      "n": 2200,
+      "n_sha_match": 2200,
+      "pct_sha_match": 100.0,
+      "n_attacked_pred_match_formal": 2200,
+      "max_abs_diff_iq_linf_vs_formal": 4.656612873077393e-10,
+      "median_abs_diff_iq_linf_vs_formal": 0.0,
+      "verdict": "EXACT_MATCH"
+    }
+  ],
+  "note": "spectral_ratio thresholds 3 and 10 are linear, not dB"
+}

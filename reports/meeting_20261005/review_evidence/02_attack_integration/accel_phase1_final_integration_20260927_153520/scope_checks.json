@@ -1,0 +1,274 @@
+{
+  "all_pass": true,
+  "checks": {
+    "clean_inference_before": {
+      "forward_states": [
+        true
+      ],
+      "pass": true
+    },
+    "pgd_b1_option_on": {
+      "attack": "pgd",
+      "batch_size": 1,
+      "adapter": "option_on",
+      "global_state_before": true,
+      "atk_entry_states": [
+        false
+      ],
+      "forward_states_before_atk": [
+        true
+      ],
+      "forward_states_during_and_after_atk": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "global_state_after": true,
+      "meta_applied": true,
+      "attack_status": "ok",
+      "state_changed_by_call": {},
+      "model_state_ok": true,
+      "pass": true
+    },
+    "bim_b1_option_on": {
+      "attack": "bim",
+      "batch_size": 1,
+      "adapter": "option_on",
+      "global_state_before": true,
+      "atk_entry_states": [
+        false
+      ],
+      "forward_states_before_atk": [
+        true
+      ],
+      "forward_states_during_and_after_atk": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "global_state_after": true,
+      "meta_applied": true,
+      "attack_status": "ok",
+      "state_changed_by_call": {},
+      "model_state_ok": true,
+      "pass": true
+    },
+    "fgsm_b1_option_on_not_applied": {
+      "attack": "fgsm",
+      "batch_size": 1,
+      "adapter": "option_on",
+      "global_state_before": true,
+      "atk_entry_states": [
+        true
+      ],
+      "forward_states_before_atk": [
+        true
+      ],
+      "forward_states_during_and_after_atk": [
+        true
+      ],
+      "global_state_after": true,
+      "meta_applied": false,
+      "attack_status": "ok",
+      "state_changed_by_call": {},
+      "model_state_ok": true,
+      "pass": true
+    },
+    "pgd_b2_option_on_not_applied": {
+      "attack": "pgd",
+      "batch_size": 2,
+      "adapter": "option_on",
+      "global_state_before": true,
+      "atk_entry_states": [
+        true
+      ],
+      "forward_states_before_atk": [
+        true
+      ],
+      "forward_states_during_and_after_atk": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "global_state_after": true,
+      "meta_applied": false,
+      "attack_status": "ok",
+      "state_changed_by_call": {},
+      "model_state_ok": true,
+      "pass": true
+    },
+    "bim_b2_option_on_not_applied": {
+      "attack": "bim",
+      "batch_size": 2,
+      "adapter": "option_on",
+      "global_state_before": true,
+      "atk_entry_states": [
+        true
+      ],
+      "forward_states_before_atk": [
+        true
+      ],
+      "forward_states_during_and_after_atk": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "global_state_after": true,
+      "meta_applied": false,
+      "attack_status": "ok",
+      "state_changed_by_call": {},
+      "model_state_ok": true,
+      "pass": true
+    },
+    "pgd_b1_option_off_default": {
+      "attack": "pgd",
+      "batch_size": 1,
+      "adapter": "option_off",
+      "global_state_before": true,
+      "atk_entry_states": [
+        true
+      ],
+      "forward_states_before_atk": [
+        true
+      ],
+      "forward_states_during_and_after_atk": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "global_state_after": true,
+      "meta_applied": null,
+      "attack_status": "ok",
+      "state_changed_by_call": {},
+      "model_state_ok": true,
+      "pass": true
+    },
+    "bim_b1_option_off_default": {
+      "attack": "bim",
+      "batch_size": 1,
+      "adapter": "option_off",
+      "global_state_before": true,
+      "atk_entry_states": [
+        true
+      ],
+      "forward_states_before_atk": [
+        true
+      ],
+      "forward_states_during_and_after_atk": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "global_state_after": true,
+      "meta_applied": null,
+      "attack_status": "ok",
+      "state_changed_by_call": {},
+      "model_state_ok": true,
+      "pass": true
+    },
+    "clean_inference_after": {
+      "forward_states": [
+        true
+      ],
+      "pass": true
+    },
+    "pgd_b1_option_on_previous_state_false": {
+      "attack": "pgd",
+      "batch_size": 1,
+      "adapter": "option_on",
+      "global_state_before": false,
+      "atk_entry_states": [
+        false
+      ],
+      "forward_states_before_atk": [
+        false
+      ],
+      "forward_states_during_and_after_atk": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "global_state_after": false,
+      "meta_applied": true,
+      "attack_status": "ok",
+      "state_changed_by_call": {},
+      "model_state_ok": true,
+      "pass": true
+    },
+    "pgd_b1_option_on_synthetic_exception": {
+      "attack": "pgd",
+      "batch_size": 1,
+      "adapter": "option_on",
+      "global_state_before": true,
+      "atk_entry_states": [
+        false
+      ],
+      "forward_states_before_atk": [
+        true
+      ],
+      "forward_states_during_and_after_atk": [],
+      "global_state_after": true,
+      "meta_applied": false,
+      "attack_status": "fallback",
+      "state_changed_by_call": {},
+      "model_state_ok": true,
+      "pass": true,
+      "expected_fallback": true
+    },
+    "helper_restores_after_exception": {
+      "state_inside": false,
+      "exception_propagated": true,
+      "state_after": true,
+      "pass": true
+    }
+  }
+}

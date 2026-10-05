@@ -1,0 +1,170 @@
+source_result_dir,source_file,attack,profile,defense,metric_name,raw_count,denominator,value,unit,notes
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,none,recovery_pct,0,20960,0.0,%,full comparison
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,none,recovery_ci95_lo_pct,,,-1.3552527156068805e-18,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,none,recovery_ci95_hi_pct,,,0.018324885645005062,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,none,clean_degradation_pct,0,31152,0.0,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,none,retention_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,none,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,none,net_gain_pp,,,0.0,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,none,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,none,defended_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,none,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,none,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,none,clean_defended_acc_pct,1298,2200,59.0,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,none,clean_degradation_pct,0,1298,0.0,%,unique-sample denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k10,recovery_pct,5659,20960,26.999045801526716,%,full comparison
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k10,recovery_ci95_lo_pct,,,26.40226717440841,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k10,recovery_ci95_hi_pct,,,27.604254225753287,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k10,clean_degradation_pct,19728,31152,63.32819722650231,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k10,retention_pct,9630,31152,30.912942989214176,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k10,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k10,net_gain_pp,,,-1.8040575243965087,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k10,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k10,defended_acc_pct,13613,52800,25.78219696969697,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k10,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k10,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,fixed_topk_k10,clean_defended_acc_pct,594,2200,27.0,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,fixed_topk_k10,clean_degradation_pct,822,1298,63.32819722650231,%,unique-sample denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k20,recovery_pct,5520,20960,26.33587786259542,%,full comparison
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k20,recovery_ci95_lo_pct,,,25.74395654416768,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k20,recovery_ci95_hi_pct,,,26.936472027664305,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k20,clean_degradation_pct,10224,31152,32.81972265023113,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k20,retention_pct,13495,31152,43.3198510529019,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k20,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k20,net_gain_pp,,,10.602850539291218,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k20,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k20,defended_acc_pct,18118,52800,34.31439393939394,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k20,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k20,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,fixed_topk_k20,clean_defended_acc_pct,1002,2200,45.54545454545455,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,fixed_topk_k20,clean_degradation_pct,426,1298,32.81972265023113,%,unique-sample denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k30,recovery_pct,5651,20960,26.96087786259542,%,full comparison
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k30,recovery_ci95_lo_pct,,,26.364374142498725,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k30,recovery_ci95_hi_pct,,,27.565825368262697,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k30,clean_degradation_pct,7368,31152,23.651771956856702,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k30,retention_pct,14382,31152,46.16718027734977,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k30,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k30,net_gain_pp,,,13.450179763739087,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k30,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k30,defended_acc_pct,19090,52800,36.15530303030303,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k30,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k30,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,fixed_topk_k30,clean_defended_acc_pct,1101,2200,50.04545454545455,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,fixed_topk_k30,clean_degradation_pct,307,1298,23.651771956856702,%,unique-sample denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k40,recovery_pct,5715,20960,27.266221374045802,%,full comparison
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k40,recovery_ci95_lo_pct,,,26.667534128008707,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k40,recovery_ci95_hi_pct,,,27.87324049795489,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k40,clean_degradation_pct,3960,31152,12.711864406779661,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k40,retention_pct,15178,31152,48.72239342578326,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k40,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k40,net_gain_pp,,,16.005392912172574,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k40,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k40,defended_acc_pct,19718,52800,37.34469696969697,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k40,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,fixed_topk_k40,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,fixed_topk_k40,clean_defended_acc_pct,1211,2200,55.04545454545455,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,fixed_topk_k40,clean_degradation_pct,165,1298,12.711864406779661,%,unique-sample denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adaptive_k_v2_snr,recovery_pct,5677,20960,27.084923664122137,%,full comparison
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adaptive_k_v2_snr,recovery_ci95_lo_pct,,,26.48752855458629,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adaptive_k_v2_snr,recovery_ci95_hi_pct,,,27.690717096726015,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adaptive_k_v2_snr,clean_degradation_pct,1632,31152,5.238828967642527,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adaptive_k_v2_snr,retention_pct,15441,31152,49.56664098613251,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adaptive_k_v2_snr,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adaptive_k_v2_snr,net_gain_pp,,,16.849640472521827,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adaptive_k_v2_snr,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adaptive_k_v2_snr,defended_acc_pct,19516,52800,36.96212121212121,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adaptive_k_v2_snr,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adaptive_k_v2_snr,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,adaptive_k_v2_snr,clean_defended_acc_pct,1261,2200,57.31818181818182,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,adaptive_k_v2_snr,clean_degradation_pct,68,1298,5.238828967642527,%,unique-sample denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_kalman,recovery_pct,2336,20960,11.145038167938932,%,full comparison
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_kalman,recovery_ci95_lo_pct,,,10.726105995704398,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_kalman,recovery_ci95_hi_pct,,,11.578210594819733,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_kalman,clean_degradation_pct,25104,31152,80.58551617873651,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_kalman,retention_pct,4917,31152,15.783898305084746,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_kalman,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_kalman,net_gain_pp,,,-16.933102208525938,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_kalman,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_kalman,defended_acc_pct,8259,52800,15.642045454545455,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_kalman,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_kalman,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,signal_filter_kalman,clean_defended_acc_pct,350,2200,15.909090909090908,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,signal_filter_kalman,clean_degradation_pct,1046,1298,80.58551617873651,%,unique-sample denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_wiener,recovery_pct,3937,20960,18.783396946564885,%,full comparison
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_wiener,recovery_ci95_lo_pct,,,18.260361081138534,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_wiener,recovery_ci95_hi_pct,,,19.317873625614826,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_wiener,clean_degradation_pct,12432,31152,39.907550077041606,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_wiener,retention_pct,11189,31152,35.91743708269132,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_wiener,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_wiener,net_gain_pp,,,3.2004365690806367,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_wiener,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_wiener,defended_acc_pct,16309,52800,30.888257575757574,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_wiener,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_wiener,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,signal_filter_wiener,clean_defended_acc_pct,928,2200,42.18181818181818,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,signal_filter_wiener,clean_degradation_pct,518,1298,39.907550077041606,%,unique-sample denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_savitzky_golay,recovery_pct,3452,20960,16.46946564885496,%,full comparison
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_savitzky_golay,recovery_ci95_lo_pct,,,15.973480810346338,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_savitzky_golay,recovery_ci95_hi_pct,,,16.977739351515595,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_savitzky_golay,clean_degradation_pct,10800,31152,34.66872110939907,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_savitzky_golay,retention_pct,11230,31152,36.04904982023626,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_savitzky_golay,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_savitzky_golay,net_gain_pp,,,3.332049306625578,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_savitzky_golay,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_savitzky_golay,defended_acc_pct,16527,52800,31.301136363636363,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_savitzky_golay,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_savitzky_golay,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,signal_filter_savitzky_golay,clean_defended_acc_pct,1008,2200,45.81818181818182,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,signal_filter_savitzky_golay,clean_degradation_pct,450,1298,34.66872110939907,%,unique-sample denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_gaussian,recovery_pct,3386,20960,16.154580152671755,%,full comparison
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_gaussian,recovery_ci95_lo_pct,,,15.66253860975659,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_gaussian,recovery_ci95_hi_pct,,,16.659025964553106,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_gaussian,clean_degradation_pct,10320,31152,33.12788906009245,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_gaussian,retention_pct,11247,31152,36.10362095531587,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_gaussian,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_gaussian,net_gain_pp,,,3.3866204417051833,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_gaussian,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_gaussian,defended_acc_pct,16475,52800,31.202651515151516,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_gaussian,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_gaussian,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,signal_filter_gaussian,clean_defended_acc_pct,1011,2200,45.95454545454545,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,signal_filter_gaussian,clean_degradation_pct,430,1298,33.12788906009245,%,unique-sample denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_fir,recovery_pct,4388,20960,20.935114503816795,%,full comparison
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_fir,recovery_ci95_lo_pct,,,20.389670406884164,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_fir,recovery_ci95_hi_pct,,,21.491210814809474,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_fir,clean_degradation_pct,21888,31152,70.26194144838213,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_fir,retention_pct,7876,31152,25.282485875706215,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_fir,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_fir,net_gain_pp,,,-7.434514637904471,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_fir,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_fir,defended_acc_pct,12429,52800,23.539772727272727,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_fir,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,signal_filter_fir,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,signal_filter_fir,clean_defended_acc_pct,540,2200,24.545454545454547,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,signal_filter_fir,clean_degradation_pct,912,1298,70.26194144838213,%,unique-sample denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,recovery_pct,11219,20960,53.525763358778626,%,EXPLORATORY: training/evaluation overlap (see adversarial_training_summary.csv)
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,recovery_ci95_lo_pct,,,52.84995462649501,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,recovery_ci95_hi_pct,,,54.20027990685502,%,Wilson
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,clean_degradation_pct,4968,31152,15.947611710323574,%,attack-row denominator
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,retention_pct,20807,31152,66.79185927067283,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,net_gain_pp,,,34.074858757062145,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,defended_acc_pct,24131,52800,45.702651515151516,%,
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261004_215947,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_exploratory,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,adversarial_training_transfer_exploratory,clean_defended_acc_pct,1148,2200,52.18181818181818,%,
+results/defense_recovery_full_20261004_215947,clean_degradation.csv,,unique_clean,adversarial_training_transfer_exploratory,clean_degradation_pct,207,1298,15.947611710323574,%,unique-sample denominator
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,recovery_pct,11877,20960,56.66507633587786,%,LEAKAGE-FREE: formal evaluation samples excluded from AT train/val
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,recovery_ci95_lo_pct,,,55.99304715341067,%,Wilson
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,recovery_ci95_hi_pct,,,57.33466278311165,%,Wilson
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,clean_degradation_pct,5784,31152,18.567026194144837,%,attack-row denominator
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,retention_pct,21376,31152,68.61838726245506,%,
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,retention_nodef_pct,10192,31152,32.717000513610685,%,
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,net_gain_pp,,,35.901386748844374,pp,retention_pct - retention_nodef_pct
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,attacked_acc_pct,16225,52800,30.729166666666668,%,
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,defended_acc_pct,24633,52800,46.65340909090909,%,
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,clean_acc_pct,31152,52800,59.0,%,standard AWN
+results/defense_recovery_full_20261005_152728,defense_recovery_summary.csv,,ALL_24,adversarial_training_transfer_leakage_free,cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,standard AWN
+results/defense_recovery_full_20261005_152728,clean_degradation.csv,,unique_clean,adversarial_training_transfer_leakage_free,clean_defended_acc_pct,1116,2200,50.72727272727273,%,
+results/defense_recovery_full_20261005_152728,clean_degradation.csv,,unique_clean,adversarial_training_transfer_leakage_free,clean_degradation_pct,241,1298,18.567026194144837,%,unique-sample denominator

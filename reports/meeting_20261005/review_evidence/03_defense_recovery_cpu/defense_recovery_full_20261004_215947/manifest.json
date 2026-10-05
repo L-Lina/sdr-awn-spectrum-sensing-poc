@@ -1,0 +1,222 @@
+{
+  "benchmark": "defense_recovery_comparison",
+  "mode": "full",
+  "run_key": {
+    "mode": "full",
+    "defenses": [
+      "none",
+      "fixed_topk_k10",
+      "fixed_topk_k20",
+      "fixed_topk_k30",
+      "fixed_topk_k40",
+      "adaptive_k_v2_snr",
+      "signal_filter_kalman",
+      "signal_filter_wiener",
+      "signal_filter_savitzky_golay",
+      "signal_filter_gaussian",
+      "signal_filter_fir",
+      "adversarial_training_transfer_exploratory"
+    ],
+    "profiles": [
+      "fgsm/eps0.005",
+      "fgsm/eps0.01",
+      "fgsm/eps0.03",
+      "fgsm/eps0.05",
+      "bim/eps0.03_default",
+      "pgd/eps0.005",
+      "pgd/eps0.01",
+      "pgd/eps0.03",
+      "mifgsm/eps0.03_default",
+      "difgsm/eps0.03_default",
+      "vmifgsm/eps0.03_default",
+      "vnifgsm/eps0.03_default",
+      "rfgsm/eps0.03_default",
+      "tpgd/eps0.03_default",
+      "cw/c1_steps20_lr0.01",
+      "deepfool/package_default",
+      "fab/eps0.005",
+      "fab/eps0.01",
+      "fab/eps0.03",
+      "square/eps0.03_default",
+      "apgd/eps0.03_default",
+      "apgdt/eps0.03_default",
+      "autoattack/eps0.03_standard",
+      "ead/package_default"
+    ],
+    "at_checkpoint_sha256": "b0fa1b84174bf6ee8db472927810e4432456e2c68b649e5ad798b4f1396ebfca",
+    "at_whitebox": false,
+    "adv_store_dir": "results/adaptive_k_effectiveness_20260927_164906",
+    "config_sha256": "6c1a33e8acffa29aa210ea2de95f0854a451dbaceb0fc1d25dd60d65046716f8"
+  },
+  "command": [
+    "/home/lina/sdr-awn-spectrum-sensing-poc/.venv/bin/python",
+    "experiments/benchmark_defense_recovery_comparison_pi5.py",
+    "--full",
+    "--attack-temperature",
+    "1.0",
+    "--adv-store-dir",
+    "results/adaptive_k_effectiveness_20260927_164906",
+    "--at-checkpoint",
+    "external/adversarial-rf/awn_fpga/2016.10a_AWN_at.pkl"
+  ],
+  "started_utc": "2026-10-04T13:59:52.489288+00:00",
+  "evaluation_backend": "cpu",
+  "hashes": {
+    "dataset_sha256": "b29ccc25b00d0718cd3b70ffa9158662ec83f6d9b63ffd845c7bcbe3b3096e8c",
+    "checkpoint_sha256": "8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695",
+    "config_sha256": "6c1a33e8acffa29aa210ea2de95f0854a451dbaceb0fc1d25dd60d65046716f8"
+  },
+  "sources": {
+    "reference_sha256": "f818dd0229ae3a02271a6bc546593d3d5df2857e4ac63a6d2f26bc8ddf81a891",
+    "reference_ok": true,
+    "defense_py_sha256": "291a4ae4b5da17c91c52b8db345259b76134799f717975630464c961dfbfc528",
+    "defense_py_ok": true,
+    "adversarial_rf_commit": "ced705ed861bde352841b0b8bd038a6449e0fa4d",
+    "adversarial_rf_commit_ok": true,
+    "phase_a_dir": "results/adaptive_k_parity_20260927_162249",
+    "phase_a_overall": "PASS",
+    "phase_a_ok": true,
+    "util/defense_baselines.py_sha256": "845013e3b5fd38126216fdbb74084dca2c44a61bac064d1aa19aded7307fbf4d",
+    "util/defense_registry.py_sha256": "207f08105f1c8fc1da14167fc9a6d3a44410284912bcb4c2dc435fc3623de44d"
+  },
+  "defenses": [
+    {
+      "name": "none",
+      "family": "no_defense",
+      "kind": "transform",
+      "source": "identity"
+    },
+    {
+      "name": "fixed_topk_k10",
+      "family": "fixed_topk",
+      "kind": "transform",
+      "source": "external/adversarial-rf/util/defense.py:fft_topk_denoise",
+      "param": {
+        "topk": 10
+      }
+    },
+    {
+      "name": "fixed_topk_k20",
+      "family": "fixed_topk",
+      "kind": "transform",
+      "source": "external/adversarial-rf/util/defense.py:fft_topk_denoise",
+      "param": {
+        "topk": 20
+      }
+    },
+    {
+      "name": "fixed_topk_k30",
+      "family": "fixed_topk",
+      "kind": "transform",
+      "source": "external/adversarial-rf/util/defense.py:fft_topk_denoise",
+      "param": {
+        "topk": 30
+      }
+    },
+    {
+      "name": "fixed_topk_k40",
+      "family": "fixed_topk",
+      "kind": "transform",
+      "source": "external/adversarial-rf/util/defense.py:fft_topk_denoise",
+      "param": {
+        "topk": 40
+      }
+    },
+    {
+      "name": "adaptive_k_v2_snr",
+      "family": "adaptive_k",
+      "kind": "transform",
+      "source": "external/adversarial-rf/util/defense.py:adaptive_k_v2_snr_defense"
+    },
+    {
+      "name": "signal_filter_kalman",
+      "family": "signal_filter",
+      "kind": "transform",
+      "source": "external/adversarial-rf/util/defense_registry.py:DEFENSE_REGISTRY['kalman'] via _apply_filter (registry default parameters)"
+    },
+    {
+      "name": "signal_filter_wiener",
+      "family": "signal_filter",
+      "kind": "transform",
+      "source": "external/adversarial-rf/util/defense_registry.py:DEFENSE_REGISTRY['wiener'] via _apply_filter (registry default parameters)"
+    },
+    {
+      "name": "signal_filter_savitzky_golay",
+      "family": "signal_filter",
+      "kind": "transform",
+      "source": "external/adversarial-rf/util/defense_registry.py:DEFENSE_REGISTRY['savitzky_golay'] via _apply_filter (registry default parameters)"
+    },
+    {
+      "name": "signal_filter_gaussian",
+      "family": "signal_filter",
+      "kind": "transform",
+      "source": "external/adversarial-rf/util/defense_registry.py:DEFENSE_REGISTRY['gaussian'] via _apply_filter (registry default parameters)"
+    },
+    {
+      "name": "signal_filter_fir",
+      "family": "signal_filter",
+      "kind": "transform",
+      "source": "external/adversarial-rf/util/defense_registry.py:DEFENSE_REGISTRY['fir'] via _apply_filter (registry default parameters)"
+    },
+    {
+      "name": "adversarial_training_transfer_exploratory",
+      "family": "adversarial_training",
+      "kind": "model",
+      "source": "external/adversarial-rf/awn_fpga/2016.10a_AWN_at.pkl [exploratory: adv_train.py random split over SNR >= snr_min rows; formal evaluation samples can be training samples (see in_at_train / at_train_overlap.csv)]"
+    }
+  ],
+  "unavailable": {},
+  "adversarial_training": {
+    "status": "ok",
+    "path": "external/adversarial-rf/awn_fpga/2016.10a_AWN_at.pkl",
+    "sha256": "b0fa1b84174bf6ee8db472927810e4432456e2c68b649e5ad798b4f1396ebfca",
+    "config_json": {
+      "epochs_total": 30,
+      "epochs_trained": 30,
+      "lr_initial": 0.0001,
+      "batch_size": 256,
+      "ta_box": "minmax",
+      "eps": 0.1,
+      "attack_iters": {
+        "fgsm": 1,
+        "pgd": 7,
+        "eadl1": 10,
+        "eaden": 10
+      },
+      "attack_list": [
+        "fgsm",
+        "pgd",
+        "eadl1",
+        "eaden"
+      ],
+      "alpha": 0.5,
+      "snr_filter": "snr_min=0",
+      "analog_mods_kept_clean": [
+        "WBFM",
+        "AM-DSB",
+        "AM-SSB"
+      ],
+      "best_epoch": 28,
+      "best_val_weighted": 0.76603,
+      "seed": 42,
+      "warm_start_ckpt": "./checkpoint/2016.10a_AWN.pkl",
+      "git_sha": "1897a27"
+    },
+    "config_json_path": "external/adversarial-rf/awn_fpga/2016.10a_AWN_at.config.json",
+    "provenance": "exploratory",
+    "provenance_reason": "adv_train.py random split over SNR >= snr_min rows; formal evaluation samples can be training samples (see in_at_train / at_train_overlap.csv)",
+    "train_split_reproduced": true,
+    "eval_samples_in_at_train": 928
+  },
+  "metric_definitions": "see module docstring; experiments/benchmark_adaptive_k_effectiveness_pi5.py:defense_metrics",
+  "denominator": "identical for all defenses: standard-AWN clean_correct / attack_success on the same stored adversarial IQ; no shared-success definition exists in the repository; AT white-box uses its own denominators and is reported separately",
+  "signal_filter_note": "registry default parameters from external/adversarial-rf/util/defense_registry.py:_apply_filter; the filters assume raw RadioML IQ scale, which is what the formal radioml-native preprocessing feeds AWN",
+  "status": "complete",
+  "finished_utc": "2026-10-04T14:29:17.981055+00:00",
+  "invalid_defenses": {},
+  "n_attack_rows": 633600,
+  "n_clean_rows": 26400,
+  "n_whitebox_rows": 0,
+  "at_eval_samples_in_at_train": 928,
+  "at_eval_samples_total": 2200
+}

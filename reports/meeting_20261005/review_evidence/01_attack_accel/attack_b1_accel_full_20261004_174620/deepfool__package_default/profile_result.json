@@ -1,0 +1,131 @@
+{
+  "attack": "deepfool",
+  "profile_id": "package_default",
+  "effective_repeats": 3,
+  "started_utc": "2026-10-04T09:46:24.909532+00:00",
+  "mkldnn": {
+    "phase": "mkldnn",
+    "baseline": "mkldnn_ON",
+    "candidate": "mkldnn_OFF",
+    "classification": "NEEDS_INVESTIGATION",
+    "reasons": [
+      "pre-validation failures {'w4': {'BIT_IDENTICAL': 1, 'BITWISE_DIFFERENT_SEMANTIC_SAME': 85, 'SEMANTIC_DIFFERENT': 2, 'INVALID': 0, 'EXCEPTION': 0}}",
+      "16 planned cells without an accepted attempt",
+      "no valid pairs"
+    ],
+    "smoke": false,
+    "repeats": 3,
+    "replications": 4,
+    "baseline_latency_ms": {
+      "n": 0,
+      "median": NaN,
+      "p05": NaN,
+      "p95": NaN,
+      "mean": NaN,
+      "std": NaN,
+      "min": NaN,
+      "max": NaN
+    },
+    "candidate_latency_ms": {
+      "n": 0,
+      "median": NaN,
+      "p05": NaN,
+      "p95": NaN,
+      "mean": NaN,
+      "std": NaN,
+      "min": NaN,
+      "max": NaN
+    },
+    "pooled_speedup_baseline_over_candidate": null,
+    "n_valid_pairs": 0,
+    "n_pairs_candidate_faster": 0,
+    "n_pairs_baseline_faster": 0,
+    "paired_median_delta_ms": null,
+    "paired_median_delta_pct": null,
+    "paired_median_speedup": null,
+    "sign_test_two_sided_p": null,
+    "useful_reduction_threshold_ms": 1.0,
+    "criteria": {
+      "consistent_direction": false,
+      "useful_reduction": false
+    },
+    "semantic_counts_timed": {
+      "BIT_IDENTICAL": 0,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0,
+      "EXCEPTION": 0
+    },
+    "baseline_nonrepeatable_calls": 0,
+    "prevalidation": {
+      "w4": {
+        "BIT_IDENTICAL": 1,
+        "BITWISE_DIFFERENT_SEMANTIC_SAME": 85,
+        "SEMANTIC_DIFFERENT": 2,
+        "INVALID": 0,
+        "EXCEPTION": 0
+      }
+    },
+    "fidelity": {
+      "w4": {
+        "n": 88,
+        "n_apply_bit_identical": 88,
+        "n_formal_sha_match": 88,
+        "failures": [],
+        "formal_sha_required": false
+      }
+    },
+    "mkldnn_state_mismatches": 0,
+    "n_planned_cells": 16,
+    "n_attempts": 0,
+    "n_attempts_not_clean": 0,
+    "not_accepted_cells": [
+      "00_mkldnn_ON: SKIPPED_PREVALIDATION_FAILED",
+      "01_mkldnn_OFF: SKIPPED_PREVALIDATION_FAILED",
+      "02_mkldnn_OFF: SKIPPED_PREVALIDATION_FAILED",
+      "03_mkldnn_ON: SKIPPED_PREVALIDATION_FAILED",
+      "04_mkldnn_OFF: SKIPPED_PREVALIDATION_FAILED",
+      "05_mkldnn_ON: SKIPPED_PREVALIDATION_FAILED",
+      "06_mkldnn_ON: SKIPPED_PREVALIDATION_FAILED",
+      "07_mkldnn_OFF: SKIPPED_PREVALIDATION_FAILED",
+      "08_mkldnn_ON: SKIPPED_PREVALIDATION_FAILED",
+      "09_mkldnn_OFF: SKIPPED_PREVALIDATION_FAILED",
+      "10_mkldnn_OFF: SKIPPED_PREVALIDATION_FAILED",
+      "11_mkldnn_ON: SKIPPED_PREVALIDATION_FAILED",
+      "12_mkldnn_OFF: SKIPPED_PREVALIDATION_FAILED",
+      "13_mkldnn_ON: SKIPPED_PREVALIDATION_FAILED",
+      "14_mkldnn_ON: SKIPPED_PREVALIDATION_FAILED",
+      "15_mkldnn_OFF: SKIPPED_PREVALIDATION_FAILED"
+    ],
+    "stopped": null,
+    "blocked": [
+      "w4: pre-validation {'BIT_IDENTICAL': 1, 'BITWISE_DIFFERENT_SEMANTIC_SAME': 85, 'SEMANTIC_DIFFERENT': 2, 'INVALID': 0, 'EXCEPTION': 0}"
+    ],
+    "error": null,
+    "worker_ready": {
+      "w4": {
+        "event": "ready",
+        "pid": 12891,
+        "tag": "w4",
+        "intra_threads": 4,
+        "interop_threads": 1,
+        "fidelity_ok": true,
+        "prevalidation": {
+          "BIT_IDENTICAL": 1,
+          "BITWISE_DIFFERENT_SEMANTIC_SAME": 85,
+          "SEMANTIC_DIFFERENT": 2,
+          "INVALID": 0,
+          "EXCEPTION": 0
+        },
+        "mkldnn_default": true,
+        "torch_version": "2.14.0+cpu"
+      }
+    }
+  },
+  "threads_skipped": "not needed (mkldnn result NEEDS_INVESTIGATION)",
+  "final_classification": "NEEDS_INVESTIGATION",
+  "recommended_candidate": "",
+  "anchor_success_rate": 0.48863636363636365,
+  "status": "complete",
+  "finished_utc": "2026-10-04T09:46:51.362670+00:00"
+}

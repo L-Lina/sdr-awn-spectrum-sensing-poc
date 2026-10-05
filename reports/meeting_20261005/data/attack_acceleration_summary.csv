@@ -1,0 +1,341 @@
+source_result_dir,source_file,attack,profile,defense,metric_name,raw_count,denominator,value,unit,notes
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,pgd,eps0.03,,mkldnn_on_median_ms,,,42.53455399975792,ms,B=1 attack block; intra 4 / interop 1
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,pgd,eps0.03,,mkldnn_off_median_ms,,,36.3326494998546,ms,
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,pgd,eps0.03,,paired_median_delta_ms,,,-6.201488749866257,ms,OFF minus ON
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,pgd,eps0.03,,paired_ratio_median_off_over_on,,,0.8542002514554587,ratio,OFF/ON (Phase 1D-3 convention)
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,pgd,eps0.03,,pairs_off_faster,8,8,8,count,
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,pgd,eps0.03,,sign_test_two_sided_p,,,0.0078125,p,
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,pgd,eps0.03,,semantic_different_total,0,,0,count,pre-validation + timed
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,pgd,eps0.03,,disposition,,,integrated (b1_pgd_bim_mkldnn_off),label,
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,bim,eps0.03,,mkldnn_on_median_ms,,,43.83914600020944,ms,B=1 attack block; intra 4 / interop 1
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,bim,eps0.03,,mkldnn_off_median_ms,,,37.62683350032603,ms,
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,bim,eps0.03,,paired_median_delta_ms,,,-6.194043499363033,ms,OFF minus ON
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,bim,eps0.03,,paired_ratio_median_off_over_on,,,0.8587259969348258,ratio,OFF/ON (Phase 1D-3 convention)
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,bim,eps0.03,,pairs_off_faster,8,8,8,count,
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,bim,eps0.03,,sign_test_two_sided_p,,,0.0078125,p,
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,bim,eps0.03,,semantic_different_total,0,,0,count,pre-validation + timed
+results/accel_phase1d3_mkldnn_b1_20260927_135420,validation.json,bim,eps0.03,,disposition,,,integrated (b1_pgd_bim_mkldnn_off),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,final_classification,,,NO_MKLDNN_OR_THREAD_BENEFIT,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,mkldnn_on_median_ms,,,5.294760499964468,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,mkldnn_on_p95_ms,,,5.908839300013824,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,mkldnn_off_median_ms,,,4.683672000055594,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,mkldnn_off_p95_ms,,,5.4200987001195235,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,paired_median_delta_ms,,,-0.621120749997317,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,paired_median_speedup_on_over_off,,,1.1329881480067425,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,timed_bit_identical,4224,4224,4224,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,timed_semantic_same,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.005,,disposition,,,not integrated (median reduction below 1 ms threshold),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,final_classification,,,NO_MKLDNN_OR_THREAD_BENEFIT,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,mkldnn_on_median_ms,,,5.275337499824673,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,mkldnn_on_p95_ms,,,5.905047999885937,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,mkldnn_off_median_ms,,,4.781387500315759,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,mkldnn_off_p95_ms,,,5.446320199644106,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,paired_median_delta_ms,,,-0.48928275032267265,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,paired_median_speedup_on_over_off,,,1.1022964040107972,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,timed_bit_identical,4224,4224,4224,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,timed_semantic_same,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.01,,disposition,,,not integrated (median reduction below 1 ms threshold),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,final_classification,,,NO_MKLDNN_OR_THREAD_BENEFIT,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,mkldnn_on_median_ms,,,5.321710499629262,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,mkldnn_on_p95_ms,,,5.927168750076817,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,mkldnn_off_median_ms,,,4.729017499812471,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,mkldnn_off_p95_ms,,,5.4238345997873685,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,paired_median_delta_ms,,,-0.5976769998596865,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,paired_median_speedup_on_over_off,,,1.1266382928541832,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,timed_bit_identical,4224,4224,4224,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,timed_semantic_same,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.03,,disposition,,,not integrated (median reduction below 1 ms threshold),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,final_classification,,,NO_MKLDNN_OR_THREAD_BENEFIT,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,mkldnn_on_median_ms,,,5.357822999940254,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,mkldnn_on_p95_ms,,,6.257130699987097,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,mkldnn_off_median_ms,,,4.858337999849027,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,mkldnn_off_p95_ms,,,5.549987949643764,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,paired_median_delta_ms,,,-0.5554677502459526,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,paired_median_speedup_on_over_off,,,1.116152845065192,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,timed_bit_identical,4224,4224,4224,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,timed_semantic_same,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fgsm,eps0.05,,disposition,,,not integrated (median reduction below 1 ms threshold),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,mkldnn_on_median_ms,,,42.14483799978552,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,mkldnn_on_p95_ms,,,44.110103750199414,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,mkldnn_off_median_ms,,,36.41777499979071,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,mkldnn_off_p95_ms,,,37.054017750187995,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,paired_median_delta_ms,,,-5.664921499828779,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,paired_median_speedup_on_over_off,,,1.1558326769167406,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,timed_bit_identical,4224,4224,4224,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,timed_semantic_same,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,mifgsm,eps0.03_default,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,mkldnn_on_median_ms,,,44.4184634998237,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,mkldnn_on_p95_ms,,,46.27242150013444,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,mkldnn_off_median_ms,,,38.61309900003107,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,mkldnn_off_p95_ms,,,39.062081149859296,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,paired_median_delta_ms,,,-6.82178799979738,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,paired_median_speedup_on_over_off,,,1.1783080241661974,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,timed_bit_identical,4224,4224,4224,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,timed_semantic_same,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,difgsm,eps0.03_default,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,mkldnn_on_median_ms,,,245.62930199999755,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,mkldnn_on_p95_ms,,,256.4970877495398,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,mkldnn_off_median_ms,,,212.40652000005866,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,mkldnn_off_p95_ms,,,218.07770205023186,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,paired_median_delta_ms,,,-33.21641349998572,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,paired_median_speedup_on_over_off,,,1.1565109541119627,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,timed_bit_identical,4752,4752,4752,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,timed_semantic_same,0,4752,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,timed_semantic_different,0,4752,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,timed_invalid,0,4752,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,timed_exception,0,4752,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vmifgsm,eps0.03_default,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,mkldnn_on_median_ms,,,247.9457485005696,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,mkldnn_on_p95_ms,,,249.71605520040612,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,mkldnn_off_median_ms,,,211.654757499673,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,mkldnn_off_p95_ms,,,218.41363495059338,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,paired_median_delta_ms,,,-34.466324749701016,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,paired_median_speedup_on_over_off,,,1.1614148092857115,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,timed_bit_identical,4152,4224,4152,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,timed_semantic_same,72,4224,72,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,vnifgsm,eps0.03_default,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,mkldnn_on_median_ms,,,42.69881849995727,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,mkldnn_on_p95_ms,,,44.2688551496758,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,mkldnn_off_median_ms,,,36.04904250096297,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,mkldnn_off_p95_ms,,,37.14641959977598,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,paired_median_delta_ms,,,-6.7177812493355304,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,paired_median_speedup_on_over_off,,,1.1854411797402418,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,timed_bit_identical,4224,4224,4224,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,timed_semantic_same,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,rfgsm,eps0.03_default,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,mkldnn_on_median_ms,,,46.36670800027787,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,mkldnn_on_p95_ms,,,47.599838900077884,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,mkldnn_off_median_ms,,,39.34905950063694,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,mkldnn_off_p95_ms,,,40.043898800195166,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,paired_median_delta_ms,,,-6.718748999901436,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,paired_median_speedup_on_over_off,,,1.170587365865342,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,timed_bit_identical,4176,4224,4176,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,timed_semantic_same,48,4224,48,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,tpgd,eps0.03_default,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,mkldnn_on_median_ms,,,43.96533300041483,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,mkldnn_on_p95_ms,,,93.2449215989436,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,mkldnn_off_median_ms,,,39.098017499782145,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,mkldnn_off_p95_ms,,,82.64876840048599,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,paired_median_delta_ms,,,-4.8595100001875835,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,paired_median_speedup_on_over_off,,,1.1239924909093406,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,timed_bit_identical,2400,4224,2400,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,timed_semantic_same,1824,4224,1824,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,cw,c1_steps20_lr0.01,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,deepfool,package_default,,final_classification,,,NEEDS_INVESTIGATION,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,deepfool,package_default,,timed_bit_identical,0,0,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,deepfool,package_default,,timed_semantic_same,0,0,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,deepfool,package_default,,timed_semantic_different,0,0,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,deepfool,package_default,,timed_invalid,0,0,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,deepfool,package_default,,timed_exception,0,0,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,deepfool,package_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,deepfool,package_default,,reasons,,,"pre-validation failures {'w4': {'BIT_IDENTICAL': 1, 'BITWISE_DIFFERENT_SEMANTIC_SAME': 85, 'SEMANTIC_DIFFERENT': 2, 'INVALID': 0, 'EXCEPTION': 0}} | 16 planned cells without an accepted attempt | no valid pairs",text,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,deepfool,package_default,,disposition,,,not integrated (SEMANTIC_DIFFERENT in pre-validation),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,mkldnn_on_median_ms,,,330.6301770007849,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,mkldnn_on_p95_ms,,,333.46524044955004,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,mkldnn_off_median_ms,,,312.46982449920324,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,mkldnn_off_p95_ms,,,315.32345985015127,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,paired_median_delta_ms,,,-18.315510999855178,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,paired_median_speedup_on_over_off,,,1.0585919096638796,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,timed_bit_identical,2400,4224,2400,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,timed_semantic_same,1824,4224,1824,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,fab,eps0.03,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,mkldnn_on_median_ms,,,43.79727300147351,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,mkldnn_on_p95_ms,,,13976.867660599964,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,mkldnn_off_median_ms,,,33.96681000049284,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,mkldnn_off_p95_ms,,,10652.503053149303,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,paired_median_delta_ms,,,-9.480793750299199,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,paired_median_speedup_on_over_off,,,1.277012342758709,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,timed_bit_identical,1408,1408,1408,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,timed_semantic_same,0,1408,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,timed_semantic_different,0,1408,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,timed_invalid,0,1408,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,timed_exception,0,1408,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,square,eps0.03_default,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,mkldnn_on_median_ms,,,58.59432400029618,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,mkldnn_on_p95_ms,,,61.39757489963813,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,mkldnn_off_median_ms,,,51.55926350016671,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,mkldnn_off_p95_ms,,,52.4934351515185,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,paired_median_delta_ms,,,-7.578802750686009,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,paired_median_speedup_on_over_off,,,1.1493648650001902,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,timed_bit_identical,4224,4224,4224,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,timed_semantic_same,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgd,eps0.03_default,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,mkldnn_on_median_ms,,,66.47553150105523,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,mkldnn_on_p95_ms,,,600.9889348015349,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,mkldnn_off_median_ms,,,57.57747999996354,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,mkldnn_off_p95_ms,,,525.3633810494648,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,paired_median_delta_ms,,,-8.971415999440069,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,paired_median_speedup_on_over_off,,,1.1555754279454793,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,timed_bit_identical,4224,4224,4224,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,timed_semantic_same,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,apgdt,eps0.03_default,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,mkldnn_on_median_ms,,,1422.1356899979583,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,mkldnn_on_p95_ms,,,1874.3285836490033,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,mkldnn_off_median_ms,,,1223.2277615003113,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,mkldnn_off_p95_ms,,,1577.8323241023832,ms,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,paired_median_delta_ms,,,-207.60116200017364,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,paired_median_speedup_on_over_off,,,1.1712221978738793,ratio,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,timed_bit_identical,776,1408,776,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,timed_semantic_same,632,1408,632,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,timed_semantic_different,0,1408,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,timed_invalid,0,1408,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,timed_exception,0,1408,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_100032,b1_acceleration_summary.csv,ead,package_default,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,deepfool,package_default,,final_classification,,,NEEDS_INVESTIGATION,label,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,deepfool,package_default,,timed_bit_identical,0,0,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,deepfool,package_default,,timed_semantic_same,0,0,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,deepfool,package_default,,timed_semantic_different,0,0,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,deepfool,package_default,,timed_invalid,0,0,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,deepfool,package_default,,timed_exception,0,0,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,deepfool,package_default,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,deepfool,package_default,,reasons,,,"pre-validation failures {'w4': {'BIT_IDENTICAL': 1, 'BITWISE_DIFFERENT_SEMANTIC_SAME': 85, 'SEMANTIC_DIFFERENT': 2, 'INVALID': 0, 'EXCEPTION': 0}} | 16 planned cells without an accepted attempt | no valid pairs",text,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,deepfool,package_default,,disposition,,,not integrated (SEMANTIC_DIFFERENT reproduced in targeted rerun),label,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,mkldnn_on_median_ms,,,321.0016835037095,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,mkldnn_on_p95_ms,,,323.74630350204825,ms,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,mkldnn_off_median_ms,,,304.17214000044623,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,mkldnn_off_p95_ms,,,307.20890295233403,ms,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,paired_median_delta_ms,,,-16.76182150004024,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,paired_median_speedup_on_over_off,,,1.05510837751463,ratio,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,timed_bit_identical,3720,4224,3720,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,timed_semantic_same,504,4224,504,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.005,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,mkldnn_on_median_ms,,,316.4539995013911,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,mkldnn_on_p95_ms,,,320.5411263039423,ms,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,mkldnn_off_median_ms,,,300.90818899770966,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,mkldnn_off_p95_ms,,,304.17788239537913,ms,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,paired_median_delta_ms,,,-15.869371745793615,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,paired_median_speedup_on_over_off,,,1.0528564478046323,ratio,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,timed_bit_identical,3408,4224,3408,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,timed_semantic_same,816,4224,816,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,timed_semantic_different,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,timed_invalid,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,timed_exception,0,4224,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,fab,eps0.01,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,final_classification,,,SPEEDUP_CANDIDATE,label,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,mkldnn_on_median_ms,,,64.90134349951404,ms,baseline = mkldnn ON
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,mkldnn_on_p95_ms,,,15932.741439755046,ms,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,mkldnn_off_median_ms,,,57.938206002290826,ms,"candidate = mkldnn OFF around atk(x, y)"
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,mkldnn_off_p95_ms,,,12301.137182400998,ms,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,paired_median_delta_ms,,,-7.4981262514484115,ms,OFF minus ON
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,paired_median_speedup_on_over_off,,,1.1316018298883312,ratio,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,pairs_off_faster,8,8,8,count,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,sign_test_two_sided_p,,,0.0078125,p,
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,timed_bit_identical,1408,1408,1408,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,timed_semantic_same,0,1408,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,timed_semantic_different,0,1408,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,timed_invalid,0,1408,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,timed_exception,0,1408,0,count,timed calls compared with the mkldnn ON anchor
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,anchor_apply_bit_identical,88,88,88,count,benchmark ON path vs production AttackAdapter.apply()
+results/attack_b1_accel_full_20261004_174620,b1_acceleration_summary.csv,autoattack,eps0.03_standard,,disposition,,,integrated (b1_mkldnn_off_extended),label,
+results/attack_b1_accel_full_20261004_174620,profiles/deepfool__package_default/mkldnn/per_sample_validation.csv,deepfool,package_default,,semantic_different_sample,,,sample_pos=25; modulation=BPSK; snr_db=-20; sample_index=1; formal_seed=306358848,text,attacked_pred ON->OFF 7->10; attack_success ON->OFF False->False; ON top1-top2 logit margin 5.960464477539063e-08; max_abs_diff_vs_anchor 1.862645149230957e-09
+results/attack_b1_accel_full_20261004_174620,profiles/deepfool__package_default/mkldnn/per_sample_validation.csv,deepfool,package_default,,semantic_different_sample,,,sample_pos=37; modulation=CPFSK; snr_db=6; sample_index=1; formal_seed=1459427369,text,attacked_pred ON->OFF 5->9; attack_success ON->OFF False->True; ON top1-top2 logit margin 4.76837158203125e-07; max_abs_diff_vs_anchor 1.862645149230957e-09

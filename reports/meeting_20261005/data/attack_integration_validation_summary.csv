@@ -1,0 +1,120 @@
+source_result_dir,source_file,attack,profile,defense,metric_name,raw_count,denominator,value,unit,notes
+results/accel_phase1_final_integration_20260927_153520,validation.json,,,,overall,,,PASS,label,b1_pgd_bim_mkldnn_off
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_off_identical_to_prechange,88,88,88,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_BIT_IDENTICAL,,88,,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,,88,,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_SEMANTIC_DIFFERENT,,88,,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_INVALID,,88,,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_off_identical_to_prechange,88,88,88,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_BIT_IDENTICAL,,88,,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,,88,,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_SEMANTIC_DIFFERENT,,88,,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_INVALID,,88,,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_off_identical_to_prechange,88,88,88,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_BIT_IDENTICAL,,88,,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,,88,,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_SEMANTIC_DIFFERENT,,88,,count,
+results/accel_phase1_final_integration_20260927_153520,validation.json,@{n=88; n_identical=88; status=PASS},,,option_on_INVALID,,88,,count,
+results/accel_b1_extended_integration_20261004_223455,validation.json,,,,overall,,,PASS,label,b1_mkldnn_off_extended
+results/accel_b1_extended_integration_20261004_223455,validation.json,,,,n_failures,0,,0,count,
+results/accel_b1_extended_integration_20261004_223455,validation.json,,,,samples,88,,88,count,first N of the 88-sample formal subset
+results/accel_b1_extended_integration_20261004_223455,validation.json,,,,extended_attacks,,,apgd apgdt autoattack cw difgsm ead fab mifgsm rfgsm square tpgd vmifgsm vnifgsm,list,
+results/accel_b1_extended_integration_20261004_223455,validation.json,,,,not_extended_checked,,,fgsm pgd bim deepfool,list,option ON must leave these unchanged
+results/accel_b1_extended_integration_20261004_223455,validation.json,,,,deterministic_seed_rule,,,"attack_params[""seed""] = formal per-row seed (production path)",text,"autoattack only, validation control"
+results/accel_b1_extended_integration_20261004_223455,validation.json,,,,attack_adapter_sha256,,,c09a45d7689017eb4607ffeac1e3e7bba2479cb165733cfa534cef2881c4f6bf,sha256,working copy validated on the Pi
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.005,,option_on_BIT_IDENTICAL,88,88,88,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.005,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.005,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.005,,option_on_INVALID,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.01,,option_on_BIT_IDENTICAL,88,88,88,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.01,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.01,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.01,,option_on_INVALID,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.03,,option_on_BIT_IDENTICAL,88,88,88,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.03,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.03,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.03,,option_on_INVALID,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.05,,option_on_BIT_IDENTICAL,88,88,88,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.05,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.05,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fgsm,eps0.05,,option_on_INVALID,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,bim,eps0.03_default,,option_on_BIT_IDENTICAL,88,88,88,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,bim,eps0.03_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,bim,eps0.03_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,bim,eps0.03_default,,option_on_INVALID,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.005,,option_on_BIT_IDENTICAL,88,88,88,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.005,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.005,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.005,,option_on_INVALID,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.01,,option_on_BIT_IDENTICAL,88,88,88,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.01,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.01,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.01,,option_on_INVALID,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.03,,option_on_BIT_IDENTICAL,88,88,88,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.03,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.03,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,pgd,eps0.03,,option_on_INVALID,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,mifgsm,eps0.03_default,,option_on_BIT_IDENTICAL,88,88,88,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,mifgsm,eps0.03_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,mifgsm,eps0.03_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,mifgsm,eps0.03_default,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,difgsm,eps0.03_default,,option_on_BIT_IDENTICAL,88,88,88,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,difgsm,eps0.03_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,difgsm,eps0.03_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,difgsm,eps0.03_default,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,vmifgsm,eps0.03_default,,option_on_BIT_IDENTICAL,88,88,88,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,vmifgsm,eps0.03_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,vmifgsm,eps0.03_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,vmifgsm,eps0.03_default,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,vnifgsm,eps0.03_default,,option_on_BIT_IDENTICAL,85,88,85,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,vnifgsm,eps0.03_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,3,88,3,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,vnifgsm,eps0.03_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,vnifgsm,eps0.03_default,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,rfgsm,eps0.03_default,,option_on_BIT_IDENTICAL,88,88,88,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,rfgsm,eps0.03_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,rfgsm,eps0.03_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,rfgsm,eps0.03_default,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,tpgd,eps0.03_default,,option_on_BIT_IDENTICAL,86,88,86,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,tpgd,eps0.03_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,2,88,2,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,tpgd,eps0.03_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,tpgd,eps0.03_default,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,cw,c1_steps20_lr0.01,,option_on_BIT_IDENTICAL,12,88,12,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,cw,c1_steps20_lr0.01,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,76,88,76,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,cw,c1_steps20_lr0.01,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,cw,c1_steps20_lr0.01,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,deepfool,package_default,,option_on_BIT_IDENTICAL,88,88,88,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,deepfool,package_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,deepfool,package_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,deepfool,package_default,,option_on_INVALID,0,88,0,count,control (option not applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.005,,option_on_BIT_IDENTICAL,67,88,67,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.005,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,21,88,21,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.005,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.005,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.01,,option_on_BIT_IDENTICAL,54,88,54,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.01,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,34,88,34,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.01,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.01,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.03,,option_on_BIT_IDENTICAL,12,88,12,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.03,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,76,88,76,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.03,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,fab,eps0.03,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,square,eps0.03_default,,option_on_BIT_IDENTICAL,88,88,88,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,square,eps0.03_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,square,eps0.03_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,square,eps0.03_default,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,apgd,eps0.03_default,,option_on_BIT_IDENTICAL,88,88,88,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,apgd,eps0.03_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,apgd,eps0.03_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,apgd,eps0.03_default,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,apgdt,eps0.03_default,,option_on_BIT_IDENTICAL,88,88,88,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,apgdt,eps0.03_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,apgdt,eps0.03_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,apgdt,eps0.03_default,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,autoattack,eps0.03_standard,,option_on_BIT_IDENTICAL,88,88,88,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,autoattack,eps0.03_standard,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,autoattack,eps0.03_standard,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,autoattack,eps0.03_standard,,option_on_INVALID,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,ead,package_default,,option_on_BIT_IDENTICAL,9,88,9,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,ead,package_default,,option_on_BITWISE_DIFFERENT_SEMANTIC_SAME,79,88,79,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,ead,package_default,,option_on_SEMANTIC_DIFFERENT,0,88,0,count,extended (option applied)
+results/accel_b1_extended_integration_20261004_223455,validation.json,ead,package_default,,option_on_INVALID,0,88,0,count,extended (option applied)

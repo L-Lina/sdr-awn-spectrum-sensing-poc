@@ -1,0 +1,123 @@
+{
+  "script": "experiments/train_adversarial_awn.py",
+  "config": {
+    "formal_config": "configs/hailo_full_matrix.json",
+    "dataset_path": null,
+    "warm_start_checkpoint": null,
+    "train_attacks": [
+      {
+        "attack": "fgsm",
+        "profile_id": "eps0.03"
+      },
+      {
+        "attack": "pgd",
+        "profile_id": "eps0.03"
+      }
+    ],
+    "robust_val_attack": {
+      "attack": "fgsm",
+      "profile_id": "eps0.03"
+    },
+    "alpha_adversarial": 0.5,
+    "val_weight_clean": 0.5,
+    "epochs": 30,
+    "batch_size": 256,
+    "lr": 0.0001,
+    "lr_plateau_factor": 0.5,
+    "lr_plateau_patience": 4,
+    "early_stop_patience": 8,
+    "val_ratio": 0.15,
+    "seed": 42,
+    "snr_min": 0,
+    "clean_only_modulations": [
+      "WBFM",
+      "AM-DSB",
+      "AM-SSB"
+    ],
+    "exclude_formal_eval_samples": true,
+    "torch_num_threads": null
+  },
+  "plan": {
+    "n_rows": 108900,
+    "n_train": 92565,
+    "n_val": 16335,
+    "snrs": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18
+    ],
+    "excluded_sample_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "train_profiles": [
+      {
+        "attack": "fgsm",
+        "profile_id": "eps0.03",
+        "eps": 0.03,
+        "attack_params": {},
+        "cw_c": 1.0,
+        "cw_steps": 20,
+        "cw_lr": 0.01
+      },
+      {
+        "attack": "pgd",
+        "profile_id": "eps0.03",
+        "eps": 0.03,
+        "attack_params": {},
+        "cw_c": 1.0,
+        "cw_steps": 20,
+        "cw_lr": 0.01
+      }
+    ],
+    "val_profile": {
+      "attack": "fgsm",
+      "profile_id": "eps0.03",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01
+    },
+    "batches_per_epoch": 362
+  },
+  "hashes": {
+    "training_config_sha256": "ade04cb4037f3a6c80acfaa6db5d374da3d5e221a0735f91a8d4fa7c07b0a747",
+    "formal_config_sha256": "6c1a33e8acffa29aa210ea2de95f0854a451dbaceb0fc1d25dd60d65046716f8",
+    "dataset_sha256": "b29ccc25b00d0718cd3b70ffa9158662ec83f6d9b63ffd845c7bcbe3b3096e8c",
+    "warm_start_sha256": "8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695",
+    "this_script_sha256": "721bcfaf05902205774cc53f286c92d436d0bafb88c1b2956722a0ebb63ac652"
+  },
+  "split_digest": "ca82afe4bc49f45ee4c9665cd02ba1df3abe48402c4509e3a6c84b6f6966d698",
+  "git_head": "5aac399b93be3c0778eb8fbb4a0329b285c232b6",
+  "torch_version": "2.14.0+cpu",
+  "device": "cpu",
+  "started_utc": "2026-10-04T15:08:03.535768+00:00",
+  "max_batches_per_epoch": null,
+  "functional_check_only": false,
+  "status": "complete",
+  "resumes": [
+    {
+      "utc": "2026-10-05T02:53:42.893931+00:00",
+      "device": "cpu"
+    }
+  ],
+  "finished_utc": "2026-10-05T06:52:19.341105+00:00",
+  "best_val_weighted": 0.792072237526783,
+  "best_model_sha256": "e3cdc7dd108a905c8cb98b90732200211bd626ee41ecd73348aa97f275bffc15"
+}

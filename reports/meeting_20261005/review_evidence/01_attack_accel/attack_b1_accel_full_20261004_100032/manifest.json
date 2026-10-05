@@ -1,0 +1,1191 @@
+{
+  "benchmark": "attack_b1_acceleration_full",
+  "mode": "full",
+  "run_key": {
+    "mode": "full",
+    "subset": [
+      [
+        "8PSK",
+        -20,
+        0
+      ],
+      [
+        "8PSK",
+        -20,
+        1
+      ],
+      [
+        "8PSK",
+        -6,
+        0
+      ],
+      [
+        "8PSK",
+        -6,
+        1
+      ],
+      [
+        "8PSK",
+        6,
+        0
+      ],
+      [
+        "8PSK",
+        6,
+        1
+      ],
+      [
+        "8PSK",
+        18,
+        0
+      ],
+      [
+        "8PSK",
+        18,
+        1
+      ],
+      [
+        "AM-DSB",
+        -20,
+        0
+      ],
+      [
+        "AM-DSB",
+        -20,
+        1
+      ],
+      [
+        "AM-DSB",
+        -6,
+        0
+      ],
+      [
+        "AM-DSB",
+        -6,
+        1
+      ],
+      [
+        "AM-DSB",
+        6,
+        0
+      ],
+      [
+        "AM-DSB",
+        6,
+        1
+      ],
+      [
+        "AM-DSB",
+        18,
+        0
+      ],
+      [
+        "AM-DSB",
+        18,
+        1
+      ],
+      [
+        "AM-SSB",
+        -20,
+        0
+      ],
+      [
+        "AM-SSB",
+        -20,
+        1
+      ],
+      [
+        "AM-SSB",
+        -6,
+        0
+      ],
+      [
+        "AM-SSB",
+        -6,
+        1
+      ],
+      [
+        "AM-SSB",
+        6,
+        0
+      ],
+      [
+        "AM-SSB",
+        6,
+        1
+      ],
+      [
+        "AM-SSB",
+        18,
+        0
+      ],
+      [
+        "AM-SSB",
+        18,
+        1
+      ],
+      [
+        "BPSK",
+        -20,
+        0
+      ],
+      [
+        "BPSK",
+        -20,
+        1
+      ],
+      [
+        "BPSK",
+        -6,
+        0
+      ],
+      [
+        "BPSK",
+        -6,
+        1
+      ],
+      [
+        "BPSK",
+        6,
+        0
+      ],
+      [
+        "BPSK",
+        6,
+        1
+      ],
+      [
+        "BPSK",
+        18,
+        0
+      ],
+      [
+        "BPSK",
+        18,
+        1
+      ],
+      [
+        "CPFSK",
+        -20,
+        0
+      ],
+      [
+        "CPFSK",
+        -20,
+        1
+      ],
+      [
+        "CPFSK",
+        -6,
+        0
+      ],
+      [
+        "CPFSK",
+        -6,
+        1
+      ],
+      [
+        "CPFSK",
+        6,
+        0
+      ],
+      [
+        "CPFSK",
+        6,
+        1
+      ],
+      [
+        "CPFSK",
+        18,
+        0
+      ],
+      [
+        "CPFSK",
+        18,
+        1
+      ],
+      [
+        "GFSK",
+        -20,
+        0
+      ],
+      [
+        "GFSK",
+        -20,
+        1
+      ],
+      [
+        "GFSK",
+        -6,
+        0
+      ],
+      [
+        "GFSK",
+        -6,
+        1
+      ],
+      [
+        "GFSK",
+        6,
+        0
+      ],
+      [
+        "GFSK",
+        6,
+        1
+      ],
+      [
+        "GFSK",
+        18,
+        0
+      ],
+      [
+        "GFSK",
+        18,
+        1
+      ],
+      [
+        "PAM4",
+        -20,
+        0
+      ],
+      [
+        "PAM4",
+        -20,
+        1
+      ],
+      [
+        "PAM4",
+        -6,
+        0
+      ],
+      [
+        "PAM4",
+        -6,
+        1
+      ],
+      [
+        "PAM4",
+        6,
+        0
+      ],
+      [
+        "PAM4",
+        6,
+        1
+      ],
+      [
+        "PAM4",
+        18,
+        0
+      ],
+      [
+        "PAM4",
+        18,
+        1
+      ],
+      [
+        "QAM16",
+        -20,
+        0
+      ],
+      [
+        "QAM16",
+        -20,
+        1
+      ],
+      [
+        "QAM16",
+        -6,
+        0
+      ],
+      [
+        "QAM16",
+        -6,
+        1
+      ],
+      [
+        "QAM16",
+        6,
+        0
+      ],
+      [
+        "QAM16",
+        6,
+        1
+      ],
+      [
+        "QAM16",
+        18,
+        0
+      ],
+      [
+        "QAM16",
+        18,
+        1
+      ],
+      [
+        "QAM64",
+        -20,
+        0
+      ],
+      [
+        "QAM64",
+        -20,
+        1
+      ],
+      [
+        "QAM64",
+        -6,
+        0
+      ],
+      [
+        "QAM64",
+        -6,
+        1
+      ],
+      [
+        "QAM64",
+        6,
+        0
+      ],
+      [
+        "QAM64",
+        6,
+        1
+      ],
+      [
+        "QAM64",
+        18,
+        0
+      ],
+      [
+        "QAM64",
+        18,
+        1
+      ],
+      [
+        "QPSK",
+        -20,
+        0
+      ],
+      [
+        "QPSK",
+        -20,
+        1
+      ],
+      [
+        "QPSK",
+        -6,
+        0
+      ],
+      [
+        "QPSK",
+        -6,
+        1
+      ],
+      [
+        "QPSK",
+        6,
+        0
+      ],
+      [
+        "QPSK",
+        6,
+        1
+      ],
+      [
+        "QPSK",
+        18,
+        0
+      ],
+      [
+        "QPSK",
+        18,
+        1
+      ],
+      [
+        "WBFM",
+        -20,
+        0
+      ],
+      [
+        "WBFM",
+        -20,
+        1
+      ],
+      [
+        "WBFM",
+        -6,
+        0
+      ],
+      [
+        "WBFM",
+        -6,
+        1
+      ],
+      [
+        "WBFM",
+        6,
+        0
+      ],
+      [
+        "WBFM",
+        6,
+        1
+      ],
+      [
+        "WBFM",
+        18,
+        0
+      ],
+      [
+        "WBFM",
+        18,
+        1
+      ]
+    ],
+    "replications": 4,
+    "repeats": 3,
+    "max_cell_seconds": 180.0,
+    "warmup_samples": 2,
+    "config_sha256": "6c1a33e8acffa29aa210ea2de95f0854a451dbaceb0fc1d25dd60d65046716f8",
+    "include_controls": false
+  },
+  "command": [
+    "/home/lina/sdr-awn-spectrum-sensing-poc/.venv/bin/python",
+    "experiments/benchmark_attack_b1_acceleration_full_pi5.py",
+    "--full"
+  ],
+  "started_utc": "2026-10-04T02:00:32.640962+00:00",
+  "hashes": {
+    "dataset_sha256": "b29ccc25b00d0718cd3b70ffa9158662ec83f6d9b63ffd845c7bcbe3b3096e8c",
+    "checkpoint_sha256": "8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695",
+    "config_sha256": "6c1a33e8acffa29aa210ea2de95f0854a451dbaceb0fc1d25dd60d65046716f8",
+    "attack_adapter_py_sha256": "a2b9b39d1e865531e035fbdc4f1b8fcf018fd89100ff468e76661e3184fbcf70",
+    "this_script_sha256": "faa418581cd85acff7de60c2da56b89f5ff6f6f1b78ced4aa709cbe517b90b7a"
+  },
+  "environment": {
+    "datetime_local": "2026-10-04T10:00:33.823221+08:00",
+    "datetime_utc": "2026-10-04T02:00:33.823258+00:00",
+    "hostname": "pi-awn",
+    "git_head": "5aac399b93be3c0778eb8fbb4a0329b285c232b6",
+    "git_status_summary": {
+      "n_entries": 48,
+      "n_untracked": 44,
+      "n_modified": 4,
+      "entries_head": [
+        "M src/adapters/attack_adapter.py",
+        " M src/adapters/topk_adapter.py",
+        " M src/utils/config.py",
+        " M src/utils/pipeline.py",
+        "?? -printf",
+        "?? attack_b1_accel_full.log",
+        "?? configs/hailo_full_matrix.json",
+        "?? data/RML2016.10a_dict.pkl",
+        "?? deployment/",
+        "?? experiments/analyze_hailo_full_matrix.py",
+        "?? experiments/audit_bim_batch_semantics_pi5.py",
+        "?? experiments/bench_attack_accel_pi5.py",
+        "?? experiments/bench_attack_batch_pi5.py",
+        "?? experiments/bench_attack_batch_pi5_v2.py",
+        "?? experiments/bench_attack_mkldnn_b1_pi5.py",
+        "?? experiments/bench_attack_overhead_pi5.py",
+        "?? experiments/bench_attack_thermal_control_pi5.py",
+        "?? experiments/bench_attack_thermal_pair_pi5.py",
+        "?? experiments/benchmark_adaptive_k_effectiveness_pi5.py",
+        "?? experiments/benchmark_adaptive_k_hailo_paired_pi5.py",
+        "?? experiments/benchmark_attack_b1_acceleration_full_pi5.py",
+        "?? experiments/benchmark_formal_latency_pi5.py",
+        "?? experiments/diagnose_bim_batch_divergence_pi5.py",
+        "?? experiments/profile_arm_backend_pi5.py",
+        "?? experiments/profile_attack_b1_pi5.py",
+        "?? experiments/run_cpu_full_matrix.py",
+        "?? experiments/run_hailo_full_matrix.py",
+        "?? experiments/run_signal_preservation_audit.py",
+        "?? experiments/run_spectrum_sensing_utility_hailo.py",
+        "?? experiments/run_target_attack_decode_all17.py",
+        "?? experiments/run_target_attack_decode_all17_calibrated.py",
+        "?? experiments/run_target_attack_decode_pilot.py",
+        "?? experiments/run_targeted_modulation_formal.py",
+        "?? experiments/run_targeted_modulation_pilot.py",
+        "?? experiments/run_waveform_calibration.py",
+        "?? experiments/run_waveform_calibration_v2.py",
+        "?? experiments/validate_adaptive_k_pipeline_wiring.py",
+        "?? experiments/validate_adaptive_k_v2_parity.py",
+        "?? experiments/validate_attack_mkldnn_b1_integration.py",
+        "?? hailort.log",
+        "?? pyhailort.log",
+        "?? references/",
+        "?? reports/meeting_20260921/evidence/",
+        "?? reports/meeting_20260921/meeting_evidence_20260921.zip",
+        "?? scripts/run_cpu_full_matrix.sh",
+        "?? scripts/run_hailo_full_matrix.sh",
+        "?? src/adapters/hailo_awn_adapter.py",
+        "?? src/modulation/"
+      ]
+    },
+    "git_submodules": "0b3d2b2d3d5d4761e73eb91e223844b4b8585b53 external/AWN (heads/main)\n ced705ed861bde352841b0b8bd038a6449e0fa4d external/adversarial-rf (heads/main)",
+    "python_version": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+    "python_executable": "/home/lina/sdr-awn-spectrum-sensing-poc/.venv/bin/python",
+    "platform": "Linux-6.18.39+rpt-rpi-2712-aarch64-with-glibc2.41",
+    "architecture": "aarch64",
+    "cpu_models": [
+      "Raspberry Pi 5 Model B Rev 1.1"
+    ],
+    "lscpu": "Architecture:                            aarch64\nCPU op-mode(s):                          32-bit, 64-bit\nByte Order:                              Little Endian\nCPU(s):                                  4\nOn-line CPU(s) list:                     0-3\nVendor ID:                               ARM\nModel name:                              Cortex-A76\nModel:                                   1\nThread(s) per core:                      1\nCore(s) per cluster:                     4\nSocket(s):                               -\nCluster(s):                              1\nStepping:                                r4p1\nFrequency boost:                         disabled\nCPU(s) scaling MHz:                      100%\nCPU max MHz:                             2400.0000\nCPU min MHz:                             1500.0000\nBogoMIPS:                                108.00\nFlags:                                   fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp\nL1d cache:                               256 KiB (4 instances)\nL1i cache:                               256 KiB (4 instances)\nL2 cache:                                2 MiB (4 instances)\nL3 cache:                                2 MiB (1 instance)\nNUMA node(s):                            8\nNUMA node0 CPU(s):                       0-3\nNUMA node1 CPU(s):                       0-3\nNUMA node2 CPU(s):                       0-3\nNUMA node3 CPU(s):                       0-3\nNUMA node4 CPU(s):                       0-3\nNUMA node5 CPU(s):                       0-3\nNUMA node6 CPU(s):                       0-3\nNUMA node7 CPU(s):                       0-3\nVulnerability Gather data sampling:      Not affected\nVulnerability Ghostwrite:                Not affected\nVulnerability Indirect target selection: Not affected\nVulnerability Itlb multihit:             Not affected\nVulnerability L1tf:                      Not affected\nVulnerability Mds:                       Not affected\nVulnerability Meltdown:                  Not affected\nVulnerability Mmio stale data:           Not affected\nVulnerability Old microcode:             Not affected\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Not affected\nVulnerability Spec rstack overflow:      Not affected\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; CSV2, BHB\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Not affected\nVulnerability Vmscape:                   Not affected",
+    "os_cpu_count": 4,
+    "cpu_max_freq_khz": "2400000",
+    "scaling_governor": {
+      "cpu0": "ondemand",
+      "cpu1": "ondemand",
+      "cpu2": "ondemand",
+      "cpu3": "ondemand"
+    },
+    "cpu_temp_c": 57.85,
+    "vcgencmd_temp": "temp=58.2'C",
+    "vcgencmd_throttled": "throttled=0x0",
+    "env_thread_vars": {
+      "OMP_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "NUMEXPR_NUM_THREADS": null
+    },
+    "torch_version": "2.14.0+cpu",
+    "torch_config_show": "PyTorch built with:\n  - GCC 13.3\n  - C++ Version: 202002\n  - Intel(R) MKL-DNN v3.12.0 (Git Hash 80afa71049cd69a3df32adcccb623b12cd7baa22)\n  - OpenMP 201511 (a.k.a. OpenMP 4.5)\n  - LAPACK is enabled (usually provided by MKL)\n  - NNPACK is enabled\n  - CPU capability usage: DEFAULT\n  - Build settings: BLAS_INFO=open, BUILD_TYPE=Release, COMMIT_SHA=08187d9e0fba026dc8217405802ab5381dc88d90, CUDA_FLAGS= -DLIBCUDACXX_ENABLE_SIMPLIFIED_COMPLEX_OPERATIONS -Xfatbin -compress-all  -Wno-deprecated-gpu-targets --expt-extended-lambda -DCUB_WRAPPED_NAMESPACE=at_cuda_detail -DDISABLE_CUSPARSE_DEPRECATED -DCUDA_HAS_FP16=1 -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -DC10_NODEPRECATED, CXX_COMPILER=/opt/rh/gcc-toolset-13/root/usr/bin/c++, CXX_FLAGS= -ffunction-sections -fdata-sections -fvisibility-inlines-hidden -DUSE_PTHREADPOOL -DNDEBUG -DUSE_KINETO -DUSE_FBGEMM -DUSE_PYTORCH_QNNPACK -DAT_BUILD_ARM_VEC256_WITH_SLEEF -DSYMBOLICATE_MOBILE_DEBUG_HANDLE -O2 -fPIC -DC10_NODEPRECATED -Wall -Wextra -Werror=return-type -Werror=non-virtual-dtor -Werror=range-loop-construct -Werror=bool-operation -Wnarrowing -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-unused-parameter -Wno-strict-overflow -Wno-strict-aliasing -Wno-stringop-overflow -Wsuggest-override -Wno-psabi -Wno-error=old-style-cast -faligned-new -Wno-maybe-uninitialized -fno-omit-frame-pointer -fno-math-errno -fno-trapping-math -Werror=format -Wno-dangling-reference -Wno-error=dangling-reference -Wno-stringop-overflow, LAPACK_INFO=open, TORCH_VERSION=2.14.0, USE_CUDA=0, USE_CUDNN=OFF, USE_CUSPARSELT=OFF, USE_GFLAGS=OFF, USE_GLOG=OFF, USE_GLOO=ON, USE_HIPSPARSELT=OFF, USE_MKLDNN=1, USE_MPI=OFF, USE_NCCL=OFF, USE_NNPACK=ON, USE_OPENMP=ON, USE_ROCM=OFF, USE_ROCM_KERNEL_ASSERT=OFF, USE_XCCL=OFF, USE_XPU=OFF, \n",
+    "torch_parallel_info_parent_default": "ATen/Parallel:\n\tat::get_num_threads() : 4\n\tat::get_num_interop_threads() : 4\nOpenMP 201511 (a.k.a. OpenMP 4.5)\n\tomp_get_max_threads() : 4\nIntel(R) MKL-DNN v3.12.0 (Git Hash 80afa71049cd69a3df32adcccb623b12cd7baa22)\nstd::thread::hardware_concurrency() : 4\nEnvironment variables:\n\tOMP_NUM_THREADS : [not set]\nATen parallel backend: OpenMP\n",
+    "torch_default_threads_parent": {
+      "intra": 4,
+      "interop": 4
+    }
+  },
+  "system_at_start": {
+    "utc": "2026-10-04T02:00:32.069191+00:00",
+    "temp_c": 56.2,
+    "throttled": {
+      "raw": "throttled=0x0",
+      "value_hex": "0x0",
+      "low": 0,
+      "high": 0,
+      "low_names": [],
+      "high_names": []
+    },
+    "arm_clock_hz": 2400020480,
+    "governor": {
+      "cpu0": "ondemand",
+      "cpu1": "ondemand",
+      "cpu2": "ondemand",
+      "cpu3": "ondemand"
+    }
+  },
+  "formal_dir": "results/cpu_full_matrix_20260921_seedaligned",
+  "config": "configs/hailo_full_matrix.json",
+  "threads": {
+    "mkldnn_phase": {
+      "intra": 4,
+      "interop": 1
+    },
+    "thread_phase": {
+      "baseline_intra": 4,
+      "candidate_intra": 1,
+      "interop": 1
+    }
+  },
+  "decision_rule": {
+    "min_useful_reduction_ms": 1.0,
+    "min_useful_reduction_pct": 1.0
+  },
+  "thermal_policy": {
+    "max_start_temp_c": 55.0,
+    "release_consecutive_reads": 2,
+    "cooldown_poll_seconds": 5.0,
+    "max_cooldown_seconds": 900.0,
+    "max_start_rejections": 5,
+    "max_cell_attempts": 3,
+    "max_consecutive_skips": 2,
+    "in_cell_vc_poll_seconds": 5.0,
+    "system_settings_changed": "none (read-only)"
+  },
+  "profiles": [
+    {
+      "attack": "fgsm",
+      "profile_id": "eps0.005",
+      "slug": "fgsm__eps0.005",
+      "eps": 0.005,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "one_step_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.005",
+        "eps": 0.005,
+        "params": {}
+      }
+    },
+    {
+      "attack": "fgsm",
+      "profile_id": "eps0.01",
+      "slug": "fgsm__eps0.01",
+      "eps": 0.01,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "one_step_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.01",
+        "eps": 0.01,
+        "params": {}
+      }
+    },
+    {
+      "attack": "fgsm",
+      "profile_id": "eps0.03",
+      "slug": "fgsm__eps0.03",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "one_step_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.03",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "fgsm",
+      "profile_id": "eps0.05",
+      "slug": "fgsm__eps0.05",
+      "eps": 0.05,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "one_step_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.05",
+        "eps": 0.05,
+        "params": {}
+      }
+    },
+    {
+      "attack": "mifgsm",
+      "profile_id": "eps0.03_default",
+      "slug": "mifgsm__eps0.03_default",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "iterative_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.03_default",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "difgsm",
+      "profile_id": "eps0.03_default",
+      "slug": "difgsm__eps0.03_default",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "iterative_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.03_default",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "vmifgsm",
+      "profile_id": "eps0.03_default",
+      "slug": "vmifgsm__eps0.03_default",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "iterative_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.03_default",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "vnifgsm",
+      "profile_id": "eps0.03_default",
+      "slug": "vnifgsm__eps0.03_default",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "iterative_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.03_default",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "rfgsm",
+      "profile_id": "eps0.03_default",
+      "slug": "rfgsm__eps0.03_default",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "iterative_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.03_default",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "tpgd",
+      "profile_id": "eps0.03_default",
+      "slug": "tpgd__eps0.03_default",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "iterative_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.03_default",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "cw",
+      "profile_id": "c1_steps20_lr0.01",
+      "slug": "cw__c1_steps20_lr0.01",
+      "eps": 0.03,
+      "attack_params": {
+        "kappa": 0.0
+      },
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": false,
+      "family": "optimization_boundary_search",
+      "formal_profile_raw": {
+        "id": "c1_steps20_lr0.01",
+        "eps": 0.03,
+        "cw_c": 1.0,
+        "cw_steps": 20,
+        "cw_lr": 0.01,
+        "params": {
+          "kappa": 0.0
+        }
+      }
+    },
+    {
+      "attack": "deepfool",
+      "profile_id": "package_default",
+      "slug": "deepfool__package_default",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": false,
+      "family": "optimization_boundary_search",
+      "formal_profile_raw": {
+        "id": "package_default",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "fab",
+      "profile_id": "eps0.005",
+      "slug": "fab__eps0.005",
+      "eps": 0.005,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "optimization_boundary_search",
+      "formal_profile_raw": {
+        "id": "eps0.005",
+        "eps": 0.005,
+        "params": {}
+      }
+    },
+    {
+      "attack": "fab",
+      "profile_id": "eps0.01",
+      "slug": "fab__eps0.01",
+      "eps": 0.01,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "optimization_boundary_search",
+      "formal_profile_raw": {
+        "id": "eps0.01",
+        "eps": 0.01,
+        "params": {}
+      }
+    },
+    {
+      "attack": "fab",
+      "profile_id": "eps0.03",
+      "slug": "fab__eps0.03",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "optimization_boundary_search",
+      "formal_profile_raw": {
+        "id": "eps0.03",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "square",
+      "profile_id": "eps0.03_default",
+      "slug": "square__eps0.03_default",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "score_query_based",
+      "formal_profile_raw": {
+        "id": "eps0.03_default",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "apgd",
+      "profile_id": "eps0.03_default",
+      "slug": "apgd__eps0.03_default",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "iterative_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.03_default",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "apgdt",
+      "profile_id": "eps0.03_default",
+      "slug": "apgdt__eps0.03_default",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "iterative_gradient",
+      "formal_profile_raw": {
+        "id": "eps0.03_default",
+        "eps": 0.03,
+        "params": {}
+      }
+    },
+    {
+      "attack": "autoattack",
+      "profile_id": "eps0.03_standard",
+      "slug": "autoattack__eps0.03_standard",
+      "eps": 0.03,
+      "attack_params": {
+        "version": "standard"
+      },
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": true,
+      "family": "composite",
+      "formal_profile_raw": {
+        "id": "eps0.03_standard",
+        "eps": 0.03,
+        "params": {
+          "version": "standard"
+        }
+      }
+    },
+    {
+      "attack": "ead",
+      "profile_id": "package_default",
+      "slug": "ead__package_default",
+      "eps": 0.03,
+      "attack_params": {},
+      "cw_c": 1.0,
+      "cw_steps": 20,
+      "cw_lr": 0.01,
+      "temperature": 1.0,
+      "diagnostics": false,
+      "eps_bound_gated": false,
+      "family": "optimization_boundary_search",
+      "formal_profile_raw": {
+        "id": "package_default",
+        "eps": 0.03,
+        "params": {}
+      }
+    }
+  ],
+  "effective_repeats": {
+    "fgsm__eps0.005": 3,
+    "fgsm__eps0.01": 3,
+    "fgsm__eps0.03": 3,
+    "fgsm__eps0.05": 3,
+    "mifgsm__eps0.03_default": 3,
+    "difgsm__eps0.03_default": 3,
+    "vmifgsm__eps0.03_default": 3,
+    "vnifgsm__eps0.03_default": 3,
+    "rfgsm__eps0.03_default": 3,
+    "tpgd__eps0.03_default": 3,
+    "cw__c1_steps20_lr0.01": 3,
+    "deepfool__package_default": 3,
+    "fab__eps0.005": 3,
+    "fab__eps0.01": 3,
+    "fab__eps0.03": 3,
+    "square__eps0.03_default": 1,
+    "apgd__eps0.03_default": 3,
+    "apgdt__eps0.03_default": 3,
+    "autoattack__eps0.03_standard": 1,
+    "ead__package_default": 1
+  },
+  "estimate": [
+    {
+      "profile": "fgsm__eps0.005",
+      "family": "one_step_gradient",
+      "est_call_ms": 9.614362852739346,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 43.82790923139158
+    },
+    {
+      "profile": "fgsm__eps0.01",
+      "family": "one_step_gradient",
+      "est_call_ms": 9.6325917031987,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 43.830900950328974
+    },
+    {
+      "profile": "fgsm__eps0.03",
+      "family": "one_step_gradient",
+      "est_call_ms": 9.623954930490092,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 43.829483483192035
+    },
+    {
+      "profile": "fgsm__eps0.05",
+      "family": "one_step_gradient",
+      "est_call_ms": 9.521648220406291,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 43.81269290593308
+    },
+    {
+      "profile": "mifgsm__eps0.03_default",
+      "family": "iterative_gradient",
+      "est_call_ms": 55.86664841818742,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 51.41883433839292
+    },
+    {
+      "profile": "difgsm__eps0.03_default",
+      "family": "iterative_gradient",
+      "est_call_ms": 57.524856600456694,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 51.690979465266956
+    },
+    {
+      "profile": "vmifgsm__eps0.03_default",
+      "family": "iterative_gradient",
+      "est_call_ms": 309.6195906182054,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 93.06476721225987
+    },
+    {
+      "profile": "vnifgsm__eps0.03_default",
+      "family": "iterative_gradient",
+      "est_call_ms": 311.9662539650357,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 93.44990160074167
+    },
+    {
+      "profile": "rfgsm__eps0.03_default",
+      "family": "iterative_gradient",
+      "est_call_ms": 55.94266746316993,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 51.43131058405545
+    },
+    {
+      "profile": "tpgd__eps0.03_default",
+      "family": "iterative_gradient",
+      "est_call_ms": 58.85140946954674,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 51.90869332214201
+    },
+    {
+      "profile": "cw__c1_steps20_lr0.01",
+      "family": "optimization_boundary_search",
+      "est_call_ms": 65.08044292820806,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 52.93100229337751
+    },
+    {
+      "profile": "deepfool__package_default",
+      "family": "optimization_boundary_search",
+      "est_call_ms": 112.25391742683027,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 60.67311292809139
+    },
+    {
+      "profile": "fab__eps0.005",
+      "family": "optimization_boundary_search",
+      "est_call_ms": 416.4822615618254,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 110.60306876752679
+    },
+    {
+      "profile": "fab__eps0.01",
+      "family": "optimization_boundary_search",
+      "est_call_ms": 418.1099161567988,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 110.87019943965383
+    },
+    {
+      "profile": "fab__eps0.03",
+      "family": "optimization_boundary_search",
+      "est_call_ms": 419.47136347317655,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 111.09364017321774
+    },
+    {
+      "profile": "square__eps0.03_default",
+      "family": "score_query_based",
+      "est_call_ms": 2029.010501264097,
+      "effective_repeats": 1,
+      "est_minutes_if_both_phases": 165.74910584360805
+    },
+    {
+      "profile": "apgd__eps0.03_default",
+      "family": "iterative_gradient",
+      "est_call_ms": 75.01059781317123,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 54.56073931309766
+    },
+    {
+      "profile": "apgdt__eps0.03_default",
+      "family": "iterative_gradient",
+      "est_call_ms": 151.12904700633513,
+      "effective_repeats": 3,
+      "est_minutes_if_both_phases": 67.05329919467972
+    },
+    {
+      "profile": "autoattack__eps0.03_standard",
+      "family": "composite",
+      "est_call_ms": 1795.8911140063385,
+      "effective_repeats": 1,
+      "est_minutes_if_both_phases": 151.55990580585248
+    },
+    {
+      "profile": "ead__package_default",
+      "family": "optimization_boundary_search",
+      "est_call_ms": 1839.673521492741,
+      "effective_repeats": 1,
+      "est_minutes_if_both_phases": 154.2247950081915
+    }
+  ],
+  "status": "complete",
+  "finished_utc": "2026-10-04T09:32:35.756077+00:00",
+  "environment_end": {
+    "utc": "2026-10-04T09:32:35.756094+00:00",
+    "temp_c": 69.95,
+    "throttled": {
+      "raw": "throttled=0xe0000",
+      "value_hex": "0xe0000",
+      "low": 0,
+      "high": 14,
+      "low_names": [],
+      "high_names": [
+        "arm_freq_capping_occurred",
+        "throttling_occurred",
+        "soft_temp_limit_occurred"
+      ]
+    },
+    "arm_clock_hz": 2400033792,
+    "governor": {
+      "cpu0": "ondemand",
+      "cpu1": "ondemand",
+      "cpu2": "ondemand",
+      "cpu3": "ondemand"
+    }
+  }
+}

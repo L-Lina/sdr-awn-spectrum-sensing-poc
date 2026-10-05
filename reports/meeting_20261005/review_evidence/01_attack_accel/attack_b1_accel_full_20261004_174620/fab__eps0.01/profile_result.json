@@ -1,0 +1,108 @@
+{
+  "attack": "fab",
+  "profile_id": "eps0.01",
+  "effective_repeats": 3,
+  "started_utc": "2026-10-04T10:19:51.484694+00:00",
+  "mkldnn": {
+    "phase": "mkldnn",
+    "baseline": "mkldnn_ON",
+    "candidate": "mkldnn_OFF",
+    "classification": "SPEEDUP_CANDIDATE",
+    "reasons": [],
+    "smoke": false,
+    "repeats": 3,
+    "replications": 4,
+    "baseline_latency_ms": {
+      "n": 2112,
+      "median": 316.4539995013911,
+      "p05": 313.41224315292493,
+      "p95": 320.5411263039423,
+      "mean": 316.7649449275097,
+      "std": 2.8120184007880424,
+      "min": 311.54981100553414,
+      "max": 366.73391699878266
+    },
+    "candidate_latency_ms": {
+      "n": 2112,
+      "median": 300.90818899770966,
+      "p05": 298.17122320018825,
+      "p95": 304.17788239537913,
+      "mean": 301.1648976022791,
+      "std": 3.618091289481399,
+      "min": 295.3571239995654,
+      "max": 427.8514140023617
+    },
+    "pooled_speedup_baseline_over_candidate": 1.0516629692115151,
+    "n_valid_pairs": 8,
+    "n_pairs_candidate_faster": 8,
+    "n_pairs_baseline_faster": 0,
+    "paired_median_delta_ms": -15.869371745793615,
+    "paired_median_delta_pct": -5.020277172190847,
+    "paired_median_speedup": 1.0528564478046323,
+    "sign_test_two_sided_p": 0.0078125,
+    "useful_reduction_threshold_ms": 3.164539995013911,
+    "criteria": {
+      "consistent_direction": true,
+      "useful_reduction": true
+    },
+    "semantic_counts_timed": {
+      "BIT_IDENTICAL": 3408,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 816,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0,
+      "EXCEPTION": 0
+    },
+    "baseline_nonrepeatable_calls": 0,
+    "prevalidation": {
+      "w4": {
+        "BIT_IDENTICAL": 54,
+        "BITWISE_DIFFERENT_SEMANTIC_SAME": 34,
+        "SEMANTIC_DIFFERENT": 0,
+        "INVALID": 0,
+        "EXCEPTION": 0
+      }
+    },
+    "fidelity": {
+      "w4": {
+        "n": 88,
+        "n_apply_bit_identical": 88,
+        "n_formal_sha_match": 88,
+        "failures": [],
+        "formal_sha_required": false
+      }
+    },
+    "mkldnn_state_mismatches": 0,
+    "n_planned_cells": 16,
+    "n_attempts": 16,
+    "n_attempts_not_clean": 0,
+    "not_accepted_cells": [],
+    "stopped": null,
+    "blocked": null,
+    "error": null,
+    "worker_ready": {
+      "w4": {
+        "event": "ready",
+        "pid": 13603,
+        "tag": "w4",
+        "intra_threads": 4,
+        "interop_threads": 1,
+        "fidelity_ok": true,
+        "prevalidation": {
+          "BIT_IDENTICAL": 54,
+          "BITWISE_DIFFERENT_SEMANTIC_SAME": 34,
+          "SEMANTIC_DIFFERENT": 0,
+          "INVALID": 0,
+          "EXCEPTION": 0
+        },
+        "mkldnn_default": true,
+        "torch_version": "2.14.0+cpu"
+      }
+    }
+  },
+  "threads_skipped": "not needed (mkldnn result SPEEDUP_CANDIDATE)",
+  "final_classification": "SPEEDUP_CANDIDATE",
+  "recommended_candidate": "mkldnn_OFF",
+  "anchor_success_rate": 0.17045454545454544,
+  "status": "complete",
+  "finished_utc": "2026-10-04T10:54:05.691455+00:00"
+}

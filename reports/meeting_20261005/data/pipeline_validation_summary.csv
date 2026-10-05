@@ -1,0 +1,7 @@
+source_result_dir,source_file,attack,profile,defense,metric_name,raw_count,denominator,value,unit,notes
+none (interactive run; no persistent artifact),docs/research/RESEARCH_CLOSEOUT_STATUS_ZH_TW.md,,,adaptive_k_pipeline_wiring,pass_count,55,55,PASS,count,experiments/validate_adaptive_k_pipeline_wiring.py; temporary directories only; 0 FAIL
+none (interactive run; no persistent artifact),docs/research/RESEARCH_CLOSEOUT_STATUS_ZH_TW.md,,,hailo_main_pipeline_wiring,pass_count,34,34,PASS,count,experiments/validate_hailo_main_pipeline_wiring.py; temporary directories only; 0 FAIL
+results/accel_b1_extended_integration_20261004_223455,validation.json,,,attack_b1_mkldnn_off_extended,overall,0,,PASS,label,raw_count = n_failures
+results/accel_phase1_final_integration_20260927_153520,validation.json,,,attack_b1_pgd_bim_mkldnn_off,overall,,,PASS,label,
+results/adaptive_k_effectiveness_20260927_164906,validation.json,,,adaptive_k_cpu_effectiveness,overall,,,PASS,label,
+results/adaptive_k_hailo_paired_20260928,validation.json,,,adaptive_k_hailo_paired,overall,,,PASS,label,

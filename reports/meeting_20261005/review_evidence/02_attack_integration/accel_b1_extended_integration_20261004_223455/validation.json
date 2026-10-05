@@ -1,0 +1,185 @@
+{
+  "overall": "PASS",
+  "n_failures": 0,
+  "failures": [],
+  "extended_attacks": [
+    "apgd",
+    "apgdt",
+    "autoattack",
+    "cw",
+    "difgsm",
+    "ead",
+    "fab",
+    "mifgsm",
+    "rfgsm",
+    "square",
+    "tpgd",
+    "vmifgsm",
+    "vnifgsm"
+  ],
+  "not_extended_checked": [
+    "fgsm",
+    "pgd",
+    "bim",
+    "deepfool"
+  ],
+  "deterministic_seed_attacks": [
+    "autoattack"
+  ],
+  "deterministic_seed_rule": "attack_params[\"seed\"] = formal per-row seed (production path)",
+  "option_on_class_counts": {
+    "fgsm__eps0.005": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "fgsm__eps0.01": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "fgsm__eps0.03": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "fgsm__eps0.05": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "bim__eps0.03_default": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "pgd__eps0.005": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "pgd__eps0.01": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "pgd__eps0.03": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "mifgsm__eps0.03_default": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "difgsm__eps0.03_default": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "vmifgsm__eps0.03_default": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "vnifgsm__eps0.03_default": {
+      "BIT_IDENTICAL": 85,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 3,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "rfgsm__eps0.03_default": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "tpgd__eps0.03_default": {
+      "BIT_IDENTICAL": 86,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 2,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "cw__c1_steps20_lr0.01": {
+      "BIT_IDENTICAL": 12,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 76,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "deepfool__package_default": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "fab__eps0.005": {
+      "BIT_IDENTICAL": 67,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 21,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "fab__eps0.01": {
+      "BIT_IDENTICAL": 54,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 34,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "fab__eps0.03": {
+      "BIT_IDENTICAL": 12,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 76,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "square__eps0.03_default": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "apgd__eps0.03_default": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "apgdt__eps0.03_default": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "autoattack__eps0.03_standard": {
+      "BIT_IDENTICAL": 88,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    },
+    "ead__package_default": {
+      "BIT_IDENTICAL": 9,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 79,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0
+    }
+  },
+  "samples": 88,
+  "base_ref": "HEAD",
+  "threads": {
+    "intra": 4,
+    "interop": 1
+  },
+  "torch_version": "2.14.0+cpu",
+  "attack_adapter_sha256": "c09a45d7689017eb4607ffeac1e3e7bba2479cb165733cfa534cef2881c4f6bf",
+  "finished_utc": "2026-10-04T15:02:59.140921+00:00"
+}

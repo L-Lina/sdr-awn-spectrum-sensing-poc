@@ -1,0 +1,108 @@
+{
+  "attack": "autoattack",
+  "profile_id": "eps0.03_standard",
+  "effective_repeats": 1,
+  "started_utc": "2026-10-04T10:54:05.696367+00:00",
+  "mkldnn": {
+    "phase": "mkldnn",
+    "baseline": "mkldnn_ON",
+    "candidate": "mkldnn_OFF",
+    "classification": "SPEEDUP_CANDIDATE",
+    "reasons": [],
+    "smoke": false,
+    "repeats": 1,
+    "replications": 4,
+    "baseline_latency_ms": {
+      "n": 704,
+      "median": 64.90134349951404,
+      "p05": 64.13506290045916,
+      "p95": 15932.741439755046,
+      "mean": 1150.3479847629023,
+      "std": 4001.8624215145232,
+      "min": 63.76301399723161,
+      "max": 16119.090629996208
+    },
+    "candidate_latency_ms": {
+      "n": 704,
+      "median": 57.938206002290826,
+      "p05": 56.1311554054555,
+      "p95": 12301.137182400998,
+      "mean": 897.4477955722065,
+      "std": 3096.6772213208733,
+      "min": 55.60510200302815,
+      "max": 12650.124960004177
+    },
+    "pooled_speedup_baseline_over_candidate": 1.1201821384829882,
+    "n_valid_pairs": 8,
+    "n_pairs_candidate_faster": 8,
+    "n_pairs_baseline_faster": 0,
+    "paired_median_delta_ms": -7.4981262514484115,
+    "paired_median_delta_pct": -11.618529566595365,
+    "paired_median_speedup": 1.1316018298883312,
+    "sign_test_two_sided_p": 0.0078125,
+    "useful_reduction_threshold_ms": 1.0,
+    "criteria": {
+      "consistent_direction": true,
+      "useful_reduction": true
+    },
+    "semantic_counts_timed": {
+      "BIT_IDENTICAL": 1408,
+      "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+      "SEMANTIC_DIFFERENT": 0,
+      "INVALID": 0,
+      "EXCEPTION": 0
+    },
+    "baseline_nonrepeatable_calls": 0,
+    "prevalidation": {
+      "w4": {
+        "BIT_IDENTICAL": 88,
+        "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+        "SEMANTIC_DIFFERENT": 0,
+        "INVALID": 0,
+        "EXCEPTION": 0
+      }
+    },
+    "fidelity": {
+      "w4": {
+        "n": 88,
+        "n_apply_bit_identical": 88,
+        "n_formal_sha_match": 6,
+        "failures": [],
+        "formal_sha_required": false
+      }
+    },
+    "mkldnn_state_mismatches": 0,
+    "n_planned_cells": 16,
+    "n_attempts": 16,
+    "n_attempts_not_clean": 0,
+    "not_accepted_cells": [],
+    "stopped": null,
+    "blocked": null,
+    "error": null,
+    "worker_ready": {
+      "w4": {
+        "event": "ready",
+        "pid": 14250,
+        "tag": "w4",
+        "intra_threads": 4,
+        "interop_threads": 1,
+        "fidelity_ok": true,
+        "prevalidation": {
+          "BIT_IDENTICAL": 88,
+          "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+          "SEMANTIC_DIFFERENT": 0,
+          "INVALID": 0,
+          "EXCEPTION": 0
+        },
+        "mkldnn_default": true,
+        "torch_version": "2.14.0+cpu"
+      }
+    }
+  },
+  "threads_skipped": "not needed (mkldnn result SPEEDUP_CANDIDATE)",
+  "final_classification": "SPEEDUP_CANDIDATE",
+  "recommended_candidate": "mkldnn_OFF",
+  "anchor_success_rate": 0.4318181818181818,
+  "status": "complete",
+  "finished_utc": "2026-10-04T11:38:04.272438+00:00"
+}

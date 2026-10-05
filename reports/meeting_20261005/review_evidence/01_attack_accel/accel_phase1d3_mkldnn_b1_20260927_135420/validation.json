@@ -1,0 +1,271 @@
+{
+  "anchor_fidelity": {
+    "pgd": "88/88 mkldnn-ON path bit-identical to Phase 1B path (stock PGD under torch.manual_seed(formal_seed) vs ControlledStartPGD)",
+    "bim": "88/88 mkldnn-ON path bit-identical to Phase 1B path; ON anchor sha256 == formal adversarial_sha256 for all"
+  },
+  "prevalidation": {
+    "pgd": {
+      "counts": {
+        "BIT_IDENTICAL": 88,
+        "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+        "SEMANTIC_DIFFERENT": 0,
+        "INVALID": 0
+      },
+      "status": "PASS"
+    },
+    "bim": {
+      "counts": {
+        "BIT_IDENTICAL": 87,
+        "BITWISE_DIFFERENT_SEMANTIC_SAME": 1,
+        "SEMANTIC_DIFFERENT": 0,
+        "INVALID": 0
+      },
+      "status": "PASS"
+    }
+  },
+  "semantic_different_samples": {
+    "pgd": [],
+    "bim": []
+  },
+  "planned_cell_final_status": {
+    "00_pgd_B1_mkldnnON": "ACCEPTED",
+    "01_pgd_B1_mkldnnOFF": "ACCEPTED",
+    "02_pgd_B1_mkldnnOFF": "ACCEPTED",
+    "03_pgd_B1_mkldnnON": "ACCEPTED",
+    "04_bim_B1_mkldnnOFF": "ACCEPTED",
+    "05_bim_B1_mkldnnON": "ACCEPTED",
+    "06_bim_B1_mkldnnON": "ACCEPTED",
+    "07_bim_B1_mkldnnOFF": "ACCEPTED",
+    "08_bim_B1_mkldnnOFF": "ACCEPTED",
+    "09_bim_B1_mkldnnON": "ACCEPTED",
+    "10_bim_B1_mkldnnON": "ACCEPTED",
+    "11_bim_B1_mkldnnOFF": "ACCEPTED",
+    "12_pgd_B1_mkldnnON": "ACCEPTED",
+    "13_pgd_B1_mkldnnOFF": "ACCEPTED",
+    "14_pgd_B1_mkldnnOFF": "ACCEPTED",
+    "15_pgd_B1_mkldnnON": "ACCEPTED",
+    "16_pgd_B1_mkldnnON": "ACCEPTED",
+    "17_pgd_B1_mkldnnOFF": "ACCEPTED",
+    "18_pgd_B1_mkldnnOFF": "ACCEPTED",
+    "19_pgd_B1_mkldnnON": "ACCEPTED",
+    "20_bim_B1_mkldnnOFF": "ACCEPTED",
+    "21_bim_B1_mkldnnON": "ACCEPTED",
+    "22_bim_B1_mkldnnON": "ACCEPTED",
+    "23_bim_B1_mkldnnOFF": "ACCEPTED",
+    "24_bim_B1_mkldnnOFF": "ACCEPTED",
+    "25_bim_B1_mkldnnON": "ACCEPTED",
+    "26_bim_B1_mkldnnON": "ACCEPTED",
+    "27_bim_B1_mkldnnOFF": "ACCEPTED",
+    "28_pgd_B1_mkldnnON": "ACCEPTED",
+    "29_pgd_B1_mkldnnOFF": "ACCEPTED",
+    "30_pgd_B1_mkldnnOFF": "ACCEPTED",
+    "31_pgd_B1_mkldnnON": "ACCEPTED"
+  },
+  "n_planned_cells": 32,
+  "n_attempts": 32,
+  "n_attempts_thermal_review": 0,
+  "n_start_rejections": 0,
+  "per_condition": {
+    "pgd/ON": {
+      "attack": "pgd",
+      "setting": "ON",
+      "n_planned_cells": 8,
+      "n_accepted_cells": 8,
+      "b1_latency_ms_n": 2112,
+      "b1_latency_ms_mean": 42.65001706532485,
+      "b1_latency_ms_median": 42.53455399975792,
+      "b1_latency_ms_p95": 43.17679434971069,
+      "b1_latency_ms_p99": 44.281412891014035,
+      "b1_latency_ms_std": 0.9256882837469103,
+      "b1_latency_ms_min": 42.17371800041292,
+      "b1_latency_ms_max": 76.91714300017338,
+      "per_cell_medians_ms": [
+        42.576630499752355,
+        42.558513999210845,
+        42.46798099939042,
+        42.552220500510884,
+        42.49695900034567,
+        42.63539550083806,
+        42.46423800032062,
+        42.511212000135856
+      ],
+      "phase1d0b_reference_ms": 43.0392985,
+      "delta_vs_phase1d0b_ms": -0.504744500242083,
+      "median_le_40ms": false
+    },
+    "pgd/OFF": {
+      "attack": "pgd",
+      "setting": "OFF",
+      "n_planned_cells": 8,
+      "n_accepted_cells": 8,
+      "b1_latency_ms_n": 2112,
+      "b1_latency_ms_mean": 36.52341315672784,
+      "b1_latency_ms_median": 36.3326494998546,
+      "b1_latency_ms_p95": 37.06141594975634,
+      "b1_latency_ms_p99": 43.07292576078895,
+      "b1_latency_ms_std": 1.200005649599781,
+      "b1_latency_ms_min": 36.03437400124676,
+      "b1_latency_ms_max": 57.819247000225005,
+      "per_cell_medians_ms": [
+        36.33405999971728,
+        36.29687849934271,
+        36.27520500049286,
+        36.341391999485495,
+        36.372006999954465,
+        36.42958600084967,
+        36.297278499660024,
+        36.31404400039173
+      ],
+      "phase1d0b_reference_ms": 43.0392985,
+      "delta_vs_phase1d0b_ms": -6.706649000145404,
+      "median_le_40ms": true
+    },
+    "bim/ON": {
+      "attack": "bim",
+      "setting": "ON",
+      "n_planned_cells": 8,
+      "n_accepted_cells": 8,
+      "b1_latency_ms_n": 2112,
+      "b1_latency_ms_mean": 44.09596303881444,
+      "b1_latency_ms_median": 43.83914600020944,
+      "b1_latency_ms_p95": 45.348198900592244,
+      "b1_latency_ms_p99": 50.611792310683064,
+      "b1_latency_ms_std": 1.257921548233096,
+      "b1_latency_ms_min": 43.49752300004184,
+      "b1_latency_ms_max": 68.95672199971159,
+      "per_cell_medians_ms": [
+        43.82838699984859,
+        43.83935049918364,
+        43.85137049939658,
+        43.76189499907923,
+        43.860316000063904,
+        43.82867299955251,
+        43.90688800049247,
+        43.84227500031557
+      ],
+      "phase1d0b_reference_ms": 44.2387895,
+      "delta_vs_phase1d0b_ms": -0.3996434997905638,
+      "median_le_40ms": false
+    },
+    "bim/OFF": {
+      "attack": "bim",
+      "setting": "OFF",
+      "n_planned_cells": 8,
+      "n_accepted_cells": 8,
+      "b1_latency_ms_n": 2112,
+      "b1_latency_ms_mean": 37.858772968736396,
+      "b1_latency_ms_median": 37.62683350032603,
+      "b1_latency_ms_p95": 38.544718999310135,
+      "b1_latency_ms_p99": 44.21569119020203,
+      "b1_latency_ms_std": 1.0929736052144785,
+      "b1_latency_ms_min": 37.24576199965668,
+      "b1_latency_ms_max": 55.20405099923664,
+      "per_cell_medians_ms": [
+        37.580105499728234,
+        37.65875049975875,
+        37.625807500262454,
+        37.57858449989726,
+        37.66488800101797,
+        37.71274249993439,
+        37.60182400037593,
+        37.64961600063543
+      ],
+      "phase1d0b_reference_ms": 44.2387895,
+      "delta_vs_phase1d0b_ms": -6.611955999673974,
+      "median_le_40ms": true
+    }
+  },
+  "decisions": {
+    "pgd": {
+      "status": "PASS",
+      "criteria": {
+        "1_zero_semantic_differences": true,
+        "2_all_planned_cells_accepted_thermal_clean": true,
+        "3_off_faster_in_every_valid_pair": true,
+        "4_median_paired_reduction_ge_1.0_ms": true
+      },
+      "not_accepted_cells": [],
+      "semantic_different_total": 0,
+      "prevalidation_counts": {
+        "BIT_IDENTICAL": 88,
+        "BITWISE_DIFFERENT_SEMANTIC_SAME": 0,
+        "SEMANTIC_DIFFERENT": 0,
+        "INVALID": 0
+      },
+      "timed_off_bit_identical": 2112,
+      "timed_off_bitwise_different_semantic_same": 0,
+      "on_median_ms": 42.53455399975792,
+      "off_median_ms": 36.3326494998546,
+      "pooled_ratio_off_over_on": 0.8541913828474934,
+      "n_valid_pairs": 8,
+      "n_pairs_off_faster": 8,
+      "n_pairs_on_faster": 0,
+      "paired_delta_ms": {
+        "n": 8,
+        "mean": -6.200337437576309,
+        "median": -6.201488749866257,
+        "p95": -6.139654625485491,
+        "p99": -6.127892525410061,
+        "std": 0.03960012845325748,
+        "min": -6.2616354998681345,
+        "max": -6.124952000391204
+      },
+      "paired_median_delta_ms": -6.201488749866257,
+      "paired_delta_pct_median": -14.57997485445412,
+      "paired_ratio_median": 0.8542002514554587,
+      "sign_test_two_sided_p": 0.0078125,
+      "on_median_le_40ms": false,
+      "off_median_le_40ms": true,
+      "recommendation": "RECOMMEND mkldnn OFF around the B=1 attack call only (not clean inference, not B>1, not the formal pipeline without explicit approval)"
+    },
+    "bim": {
+      "status": "PASS",
+      "criteria": {
+        "1_zero_semantic_differences": true,
+        "2_all_planned_cells_accepted_thermal_clean": true,
+        "3_off_faster_in_every_valid_pair": true,
+        "4_median_paired_reduction_ge_1.0_ms": true
+      },
+      "not_accepted_cells": [],
+      "semantic_different_total": 0,
+      "prevalidation_counts": {
+        "BIT_IDENTICAL": 87,
+        "BITWISE_DIFFERENT_SEMANTIC_SAME": 1,
+        "SEMANTIC_DIFFERENT": 0,
+        "INVALID": 0
+      },
+      "timed_off_bit_identical": 2088,
+      "timed_off_bitwise_different_semantic_same": 24,
+      "on_median_ms": 43.83914600020944,
+      "off_median_ms": 37.62683350032603,
+      "pooled_ratio_off_over_on": 0.8582930310765239,
+      "n_valid_pairs": 8,
+      "n_pairs_off_faster": 8,
+      "n_pairs_on_faster": 0,
+      "paired_delta_ms": {
+        "n": 8,
+        "mean": -6.205854562040258,
+        "median": -6.194043499363033,
+        "p95": -6.138564824550485,
+        "p99": -6.12045736460459,
+        "std": 0.05189674960724422,
+        "min": -6.305064000116545,
+        "max": -6.115930499618116
+      },
+      "paired_median_delta_ms": -6.194043499363033,
+      "paired_delta_pct_median": -14.12740030651743,
+      "paired_ratio_median": 0.8587259969348258,
+      "sign_test_two_sided_p": 0.0078125,
+      "on_median_le_40ms": false,
+      "off_median_le_40ms": true,
+      "recommendation": "RECOMMEND mkldnn OFF around the B=1 attack call only (not clean inference, not B>1, not the formal pipeline without explicit approval)"
+    }
+  },
+  "overall": "PASS",
+  "notes": [
+    "mkldnn setting scoped to atk(x, y) only via torch._C._set_mkldnn_enabled with restore; ON cells use the same statements with True.",
+    "ON is the anchor; timed ON outputs must be bit-identical to it (else abort).",
+    "Only accepted (THERMAL_CLEAN) cells enter statistics; pairs = adjacent ON/OFF cells.",
+    "No setting is applied to clean inference, B>1, batch experiments or the formal pipeline."
+  ]
+}

@@ -1,6 +1,6 @@
 label,hailo_paired_defense,cpu_comparison_defense,source_result_dir,source_csv,cpu_net_gain_pp,hailo_net_gain_pp,cpu_recovery_pct,hailo_recovery_pct,cpu_net_gain_pp_in_defense_recovery_cpu_summary,cpu_values_match
-K=10,topk10,fixed_topk_k10,results/adaptive_k_hailo_paired_20260928,data/hailo_defense_summary.csv,-1.8040575243965087,-15.689129229062672,26.999045801526716,22.238625687827138,-1.8040575243965087,True
-K=20,topk20,fixed_topk_k20,results/adaptive_k_hailo_paired_20260928,data/hailo_defense_summary.csv,10.602850539291218,-2.0313366611203563,26.33587786259542,19.23902831834653,10.602850539291218,True
-K=30,topk30,fixed_topk_k30,results/adaptive_k_hailo_paired_20260928,data/hailo_defense_summary.csv,13.450179763739087,1.3900443704936194,26.96087786259542,20.2388941081734,13.450179763739087,True
-K=40,topk40,fixed_topk_k40,results/adaptive_k_hailo_paired_20260928,data/hailo_defense_summary.csv,16.005392912172574,4.946616749861342,27.266221374045802,21.171654811434706,16.005392912172574,True
-Adaptive-K,adaptive_k_v2,adaptive_k_v2_snr,results/adaptive_k_hailo_paired_20260928,data/hailo_defense_summary.csv,16.849640472521827,3.1579312257348846,27.084923664122137,14.11219970473762,16.849640472521827,True
+K=10,topk10,fixed_topk_k10,results/adaptive_k_hailo_paired_20260928,data/hailo_defense_summary.csv,-10.229412771785654,-22.79534109816972,28.624424988870754,23.492723492723492,-10.229412771785654,True
+K=20,topk20,fixed_topk_k20,results/adaptive_k_hailo_paired_20260928,data/hailo_defense_summary.csv,6.642698168121896,-5.324459234608987,31.651580353168125,23.326403326403327,6.642698168121896,True
+K=30,topk30,fixed_topk_k30,results/adaptive_k_hailo_paired_20260928,data/hailo_defense_summary.csv,11.042629686697488,-0.3142909964873368,32.4528861848939,24.407484407484407,11.042629686697488,True
+K=40,topk40,fixed_topk_k40,results/adaptive_k_hailo_paired_20260928,data/hailo_defense_summary.csv,15.60520458825544,4.8068034756886675,33.921946876391154,26.091476091476093,15.60520458825544,True
+Adaptive-K,adaptive_k_v2,adaptive_k_v2_snr,results/adaptive_k_hailo_paired_20260928,data/hailo_defense_summary.csv,15.485362095531592,3.789979663523752,30.805757530790917,18.19126819126819,15.485362095531592,True

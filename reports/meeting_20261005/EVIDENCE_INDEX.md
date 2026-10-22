@@ -27,7 +27,7 @@
 
 | Claim／metric | Source artifact | Evidence type | Persistent artifact | 備註 |
 |---|---|---|---|---|
-| 12 列防禦（含固定 K、Adaptive-K、五種濾波器、exploratory AT）之 recovery、CI、clean degradation、retention、net gain、defended accuracy | `review_evidence/03_defense_recovery_cpu/defense_recovery_full_20261004_215947/defense_recovery_summary.csv` | measured | 有 | 分母：clean_correct 31,152、attack success 20,960 |
+| 12 列防禦（含固定 K、Adaptive-K、五種濾波器、exploratory AT）之 recovery、CI、clean degradation、retention、net gain、defended accuracy（FGSM／PGD／CW／EAD 9 個 profile 合併） | `review_evidence/03_defense_recovery_cpu/defense_recovery_full_20261004_215947/defense_recovery_by_attack.csv` | measured | 有 | 9 個主範圍 profile 之計數加總；分母：clean_correct 11,682、attack success 6,739 |
 | Clean degradation（2,200 個唯一 clean 樣本） | 同目錄 `clean_degradation.csv` | measured | 有 | |
 | Exploratory AT 之訓練／評估重疊 928／2,200 | 同目錄 `manifest.json`、`at_train_overlap.csv` | provenance／statistics | 有 | 依重疊分組之結果受 SNR 範圍影響，不作為 leakage 效應估計 |
 | 已儲存對抗輸入之來源驗證 | `review_evidence/03_defense_recovery_cpu/adaptive_k_effectiveness_20260927_164906/validation.json` | validation | 有 | |
@@ -41,7 +41,7 @@
 | n_train 92,565、n_val 16,335、排除 sample_index 0–9、訓練攻擊、模型與 warm start SHA-256 | `review_evidence/04_adversarial_training/adversarial_training_20261004_230802/manifest.json` | provenance | 有 | 模型 checkpoint 本身未納入資料包 |
 | Best epoch 19、split 紀錄、formal_eval_samples_excluded、functional_check_only | 同目錄 `best_model.config.json` | provenance | 有 | |
 | Validation clean 89.50%、robust 68.91%、weighted 0.7921；27 epochs | 同目錄 `training_log.csv` | measured | 有 | |
-| Recovery 56.67%（CI 55.99–57.33%）、clean degradation 18.57%、retention 68.62%、net gain +35.90 pp、defended accuracy 46.65% | `review_evidence/04_adversarial_training/defense_recovery_full_20261005_152728/defense_recovery_summary.csv` | measured | 有 | Transfer 評估；分母同第 3 項 |
+| Recovery 56.67%（CI 55.99–57.33%）、clean degradation 18.57%、retention 68.62%、net gain +35.90 pp、defended accuracy 46.65%（歷史範圍：24 個 profile 合併） | `review_evidence/04_adversarial_training/defense_recovery_full_20261005_152728/defense_recovery_summary.csv` | measured | 有 | Transfer 評估；分母 clean_correct 31,152、attack success 20,960；無逐攻擊來源，未於主範圍重算，不作為主範圍結論 |
 | AT 模型 clean accuracy 50.73% | 同目錄 `clean_degradation.csv` | measured | 有 | |
 | Provenance leakage_free、重疊 0／2,200 | 同目錄 `manifest.json`、`at_train_overlap.csv` | provenance | 有 | |
 | 彙整表 | `data/adversarial_training_summary.csv` | 衍生彙整 | 有 | |
@@ -50,8 +50,8 @@
 
 | Claim／metric | Source artifact | Evidence type | Persistent artifact | 備註 |
 |---|---|---|---|---|
-| Hailo-8 clean accuracy 54.64%、Conditional Attack Success Rate 51.66% | `review_evidence/05_hailo_paired/adaptive_k_hailo_paired_20260928/defense_summary_paired.csv`（scope = overall、defense = none） | measured | 有 | Surrogate transfer |
-| 固定 K 與 Adaptive-K 之 CPU／Hailo-8 recovery、clean degradation、net gain | 同檔（scope = overall） | measured | 有 | |
+| Hailo-8 clean accuracy 54.64%、Conditional Attack Success Rate 44.46%（FGSM／PGD／CW／EAD 9 個 profile 合併） | `review_evidence/05_hailo_paired/adaptive_k_hailo_paired_20260928/defense_summary_paired.csv`（scope = profile、defense = none，9 個主範圍 profile 加總） | measured | 有 | Surrogate transfer |
+| 固定 K 與 Adaptive-K 之 CPU／Hailo-8 recovery、clean degradation、net gain | 同檔（scope = profile，9 個主範圍 profile 加總） | measured | 有 | |
 | 配對驗證 gate 全部 PASS | 同目錄 `validation.json` | validation | 有 | `manifest.json` 含 HEF 與來源資訊 |
 | 彙整表 | `data/hailo_defense_summary.csv` | measured（衍生彙整） | 有 | CPU 值與 `data/defense_recovery_cpu_summary.csv` 一致 |
 | 圖 3 | `figures/fig3_cpu_hailo_defense_comparison.png`；資料 `figure_sources/fig3_cpu_hailo_defense_comparison.csv` | measured（衍生） | 有 | figure source 含 CPU 值一致性檢查欄位 |

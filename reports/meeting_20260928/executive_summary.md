@@ -14,8 +14,8 @@
 | 2 | **整合驗證** | opt-in 選項 `b1_pgd_bim_mkldnn_off`，預設關閉；選項關閉時輸出與修改前 88/88 相同；範圍檢查全數通過；完整 `apply()` 路徑中位 PGD 46.76 → 39.52 ms、BIM 48.04 → 40.80 ms；正式 CPU full matrix 尚未使用此選項重跑 | `accel_phase1_final_integration_20260927_153520` |
 | 3 | **Batching** | PGD／BIM 之 throughput 加速比最高 5.16×（BIM B=32 intra4；PGD 同條件為 5.03×），但 PGD／BIM 的批次完成時間皆高於 40 ms，不降低單樣本決策延遲 | `accel_phase1c_v2_formal_20260926_164547` |
 | 4 | **Adaptive-K parity** | 真實資料（2200 clean、264 attacked）之決策差異為 0；此 PASS 是在 batch vs N=1 gate 由 bitwise 條件改為決策＋容差條件後取得（第一次 run 為 FAIL） | `adaptive_k_parity_20260927_{160808,162249}` |
-| 5 | **Adaptive-K 效果（CPU，24 profile 合併）** | Clean degradation 5.24%（K=40：12.71%）；retention 49.57%；淨增益 +16.85 pp（K=40：+16.01 pp） | `adaptive_k_effectiveness_20260927_164906` |
-| 6 | **Adaptive-K 效果（Hailo-8 配對）** | Clean degradation 4.91%（為各防禦最低）；recovery 14.11%（K=40：21.17%）；淨增益 +3.16 pp（K=40：+4.95 pp） | `adaptive_k_hailo_paired_20260928` |
+| 5 | **Adaptive-K 效果（CPU，FGSM／PGD／CW／EAD 9 profile 合併）** | Clean degradation 5.24%（K=40：12.71%）；retention 57.80%；淨增益 +15.49 pp（K=40：+15.61 pp） | `adaptive_k_effectiveness_20260927_164906`、`adaptive_k_hailo_paired_20260928`（scope = profile） |
+| 6 | **Adaptive-K 效果（Hailo-8 配對，9 profile 合併）** | Clean degradation 4.91%（為各防禦最低）；recovery 18.19%（K=40：26.09%）；淨增益 +3.79 pp（K=40：+4.81 pp） | `adaptive_k_hailo_paired_20260928` |
 | 7 | **正式延遲（量測值）** | Hailo adapter 0.656 ms vs CPU adapter 2.42 ms（中位；配對差 −1.76 ms，440/440）；clean pipeline（evaluation path）CPU 5.60 ms、Hailo 3.79 ms；加上 Adaptive-K 後為 6.06、4.38 ms | `formal_latency_20260928d`（PRIMARY_FORMAL，10/10 accepted） |
 | 8 | **正式延遲（推導值與輔助值）** | Deployment estimate（推導，非量測）：Hailo 3.63 ms、CPU 5.42 ms；HailoRT HW latency（輔助、非配對）0.17 ms | 同上 |
 
@@ -29,7 +29,7 @@
 ## 結論
 
 1. 在限定條件（PGD／BIM、B=1、88 樣本、熱控制）下，攻擊生成可降至 40 ms 以下，且未觀察到攻擊語意改變；尚未擴及其他攻擊與正式 full matrix。
-2. Adaptive-K 在 CPU 上以最低的 clean 代價得到與 K=40 相近的淨增益；在 Hailo-8 上 clean 代價仍最低，但淨增益低於 K=40。防禦的相對優劣依部署 backend 而異。以上為演算法與實驗驗證；本機 repository 的 main pipeline（`src/utils/pipeline.py`、`TopKAdapter`）尚未接入 Adaptive-K。
+2. 在 FGSM／PGD／CW／EAD 9 個 profile 合併下，Adaptive-K 在 CPU 上以最低的 clean 代價得到與 K=40 相近的淨增益；在 Hailo-8 上 clean 代價仍最低，但淨增益低於 K=40。防禦的相對優劣依部署 backend 而異。以上為演算法與實驗驗證；本機 repository 的 main pipeline（`src/utils/pipeline.py`、`TopKAdapter`）尚未接入 Adaptive-K。
 3. 正式延遲量測區分量測值、配對統計、推導估計與輔助硬體量測；Hailo pipeline 中 host 端 sensing 仍佔主要時間。
 
 ## 主要限制

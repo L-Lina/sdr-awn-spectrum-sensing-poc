@@ -4,7 +4,7 @@
 
 ## 1. 前次 checkpoint baseline
 
-`reports/meeting_20260921/`：CPU（`results/cpu_full_matrix_20260921_seedaligned`）與 NPU（`results/hailo_full_matrix_20260920_seedaligned`）full matrix；2200 樣本、24 個攻擊 profile、固定 K Top-K ∈ {10, 20, 30, 40}；Phase A 資料驗證 113 項 PASS。已報告：clean 準確度、conditional ASR、surrogate transfer 落差、固定 K 防禦、CPU／NPU 延遲比較。明列限制：未評估自適應 K；延遲量測未記錄硬體狀態。
+`reports/meeting_20260921/`：CPU（`results/cpu_full_matrix_20260921_seedaligned`）與 NPU（`results/hailo_full_matrix_20260920_seedaligned`）full matrix；2200 樣本、24 個攻擊 profile（合併指標限於 FGSM、PGD、CW、EAD 共 9 個 profile）、固定 K Top-K ∈ {10, 20, 30, 40}；Phase A 資料驗證 113 項 PASS。已報告：clean 準確度、conditional ASR、surrogate transfer 落差、固定 K 防禦、CPU／NPU 延遲比較。明列限制：未評估自適應 K；延遲量測未記錄硬體狀態。
 
 ## 2. 逐目錄判定
 

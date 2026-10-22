@@ -12,9 +12,9 @@
 |---|---|---|
 | `attack_acceleration_summary.csv` | 各攻擊 profile 之 mkldnn ON／OFF 中位延遲、配對差、配對結果、語意分類計數、處置，以及 DeepFool 兩個 SEMANTIC_DIFFERENT 樣本之索引欄位 | 第 3 節 |
 | `attack_integration_validation_summary.csv` | PGD／BIM 與 extended 13 attacks 之整合驗證：option OFF parity、option ON 語意分類計數、control 攻擊結果 | 第 4 節 |
-| `defense_recovery_cpu_summary.csv` | CPU 上 13 列防禦（含 exploratory 與 leakage-free AT）之 recovery、95% CI、clean degradation、retention、net gain、defended accuracy | 第 5 節 |
+| `defense_recovery_cpu_summary.csv` | CPU 上 12 列防禦（含 exploratory AT）於 FGSM／PGD／CW／EAD 9 個 profile 合併（`profile = FGSM_PGD_CW_EAD`）之 recovery、95% CI、clean degradation、retention、net gain、defended accuracy；leakage-free AT 列無逐攻擊來源，標記為 `ALL_24_HISTORICAL` | 第 5 節 |
 | `adversarial_training_summary.csv` | Leakage-free AT 訓練紀錄（資料切分、訓練攻擊、best epoch、validation 指標、模型雜湊）、transfer 評估結果，以及 exploratory AT 之訓練／評估重疊紀錄 | 第 5、6 節 |
-| `hailo_defense_summary.csv` | CPU 與 Hailo-8 配對評估之 recovery、clean degradation、retention、net gain 與 baseline | 第 7 節 |
+| `hailo_defense_summary.csv` | CPU 與 Hailo-8 配對評估於 FGSM／PGD／CW／EAD 9 個 profile 合併之 recovery、clean degradation、retention、net gain 與 baseline | 第 7 節 |
 | `pipeline_validation_summary.csv` | Main pipeline 與相關實驗之驗證結果；Adaptive-K 與 Hailo-8 pipeline 驗證為 interactive validation，無 persistent artifact | 第 8 節 |
 | `SOURCE_MANIFEST.csv` | 每一來源檔之 repository 相對路徑、所在位置、用途、primary／supporting 分類、SHA-256、使用該來源之 CSV，以及其於 `review_evidence/` 之副本位置 | 全部 |
 
@@ -26,7 +26,7 @@
 | `figure_sources/` | 每張圖所使用之數值；每列保留來源 `source_result_dir` 與 `source_csv`。圖 1 之降低比例由原始 ON／OFF 中位延遲計算，計算公式與結果保存於 `reduction_pct`、`reduction_formula` 欄位；圖 3 另保存 CPU 值與 `data/defense_recovery_cpu_summary.csv` 之一致性檢查欄位 |
 | `EVIDENCE_INDEX.md` | 依報告章節列出各項 claim／metric 之 source artifact、evidence type、是否有 persistent artifact 與備註，供查核使用 |
 
-圖表均由 `data/` 內 CSV 產生：先由 `data/` CSV 產生 `figure_sources/` CSV，再由 `figure_sources/` CSV 繪圖，數值未經人工重新輸入。
+圖表均由 `data/` 內 CSV 產生：先由 `data/` CSV 產生 `figure_sources/` CSV，再由 `figure_sources/` CSV 繪圖，數值未經人工重新輸入。第 5–7 節之合併列與圖 2、圖 3 限定於主研究攻擊範圍（FGSM、PGD、CW、EAD，9 個 profile），由 `scripts/correct_historical_attack_scope.py` 自逐 profile 來源（`defense_recovery_by_attack.csv`、`defense_summary_paired.csv` 之 profile 列）重算；該腳本檢查 24 個 profile 之計數加總等於原合併列。
 
 ## 4. `review_evidence/` 用途
 

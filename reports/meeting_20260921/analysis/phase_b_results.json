@@ -57,29 +57,22 @@
     "NPU_K40": 57.45454545454545
   },
   "recovered_share_qam64_pam4_amdsb_pct": {
-    "CPU_K10": 79.0994504520475,
-    "CPU_K20": 61.112117370041666,
-    "CPU_K30": 51.28523311469597,
-    "CPU_K40": 44.811237928007024,
-    "NPU_K10": 86.7816091954023,
-    "NPU_K20": 65.90589887640449,
-    "NPU_K30": 51.491053677932406,
-    "NPU_K40": 42.311365807067816
+    "CPU_K10": 82.6783867631851,
+    "CPU_K20": 63.950734249171006,
+    "CPU_K30": 53.610603290676416,
+    "CPU_K40": 46.190893169877405,
+    "NPU_K10": 86.60159716060338,
+    "NPU_K20": 65.22911051212938,
+    "NPU_K30": 52.34441602728048,
+    "NPU_K40": 41.59362549800797
   },
   "amdsb_identical_inputs": {
-    "n_rows": 1936,
-    "cpu_attacked_pred_wbfm_pct": 73.19214876033058,
-    "npu_attacked_pred_wbfm_pct": 2.479338842975207,
-    "cpu_attacked_pred_amdsb_pct": 20.764462809917354,
-    "npu_attacked_pred_amdsb_pct": 92.87190082644628
+    "status": "not recomputed for the main attack scope",
+    "reason": "requires per-row adversarial_sha256 and attacked_pred from results/cpu_full_matrix_20260921_seedaligned and results/hailo_full_matrix_20260920_seedaligned, which are not in the repository"
   },
   "clean_acc_excl_gfsk_pct": {
     "CPU": 58.050000000000004,
     "NPU": 56.45
-  },
-  "pooled_asr_all24_pct": {
-    "CPU": 67.19632768361582,
-    "NPU": 51.65002773155852
   },
   "attack_zero_success_profiles": {
     "CPU": [],
@@ -216,74 +209,88 @@
     {
       "backend": "CPU",
       "topk": 10,
-      "recovery_pct": 26.94788133569006,
+      "recovery_pct": 28.660343805572023,
       "clean_degradation_pct": 63.32819722650231,
-      "retention_pct": 30.903312788906007,
-      "retention_nodef_pct": 32.80367231638418,
-      "retention_gain_pp": -1.900359527478173
+      "retention_pct": 32.07498715973292,
+      "retention_nodef_pct": 42.23591850710495,
+      "retention_gain_pp": -10.160931347372028
     },
     {
       "backend": "CPU",
       "topk": 20,
-      "recovery_pct": 26.374623799742036,
+      "recovery_pct": 31.283343212803793,
       "clean_degradation_pct": 32.81972265023113,
-      "retention_pct": 43.41294298921417,
-      "retention_nodef_pct": 32.80367231638418,
-      "retention_gain_pp": 10.609270672829993
+      "retention_pct": 48.835815784968325,
+      "retention_nodef_pct": 42.23591850710495,
+      "retention_gain_pp": 6.599897277863377
     },
     {
       "backend": "CPU",
       "topk": 30,
-      "recovery_pct": 26.94788133569006,
+      "recovery_pct": 32.424422050978066,
       "clean_degradation_pct": 23.651771956856702,
-      "retention_pct": 46.14149974319466,
-      "retention_nodef_pct": 32.80367231638418,
-      "retention_gain_pp": 13.337827426810478
+      "retention_pct": 53.26998801575073,
+      "retention_nodef_pct": 42.23591850710495,
+      "retention_gain_pp": 11.034069508645779
     },
     {
       "backend": "CPU",
       "topk": 40,
-      "recovery_pct": 27.20584722686667,
+      "recovery_pct": 33.84706579727327,
       "clean_degradation_pct": 12.711864406779661,
-      "retention_pct": 48.725603492552644,
-      "retention_nodef_pct": 32.80367231638418,
-      "retention_gain_pp": 15.921931176168464
+      "retention_pct": 57.909604519774014,
+      "retention_nodef_pct": 42.23591850710495,
+      "retention_gain_pp": 15.673686012669066
     },
     {
       "backend": "NPU",
       "topk": 10,
-      "recovery_pct": 22.18791946308725,
+      "recovery_pct": 23.449854348730753,
       "clean_degradation_pct": 65.97337770382696,
-      "retention_pct": 32.62617859123683,
-      "retention_nodef_pct": 48.34997226844149,
-      "retention_gain_pp": -15.723793677204661
+      "retention_pct": 32.70475134035866,
+      "retention_nodef_pct": 55.57404326123128,
+      "retention_gain_pp": -22.86929192087262
     },
     {
       "backend": "NPU",
       "topk": 20,
-      "recovery_pct": 19.114093959731544,
+      "recovery_pct": 23.158551810237203,
       "clean_degradation_pct": 33.36106489184692,
-      "retention_pct": 46.21810870770937,
-      "retention_nodef_pct": 48.34997226844149,
-      "retention_gain_pp": -2.1318635607321212
+      "retention_pct": 50.175633203919396,
+      "retention_nodef_pct": 55.57404326123128,
+      "retention_gain_pp": -5.398410057311885
     },
     {
       "backend": "NPU",
       "topk": 30,
-      "recovery_pct": 20.255033557046982,
+      "recovery_pct": 24.406991260923846,
       "clean_degradation_pct": 24.625623960066555,
-      "retention_pct": 49.642956184137546,
-      "retention_nodef_pct": 48.34997226844149,
-      "retention_gain_pp": 1.2929839156960554
+      "retention_pct": 55.13958217785173,
+      "retention_nodef_pct": 55.57404326123128,
+      "retention_gain_pp": -0.4344610833795528
     },
     {
       "backend": "NPU",
       "topk": 40,
-      "recovery_pct": 21.080536912751676,
-      "clean_degradation_pct": 13.227953410981696,
-      "retention_pct": 53.17872989462008,
-      "retention_nodef_pct": 48.34997226844149,
-      "retention_gain_pp": 4.828757626178593
+      "recovery_pct": 26.113191843528924,
+      "clean_degradation_pct": 13.227953410981698,
+      "retention_pct": 60.29765206137918,
+      "retention_nodef_pct": 55.57404326123128,
+      "retention_gain_pp": 4.7236088001479
     }
-  ]
+  ],
+  "pooled_asr_main4_pct": {
+    "CPU": 57.76408149289505,
+    "NPU": 44.42595673876872
+  },
+  "main_attack_scope": {
+    "attacks": [
+      "fgsm",
+      "pgd",
+      "cw",
+      "ead"
+    ],
+    "profiles": 9,
+    "note": "pooled aggregates restricted to FGSM/PGD/CW/EAD"
+  }
 }

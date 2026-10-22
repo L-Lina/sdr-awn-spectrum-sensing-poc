@@ -28,15 +28,15 @@
 | 研究線 | 本週可支持的結論（皆附條件） | 主要 evidence |
 |---|---|---|
 | A. 攻擊生成加速 | 在 88 樣本子集、B=1、熱控制條件下，僅在 PGD／BIM 的 `atk(x, y)` 呼叫期間關閉 oneDNN（mkldnn），中位延遲由 42.53 → 36.33 ms（PGD）與 43.84 → 37.63 ms（BIM），配對差中位數約 −6.2 ms（8/8 對皆較快，sign test p = 0.0078），攻擊輸出未出現語意差異。此選項已以 opt-in 方式整合至 `AttackAdapter`（`b1_pgd_bim_mkldnn_off`，預設 `False`），整合驗證 PASS；正式 CPU full matrix 尚未使用此選項重跑。Batching 可提高 throughput，但單一樣本的決策延遲並未降低。 | `accel_phase1d3_mkldnn_b1_20260927_135420`、`accel_phase1_final_integration_20260927_153520`、`accel_phase1c_v2_formal_20260926_164547`、`accel_phase1d0_thermal_20260927_092156` |
-| B. Adaptive-K（CPU） | Parity 驗證結果為：production 實作與 reference 在真實資料（2200 clean、264 attacked）上的分支、K 與 Top-K 決策完全一致（第二次 run，gate 經修訂，見 §4.1）。Effectiveness 實驗（24 profile 合併）結果為：Adaptive-K 的 clean degradation 5.24%，低於固定 K=40 的 12.71%；retention 49.57%，對無防禦之淨增益 +16.85 pp，與 K=40（+16.01 pp）相近。以上為演算法與實驗驗證；repository 之 main pipeline 尚未整合 Adaptive-K（§10）。 | `adaptive_k_parity_20260927_162249`、`adaptive_k_effectiveness_20260927_164906` |
-| C. Hailo-8 配對 | 以 CPU 上儲存的同一批對抗 IQ 送入 Hailo-8（surrogate transfer）時，Adaptive-K 的 clean degradation 4.91%，為各防禦中最低；但 recovery 14.11%、retention 淨增益 +3.16 pp，低於固定 K=40（21.17%、+4.95 pp）。CPU 與 Hailo 上的防禦排序並不相同。 | `adaptive_k_hailo_paired_20260928` |
+| B. Adaptive-K（CPU） | Parity 驗證結果為：production 實作與 reference 在真實資料（2200 clean、264 attacked）上的分支、K 與 Top-K 決策完全一致（第二次 run，gate 經修訂，見 §4.1）。Effectiveness 實驗（FGSM／PGD／CW／EAD 9 個 profile 合併）結果為：Adaptive-K 的 clean degradation 5.24%，低於固定 K=40 的 12.71%；retention 57.80%，對無防禦之淨增益 +15.49 pp，與 K=40（+15.61 pp）相近。以上為演算法與實驗驗證；repository 之 main pipeline 尚未整合 Adaptive-K（§10）。 | `adaptive_k_parity_20260927_162249`、`adaptive_k_effectiveness_20260927_164906` |
+| C. Hailo-8 配對 | 以 CPU 上儲存的同一批對抗 IQ 送入 Hailo-8（surrogate transfer）時，Adaptive-K 的 clean degradation 4.91%，為各防禦中最低；但 recovery 18.19%、retention 淨增益 +3.79 pp（FGSM／PGD／CW／EAD 9 個 profile 合併），低於固定 K=40（26.09%、+4.81 pp）。CPU 與 Hailo 上的防禦排序並不相同。 | `adaptive_k_hailo_paired_20260928` |
 | D. 正式延遲 | 採用 PRIMARY_FORMAL run `formal_latency_20260928d`（10/10 cells accepted，全部 THERMAL_CLEAN）。直接量測結果（無防禦）：Hailo adapter round trip 中位 0.656 ms，CPU AWN adapter 2.42 ms；配對差 −1.76 ms（440/440 對）。Clean pipeline（evaluation path，量測值）中位：CPU 5.60 ms、Hailo 3.79 ms；加上 Adaptive-K 後為 6.06 ms、4.38 ms。Deployment estimate 為推導值，另列。 | `formal_latency_20260928d` |
 
 ---
 
 ## 2. 與前次 checkpoint 的銜接
 
-前次 checkpoint（`reports/meeting_20260921/`）已報告以下內容，本報告不再列為新成果：CPU 與 NPU full-matrix 的 clean accuracy（59.00% / 54.64%）、24 個攻擊 profile 的 conditional ASR 與 surrogate transfer 落差、固定 K Top-K（K ∈ {10, 20, 30, 40}）之 recovery／retention，以及 CPU／NPU 推論與端到端延遲的初步比較。
+前次 checkpoint（`reports/meeting_20260921/`）已報告以下內容，本報告不再列為新成果：CPU 與 NPU full-matrix 的 clean accuracy（59.00% / 54.64%）、FGSM／PGD／CW／EAD 9 個攻擊 profile 的 conditional ASR 與 surrogate transfer 落差、固定 K Top-K（K ∈ {10, 20, 30, 40}）之 recovery／retention，以及 CPU／NPU 推論與端到端延遲的初步比較。
 
 0921 報告留下的開放問題與本週研究線的對應：
 
@@ -254,28 +254,27 @@ Adaptive-K v2 為分支式防禦：依頻譜平坦度（flatness 門檻 0.4）�
 
 ### 4.2 CPU 效果評估
 
-設定（`adaptive_k_effectiveness_20260927_164906`，`overall = PASS`）：2200 clean、24 個攻擊 profile、52,800 attacked；防禦為 none、固定 K ∈ {10, 20, 30, 40} 與 adaptive_k_v2；分類器為 Pi 5 上的 PyTorch AWN。Row counts 皆符合預期（clean eval 13,200、attacked eval 316,800、adaptive decisions 55,000）。
+設定（`adaptive_k_effectiveness_20260927_164906`，`overall = PASS`）：2200 clean、24 個攻擊 profile、52,800 attacked；防禦為 none、固定 K ∈ {10, 20, 30, 40} 與 adaptive_k_v2；分類器為 Pi 5 上的 PyTorch AWN。本報告之合併結果僅使用其中 FGSM、PGD、CW、EAD 共 9 個 profile。Row counts 皆符合預期（clean eval 13,200、attacked eval 316,800、adaptive decisions 55,000）。
 
 攻擊重現：16 個 profile 與正式 CPU run 逐筆 SHA-256 相同（EXACT_MATCH）；PGD ×3、VMI-FGSM、VNI-FGSM、RFGSM、TPGD、AutoAttack 共 8 個 profile 為 `EXPECTED_MISMATCH_RECORDED`，與0921 報告 §4.3 所列的非 bit-identical profile 相同。
 
-**24 profile 合併結果**（`defense_summary.csv`，scope = overall）：
+**FGSM／PGD／CW／EAD 9 個 profile 合併結果**（`adaptive_k_hailo_paired_20260928/defense_summary_paired.csv` 之 `cpu_*` 計數，scope = profile，9 個主範圍 profile 加總；該檔之 CPU 值經 gate 驗證與本節 Phase B 一致）：
 
 | 防禦 | Clean degradation (%) | Recovery (%) | Retention (%) | 對無防禦淨增益 (pp) | Clean 防禦後準確度 (%) |
 |---|---:|---:|---:|---:|---:|
-| 無防禦 | 0.00 | 0.00 | 32.72 | 0.00 | 59.00 |
-| 固定 K=10 | 63.33 | 27.00 | 30.91 | −1.80 | 27.00 |
-| 固定 K=20 | 32.82 | 26.34 | 43.32 | +10.60 | 45.55 |
-| 固定 K=30 | 23.65 | 26.96 | 46.17 | +13.45 | 50.05 |
-| 固定 K=40 | 12.71 | 27.27 | 48.72 | +16.01 | 55.05 |
-| **Adaptive-K v2** | **5.24** | **27.08** | **49.57** | **+16.85** | **57.32** |
+| 無防禦 | 0.00 | 0.00 | 42.31 | 0.00 | 59.00 |
+| 固定 K=10 | 63.33 | 28.62 | 32.08 | −10.23 | 27.00 |
+| 固定 K=20 | 32.82 | 31.65 | 48.96 | +6.64 | 45.55 |
+| 固定 K=30 | 23.65 | 32.45 | 53.36 | +11.04 | 50.05 |
+| 固定 K=40 | 12.71 | 33.92 | 57.92 | +15.61 | 55.05 |
+| **Adaptive-K v2** | **5.24** | **30.81** | **57.80** | **+15.49** | **57.32** |
 
-無防禦的 conditional ASR 為 67.28%（0921 報告為 67.20%，差異來自上述 8 個 profile 重新生成，見 §8）。
+無防禦的 conditional ASR 為 57.69%（6739 / 11682；0921 報告為 57.76%，差異來自 PGD 三個 profile 重新生成，見 §8）。Clean degradation 與 clean 防禦後準確度與攻擊無關。
 
 **各 profile 的差異**（`comparison_fixed_k.csv`）：Adaptive-K 與 K=40 的差距依攻擊而不同，例如：
 
 | Profile | Adaptive-K recovery (%) | K=40 recovery (%) | Adaptive-K retention (%) | K=40 retention (%) |
 |---|---:|---:|---:|---:|
-| FAB ε=0.01 | 59.45 | 55.20 | 84.82 | 81.43 |
 | EAD | 73.42 | 68.72 | 73.42 | 68.72 |
 | CW | 37.89 | 48.10 | 43.07 | 52.23 |
 | FGSM ε=0.005 | 24.20 | 34.70 | 83.20 | 80.43 |
@@ -285,7 +284,7 @@ Adaptive-K v2 為分支式防禦：依頻譜平坦度（flatness 門檻 0.4）�
 - Adaptive-K 在 AM-SSB 的 clean degradation 為 0.0%（K=40 為 22.58%），在 QAM16 為 14.85%（K=40 為 12.87%）。
 - Wideband 分支比例：clean 整體 49.55%；SNR ≤ −12 dB 為 100%；0 dB 降至 12.73%。低 SNR 樣本主要走 wideband 分支。
 
-**可支持的結論**：在 CPU 白箱攻擊的 24 profile 合併結果中，Adaptive-K 的 clean degradation 低於所有固定 K，retention 淨增益與 K=40 相近。其優劣依攻擊而異（例如 CW 低於 K=40、FAB 與 EAD 高於 K=40），不能概括為所有攻擊皆較佳。本實驗為 digital classifier-input 條件，不延伸至 OTA 或 RF 情境。
+**可支持的結論**：在 CPU 白箱攻擊的 FGSM／PGD／CW／EAD 9 個 profile 合併結果中，Adaptive-K 的 clean degradation 低於所有固定 K，retention 淨增益與 K=40 相近（+15.49 vs +15.61 pp），recovery 則低於 K=20–40。其優劣依攻擊而異（例如 CW 低於 K=40、EAD 高於 K=40），不能概括為所有攻擊皆較佳。本實驗為 digital classifier-input 條件，不延伸至 OTA 或 RF 情境。
 
 ---
 
@@ -295,32 +294,32 @@ Adaptive-K v2 為分支式防禦：依頻譜平坦度（flatness 門檻 0.4）�
 
 - 來源：`adaptive_k_hailo_paired_20260928`，`overall = PASS`（stage = summarize）；evaluate 階段 25 個部分（clean + 24 profile）全數完成，無失敗。
 - 輸入：重用 Phase B 儲存的 clean 與對抗 IQ，本階段不生成攻擊（`no_attack_generation = true`）。Hailo 端的攻擊因此仍屬 **surrogate-model transfer attack**（對抗樣本由 PyTorch surrogate 生成），與0921 報告的威脅模型相同。
-- 涵蓋 profile：FGSM ε ∈ {0.005, 0.01, 0.03, 0.05}、BIM、PGD ε ∈ {0.005, 0.01, 0.03}、MI-FGSM、DI-FGSM、VMI-FGSM、VNI-FGSM、RFGSM、TPGD、CW、DeepFool、FAB ε ∈ {0.005, 0.01, 0.03}、Square、APGD、APGD-T、AutoAttack、EAD，共 24 個（`eval_parts/00`–`23`）。
+- 執行之 profile：FGSM ε ∈ {0.005, 0.01, 0.03, 0.05}、BIM、PGD ε ∈ {0.005, 0.01, 0.03}、MI-FGSM、DI-FGSM、VMI-FGSM、VNI-FGSM、RFGSM、TPGD、CW、DeepFool、FAB ε ∈ {0.005, 0.01, 0.03}、Square、APGD、APGD-T、AutoAttack、EAD，共 24 個（`eval_parts/00`–`23`）。本報告之合併結果僅使用 FGSM、PGD、CW、EAD 共 9 個 profile；其餘 15 個 profile 不納入合併指標與結論。
 - 防禦後 IQ 以凍結的 Phase B `apply_defense` 重建；Hailo 推論為 `HailoAWNAdapter.infer`，B=1。
 - 驗證 gate（全部 true）：row counts（clean 13,200、attacked 316,800）；輸入相同處 Hailo 預測與正式 Hailo run 一致（187,905 筆比對）；CPU 重算與 Phase B 一致；Adaptive-K 防禦後 SHA-256 與 Phase B 一致；wideband 列無 K、narrowband 列有 K；Hailo 預測非常數；未修改 Phase B 產物。
 
-### 5.2 結果（24 profile 合併）
+### 5.2 結果（FGSM／PGD／CW／EAD 9 個 profile 合併）
 
-來源：`defense_summary_paired.csv`、`clean_summary_paired.csv`（scope = overall）。
+來源：`defense_summary_paired.csv`（scope = profile，9 個主範圍 profile 之 `cpu_*`／`hailo_*` 計數加總後求比率）；clean degradation 取自 `clean_summary_paired.csv`，與攻擊無關。
 
 | 防禦 | CPU clean deg. (%) | Hailo clean deg. (%) | CPU recovery (%) | Hailo recovery (%) | CPU retention 淨增益 (pp) | Hailo retention (%) | Hailo retention 淨增益 (pp) |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 無防禦 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 48.34 | 0.00 |
-| 固定 K=10 | 63.33 | 65.97 | 27.00 | 22.24 | −1.80 | 32.65 | −15.69 |
-| 固定 K=20 | 32.82 | 33.36 | 26.34 | 19.24 | +10.60 | 46.31 | −2.03 |
-| 固定 K=30 | 23.65 | 24.63 | 26.96 | 20.24 | +13.45 | 49.73 | +1.39 |
-| 固定 K=40 | 12.71 | 13.23 | 27.27 | 21.17 | +16.01 | 53.29 | +4.95 |
-| **Adaptive-K v2** | 5.24 | **4.91** | 27.08 | **14.11** | +16.85 | 51.50 | **+3.16** |
+| 無防禦 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 55.54 | 0.00 |
+| 固定 K=10 | 63.33 | 65.97 | 28.62 | 23.49 | −10.23 | 32.74 | −22.80 |
+| 固定 K=20 | 32.82 | 33.36 | 31.65 | 23.33 | +6.64 | 50.21 | −5.32 |
+| 固定 K=30 | 23.65 | 24.63 | 32.45 | 24.41 | +11.04 | 55.22 | −0.31 |
+| 固定 K=40 | 12.71 | 13.23 | 33.92 | 26.09 | +15.61 | 60.34 | +4.81 |
+| **Adaptive-K v2** | 5.24 | **4.91** | 30.81 | **18.19** | +15.49 | 59.33 | **+3.79** |
 
-- Hailo 無防禦：clean accuracy 54.64%、conditional ASR 51.66%。
-- Adaptive-K 下 CPU 與 Hailo 的防禦後預測一致率為 84.03%；clean 預測一致率為 90.73%。
+- Hailo 無防禦：clean accuracy 54.64%、conditional ASR 44.46%（4810 / 10818）。
+- Clean 預測一致率為 90.73%。CPU 與 Hailo 防禦後預測一致率之逐列計算需要 evidence 中的逐列結果，未於主範圍重算（§9 第 9 點）。
 - 分支拆分：wideband 分支 1090 筆，Hailo clean degradation 4.60%；narrowband 分支 1110 筆，5.04%。
 
-**比較結果指出**：在 Hailo-8 上，Adaptive-K 維持最低的 clean degradation；其 recovery（14.11%）低於所有固定 K，retention 淨增益（+3.16 pp）低於 K=40（+4.95 pp）、高於 K=30（+1.39 pp）。在 CPU 上 Adaptive-K 的淨增益最高，在 Hailo 上則否，因此防禦的相對排序依部署 backend 而異。本實驗未檢驗造成此差異的機制。
+**比較結果指出**：在 Hailo-8 上，Adaptive-K 維持最低的 clean degradation；其 recovery（18.19%）低於所有固定 K，retention 淨增益（+3.79 pp）低於 K=40（+4.81 pp）、高於 K=30（−0.31 pp）。在 CPU 上 Adaptive-K 的淨增益與 K=40 相近（+15.49 vs +15.61 pp），在 Hailo 上則低於 K=40 約 1.0 pp；Adaptive-K 並非在所有指標或 backend 上皆優於固定 K。本實驗未檢驗造成此差異的機制。
 
 ![Figure 2](figures/fig2_adaptive_k_tradeoff.png)
 
-**圖 2　固定 K 與 Adaptive-K v2 之防禦 trade-off（24 個攻擊 profile 合併）**　左為 CPU（PyTorch AWN，白箱攻擊），右為 Hailo-8（相同對抗 IQ，surrogate transfer）；每組長條依序為 clean degradation、recovery 與 retention 淨增益。兩個 backend 上的相對排序不同，Adaptive-K 並非在所有指標或 backend 上皆優於固定 K。來源：`adaptive_k_effectiveness_20260927_164906/defense_summary.csv`、`adaptive_k_hailo_paired_20260928/defense_summary_paired.csv`（scope = overall）；繪圖數值見 `tables/figure_sources/fig2_adaptive_k_tradeoff.csv`。
+**圖 2　固定 K 與 Adaptive-K v2 之防禦 trade-off（FGSM／PGD／CW／EAD 9 個 profile 合併）**　左為 CPU（PyTorch AWN，白箱攻擊），右為 Hailo-8（相同對抗 IQ，surrogate transfer）；每組長條依序為 clean degradation、recovery 與 retention 淨增益。Adaptive-K 並非在所有指標或 backend 上皆優於固定 K。來源：`adaptive_k_hailo_paired_20260928/defense_summary_paired.csv`（scope = profile，9 個主範圍 profile 合併）；圖由 `scripts/correct_historical_attack_scope.py` 產生，繪圖數值見 `tables/figure_sources/fig2_adaptive_k_tradeoff.csv`。
 
 ### 5.3 Hailo 推論延遲（本評估之附帶紀錄）
 
@@ -432,7 +431,7 @@ Evaluation path 量測值與推導估計之間的差（evaluation 額外開銷�
 
 1. **Thread 比較方向相反**：1a（未控制熱狀態，溫度升至約 85 °C）中 intra1 最快；1d0b（熱控制）中 intra4 快約 4%。本報告採用 1d0b 的結果，並將差異歸為「與熱狀態影響假設一致」。
 2. **Adaptive-K parity 的 gate 修訂**：第一次 run 以 bitwise 條件判定為 FAIL，第二次 run 改用決策與容差條件判定為 PASS。修訂的依據未記錄於 evidence bundle 內，目前證據不足以判定修訂是否事先規劃。
-3. **CPU 無防禦 ASR 數值**：Phase B 為 67.28%（`defense_summary.csv`），0921 報告為 67.20%，原因為 8 個非 bit-identical profile 在 Phase B 中重新生成（`validation.json` 之 `attack_reproduction`）。Hailo 無防禦 ASR 在本週為 51.66%，0921 報告為 51.65%；兩者使用的對抗輸入來源不同（本週使用 Phase B 輸入）。
+3. **CPU 無防禦 ASR 數值**（FGSM／PGD／CW／EAD 9 個 profile 合併）：Phase B 為 57.69%，0921 報告為 57.76%，原因為 PGD 三個非 bit-identical profile 在 Phase B 中重新生成（`validation.json` 之 `attack_reproduction`）。Hailo 無防禦 ASR 在本週為 44.46%，0921 報告為 44.43%；兩者使用的對抗輸入來源不同（本週使用 Phase B 輸入）。
 4. **`recovery_transfer_pct` 欄位**（`defense_summary_paired.csv`）：evidence 中未找到定義，本報告不引用此欄位。
 5. **Hailo chip 溫度**：`formal_latency_20260928d/cells.csv` 中 `hailo_chip_temp_*` 皆為 `unavailable`（HailoRTInvalidOperationException）。NPU 端熱狀態目前證據不足以判定。
 6. **State diagnostic 中的 training-mode 旗標**：見 §3.7；最終整合驗證為 PASS，但該旗標的影響目前證據不足以判定。
@@ -448,9 +447,10 @@ Evaluation path 量測值與推導估計之間的差（evaluation 額外開銷�
 3. **統計檢定力**：1d0b 每種攻擊只有 4 對（sign test 最小 p = 0.125）；1d3 為 8 對。
 4. **熱與平台狀態**：1a、1c v2 formal 執行時有 throttle 歷史位元或高溫，已依此降低其絕對數值的權重；正式延遲 run 無法讀取 Hailo 端溫度。
 5. **Adaptive-K 的評估條件**：digital classifier-input attack（A0）；Hailo 端為 surrogate transfer，非針對量化模型的白箱或 query-based 攻擊；不延伸至 OTA 或 RF 情境。
-6. **樣本相依性**：同一批 2200 樣本重複用於 24 個 profile 與 6 種防禦；evidence 內的 Wilson 區間與 sign test 假設樣本獨立，合併結果可能低估不確定性。
+6. **樣本相依性**：同一批 2200 樣本重複用於 9 個主範圍 profile 與 6 種防禦；evidence 內的 Wilson 區間與 sign test 假設樣本獨立，合併結果可能低估不確定性。
 7. **延遲定義**：evaluation-path 量測值不是 deployment latency；deployment estimate 為推導值；HailoRT HW latency 為非配對的輔助量測。三者不可混用，也不可與0921 報告的 runner 紀錄直接比較。
 8. **Parity 的涵蓋範圍**：合成案例的 odd-K 邊界只有部分達成；batched 輸出與 N=1 並非 bitwise 相同。
+9. **攻擊範圍與未能重算之項目**：合併指標僅含 FGSM、PGD、CW、EAD 的 9 個 profile，由 `defense_summary_paired.csv` 的 profile 列加總；腳本檢查 24 個 profile 列之計數加總等於原 overall 列。下列依攻擊族、SNR、調變或分支拆分之合併值，以及 CPU／Hailo 防禦後預測一致率，需要 evidence 中的逐列結果（不在 repository 中），未於主範圍重算，不作為本報告結論。
 
 ---
 
@@ -484,8 +484,8 @@ Evaluation path 量測值與推導估計之間的差（evaluation 額外開銷�
 
 1. **Attack acceleration Phase 1 方法研究與整合驗證**：thread baseline、額外開銷移除、batching 與 BIM 語意稽核、熱控制配對、B=1 profiling、backend profiling、MKLDNN B=1 驗證，以及 final integration validation（`overall = PASS`）。完成範圍限於 PGD／BIM、B=1、88 樣本子集；不代表正式 full matrix 已重新執行。
 2. **Adaptive-K parity validation**：`adaptive_k_parity_20260927_162249` 為 PASS（第一次 run `160808` 為 FAIL，gate 6、7 之定義於兩次 run 之間修訂，§4.1）。
-3. **Adaptive-K CPU effectiveness**：`adaptive_k_effectiveness_20260927_164906`，24 profile、6 種防禦，PASS。
-4. **Adaptive-K／Top-K Hailo-8 paired evaluation**：`adaptive_k_hailo_paired_20260928`，24 profile，PASS。
+3. **Adaptive-K CPU effectiveness**：`adaptive_k_effectiveness_20260927_164906`，執行 24 profile、6 種防禦，PASS；合併結果限於 FGSM／PGD／CW／EAD 9 個 profile。
+4. **Adaptive-K／Top-K Hailo-8 paired evaluation**：`adaptive_k_hailo_paired_20260928`，執行 24 profile，PASS；合併結果限於 FGSM／PGD／CW／EAD 9 個 profile。
 5. **Formal latency measurement**：`formal_latency_20260928d`（PRIMARY_FORMAL，10/10 accepted，全部 THERMAL_CLEAN，PASS）。
 
 ### 部分完成／待收尾

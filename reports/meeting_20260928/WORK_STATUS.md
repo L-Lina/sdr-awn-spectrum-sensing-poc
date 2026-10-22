@@ -24,6 +24,12 @@
 
 `accel_phase1c_preflight_20260926_161012`（FAIL）、`accel_phase1d2_backend_20260927_{125606,130303,130330,130336}`（未完成）、`adaptive_k_parity_20260927_160808`（FAIL）、`formal_latency_20260928`（dry-run 中止）、`formal_latency_20260928b`（3/10）、`formal_latency_20260928c`（9/10）。各 preflight／dry-run 目錄僅供參考。
 
+## 3a. 攻擊範圍修正（2026-10-22）
+
+- Adaptive-K 與固定 K 之 CPU／Hailo-8 合併結果（報告 §1、§4.2、§5.2、圖 2、`tables/adaptive_k_cpu_hailo_overall.csv`、`tables/figure_sources/fig2_adaptive_k_tradeoff.csv`）原為 24 個 profile 合併（scope = overall），現改為 FGSM、PGD、CW、EAD 共 9 個 profile 合併，由 `defense_summary_paired.csv` 之 profile 列加總。
+- 圖 2 與其 figure source 由 `scripts/correct_historical_attack_scope.py` 產生；`analysis/make_figures.ps1` 之 fig2 區塊已停用，預設只產生 fig1、fig3。
+- 依攻擊族、SNR、調變、分支拆分之合併值與 CPU／Hailo 防禦後預測一致率，因逐列來源不在 repository，未於主範圍重算（報告 §9 第 9 點）。
+
 ## 4. Review 前注意事項
 
 - `meeting_20260928_evidence/`、根目錄的兩個 `.tar.gz` 與其他 untracked／modified 檔案皆非本報告產生；commit 時請勿一併加入。

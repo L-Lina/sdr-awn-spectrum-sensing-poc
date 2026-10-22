@@ -54,7 +54,11 @@ d_snr = pd.read_csv(T / "defense_by_snr.csv")
 lat = pd.read_csv(T / "latency_summary_cpu_npu.csv").set_index("stage")
 agl = pd.read_csv(T / "attack_generation_latency.csv")
 
-PROFILES = asum[asum.backend == "CPU"].profile.tolist()
+# Main attack scope: per-profile figures and pooled aggregates cover FGSM, PGD, CW and EAD only (9 profiles).
+# Rows of the other attacks remain in tables/ as historical records and are not plotted.
+MAIN_ATTACKS = ("fgsm", "pgd", "cw", "ead")
+POOLED = "MAIN4/FGSM_PGD_CW_EAD"
+PROFILES = asum[(asum.backend == "CPU") & asum.attack.isin(MAIN_ATTACKS)].profile.tolist()
 NONIDENT = set(tr[~tr.backend_attributable].profile)
 NAMES = {"fgsm": "FGSM", "bim": "BIM", "pgd": "PGD", "mifgsm": "MI-FGSM", "difgsm": "DI-FGSM",
          "vmifgsm": "VMI-FGSM", "vnifgsm": "VNI-FGSM", "rfgsm": "RFGSM", "tpgd": "TPGD",
@@ -119,7 +123,7 @@ def fig1():
 
 # ------------------------------------------------------------------- Figure 2
 def fig2():
-    fig, (a, b) = plt.subplots(1, 2, figsize=(11.5, 8.6), sharey=True,
+    fig, (a, b) = plt.subplots(1, 2, figsize=(11.5, 4.6), sharey=True,
                                gridspec_kw={"width_ratios": [1.6, 1], "wspace": 0.06})
     y = np.arange(len(PROFILES))[::-1]
     c = asum[asum.backend == "CPU"].set_index("profile").loc[PROFILES]
@@ -132,7 +136,7 @@ def fig2():
         a.text(v + 1, yy - 0.2, f"{v:.1f}", va="center", fontsize=7, color=INK2)
     a.set_yticks(y, [plabel(p) for p in PROFILES])
     a.set(xlabel="Conditional ASR (%)", xlim=(0, 112))
-    a.set_title("(a) Conditional attack success rate by profile")
+    a.set_title("(a) Conditional attack success rate by profile (FGSM / PGD / CW / EAD)")
     a.legend(loc="upper right")
     a.grid(axis="y", visible=False)
     b.scatter(c.mean_linf * 1e3, y + 0.2, color=CPU, s=26, zorder=3)
@@ -142,14 +146,14 @@ def fig2():
     b.grid(axis="y", visible=True)
     b.tick_params(axis="y", left=False)
     foot(fig, "Conditional ASR = successful attacks / clean-correct samples (2200 samples per profile; "
-              "denominator 1298 for CPU, 1202 for NPU).  " + DAGGER_NOTE, y=0.005)
+              "denominator 1298 for CPU, 1202 for NPU). Main attack scope FGSM, PGD, CW, EAD (9 profiles).  " + DAGGER_NOTE, y=0.0)
     save(fig, "fig2_attack_asr_by_profile.png")
 
 
 # ------------------------------------------------------------------- Figure 3
 def fig3():
-    fig, axs = plt.subplots(1, 3, figsize=(12.5, 4.2), sharey=True)
-    for ax, atk in zip(axs, ["fgsm", "pgd", "fab"]):
+    fig, axs = plt.subplots(1, 2, figsize=(9.5, 4.2), sharey=True)
+    for ax, atk in zip(axs, ["fgsm", "pgd"]):
         for be, mk in (("CPU", "o"), ("NPU", "s")):
             d = asum[(asum.backend == be) & (asum.attack == atk)].copy()
             d["eps"] = d.attack_profile.str.replace("eps", "").astype(float)
@@ -164,7 +168,7 @@ def fig3():
     axs[0].set_ylabel("Conditional ASR (%)")
     axs[0].set_ylim(0, 100)
     axs[0].legend(loc="upper left")
-    foot(fig, "Shaded band: 95% Wilson interval, treating samples as independent. FAB was evaluated at ε = 0.005, 0.01, 0.03 only. "
+    foot(fig, "Shaded band: 95% Wilson interval, treating samples as independent. "
               "† PGD adversarial inputs differ between the CPU and NPU runs (not bit-identical).", y=0.0)
     save(fig, "fig3_epsilon_curves.png")
 
@@ -190,7 +194,7 @@ def heat(ax, M, xt, yt, vmin=0, vmax=100, fs=7, fmt="{:.0f}"):
 
 # ------------------------------------------------------------------- Figure 4
 def fig4():
-    fig, axs = plt.subplots(1, 2, figsize=(10.5, 9), sharey=True, gridspec_kw={"wspace": 0.05})
+    fig, axs = plt.subplots(1, 2, figsize=(10.5, 4.8), sharey=True, gridspec_kw={"wspace": 0.05})
     Ks = [10, 20, 30, 40]
     for ax, be in zip(axs, ["CPU", "NPU"]):
         d = dsum[dsum.backend == be].pivot(index="profile", columns="topk", values="recovery_pct").loc[PROFILES]
@@ -219,7 +223,7 @@ def fig5():
     axs[0].set(ylabel="Clean degradation (%)", ylim=(0, 100))
     axs[0].set_title("(a) Clean degradation")
     axs[1].set(ylabel="Recovery rate (%)", ylim=(0, 100))
-    axs[1].set_title("(b) Recovery, pooled over 24 profiles")
+    axs[1].set_title("(b) Recovery (9 profiles pooled)")
     axs[2].set(ylabel="Retention (%)", ylim=(0, 100))
     axs[2].set_title("(c) Retention after attack + defense")
     for ax in axs:
@@ -229,14 +233,14 @@ def fig5():
     axs[2].legend(loc="lower right", fontsize=7.5)
     foot(fig, "Clean degradation = clean-correct samples misclassified after Top-K / clean-correct samples. "
               "Recovery = recovered / successful attacks. Retention = samples correct both clean and after attack (+ defense) / clean-correct samples; 'no defense' = 100% − conditional ASR. "
-              "Pooled over all 24 attack profiles; band in (b): 95% Wilson interval, treating samples as independent.", y=0.0)
+              "Pooled over the 9 FGSM / PGD / CW / EAD profiles; band in (b): 95% Wilson interval, treating samples as independent.", y=0.0)
     save(fig, "fig5_topk_tradeoff.png")
 
 
 # ------------------------------------------------------------------- Figure 6
 def fig6():
     fig, axs = plt.subplots(2, 2, figsize=(12.5, 8.2), sharex=True)
-    P = "ALL/ALL_24"
+    P = POOLED
     A = a_snr[a_snr.profile == P]
     D = d_snr[d_snr.profile == P]
     a = axs[0, 0]
@@ -245,7 +249,7 @@ def fig6():
         a.plot(d.snr_db, d.clean_acc_pct, color=BCOL[be], marker=mk, ls="--", lw=1.4, ms=4, label=f"{be} clean")
         a.plot(d.snr_db, d.attacked_acc_pct, color=BCOL[be], marker=mk, label=f"{be} attacked")
     a.set(ylabel="Accuracy (%)", ylim=(0, 100))
-    a.set_title("(a) Accuracy by SNR, attacked = mean over 24 profiles")
+    a.set_title("(a) Accuracy by SNR (attacked: 9-profile mean)")
     a.legend(ncol=2, loc="upper left")
     b = axs[0, 1]
     for be, mk in (("CPU", "o"), ("NPU", "s")):
@@ -253,24 +257,24 @@ def fig6():
         b.plot(d.snr_db, d.cond_asr_pct, color=BCOL[be], marker=mk, label=be)
         b.fill_between(d.snr_db, d.cond_asr_ci95_lo_pct, d.cond_asr_ci95_hi_pct, color=BCOL[be], alpha=0.12, lw=0)
     b.set(ylabel="Conditional ASR (%)", ylim=(0, 100))
-    b.set_title("(b) Conditional ASR by SNR (pooled over 24 profiles)")
+    b.set_title("(b) Conditional ASR by SNR (9 profiles pooled)")
     b.legend(loc="lower left")
     for ax, be, lab in ((axs[1, 0], "CPU", "(c)"), (axs[1, 1], "NPU", "(d)")):
         for k in (10, 20, 30, 40):
             d = D[(D.backend == be) & (D.topk == k)].sort_values("snr_db")
             ax.plot(d.snr_db, d.recovery_pct, color=KRAMP[k], marker="o", ms=3.5, lw=1.8, label=f"K={k}")
         ax.set(ylabel="Recovery rate (%)", ylim=(0, 60), xlabel="SNR (dB)", xticks=range(-20, 20, 4))
-        ax.set_title(f"{lab} {be}: Top-K recovery by SNR (pooled over 24 profiles)")
+        ax.set_title(f"{lab} {be}: Top-K recovery by SNR (9 profiles pooled)")
         ax.legend(ncol=4, loc="upper left")
     foot(fig, "At low SNR (≤ −14 dB) clean accuracy is near chance (≈10–12% for 11 classes); the conditional metrics there rest on few "
-              "clean-correct samples (11–13 per profile out of 110; 264–312 in the 24-profile pooled cell).", y=0.03)
+              "clean-correct samples (11–13 per profile out of 110; 99–117 in the 9-profile pooled cell). The 9 profiles are FGSM (4), PGD (3), CW and EAD.", y=0.03)
     save(fig, "fig6_snr_analysis.png")
 
 
 # ------------------------------------------------------------------- Figure 7
 def fig7():
     fig, axs = plt.subplots(1, 2, figsize=(12.5, 6.4), sharey=True, gridspec_kw={"wspace": 0.05})
-    P = "ALL/ALL_24"
+    P = POOLED
     order = clean[clean.group_by == "modulation"].sort_values("cpu_acc_pct", ascending=False).group_value.tolist()
     cols = ["Clean acc.", "Cond. ASR", "Rec. K=10", "Rec. K=20", "Rec. K=30", "Rec. K=40"]
     for ax, be, lab in zip(axs, ["CPU", "NPU"], ["(a)", "(b)"]):
@@ -284,7 +288,7 @@ def fig7():
     cb = fig.colorbar(im, ax=axs, shrink=0.6, pad=0.02, aspect=30)
     cb.set_label("%", color=INK2)
     cb.outline.set_visible(False)
-    foot(fig, "ASR and recovery are pooled over all 24 attack profiles. Clean-correct samples per profile (CPU/NPU): "
+    foot(fig, "ASR and recovery are pooled over the 9 FGSM / PGD / CW / EAD profiles. Clean-correct samples per profile (CPU/NPU): "
               "WBFM 28/19, AM-DSB 130/133, GFSK 137/73; small denominators make WBFM cells unstable.", y=-0.02)
     save(fig, "fig7_modulation_analysis.png")
 
@@ -371,7 +375,8 @@ def fig8():
     c.grid(axis="y", visible=True)
     foot(fig, "Sensing = embedding, energy detection, region post-processing, segmentation alignment, AWN pre-processing (all host-side in both runs). "
               "Top-K segment in (b) = recorded defense_pipeline_ms − defended inference (includes the Top-K transform and a small un-itemised timing overhead). "
-              "In (c) both runs generate attacks on the host CPU; the difference between the two runs is run-to-run, not an NPU effect.", y=-0.06)
+              "In (c) both runs generate attacks on the host CPU; the difference between the two runs is run-to-run, not an NPU effect; (c) shows the FGSM / PGD / CW / EAD profiles. "
+              "Attacked / defended inference latency in (a) and the defended bars in (b) are pooled over all 24 profiles (historical scope; per-profile inference latency is not in the repository).", y=-0.06)
     save(fig, "fig8_latency.png")
 
 

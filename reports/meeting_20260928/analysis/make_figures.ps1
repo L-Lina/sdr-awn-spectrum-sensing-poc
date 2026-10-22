@@ -3,8 +3,11 @@
 # 執行環境：Windows PowerShell 5.1（.NET System.Drawing）。
 #   powershell -NoProfile -ExecutionPolicy Bypass -File reports/meeting_20260928/analysis/make_figures.ps1
 #   只產生指定圖：... make_figures.ps1 -Figures fig1
+# 圖 2 與 tables/figure_sources/fig2_adaptive_k_tradeoff.csv 限定於主研究攻擊範圍（FGSM、PGD、CW、EAD，9 個 profile），
+# 由 scripts/correct_historical_attack_scope.py 自 defense_summary_paired.csv（scope = profile）產生；
+# 本腳本之 fig2 區塊讀取 scope = overall（24 個 profile 合併），已停用。
 
-param([string[]]$Figures = @('fig1', 'fig2', 'fig3'))
+param([string[]]$Figures = @('fig1', 'fig3'))
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
@@ -167,9 +170,10 @@ $g.Dispose(); $bmp.Dispose()
 }
 
 # ------------------------------------------------------------------
-# Figure 2：CPU 與 Hailo-8 之 defense trade-off（24 profile 合併）
+# Figure 2（已停用）：CPU 與 Hailo-8 之 defense trade-off（scope = overall，24 profile 合併）
 # ------------------------------------------------------------------
 if ($Figures -contains 'fig2') {
+throw 'fig2 is built by scripts/correct_historical_attack_scope.py (FGSM/PGD/CW/EAD scope); the scope = overall block below is disabled.'
 $cpuCsv = Join-Path $Ev 'adaptive_k_effectiveness_20260927_164906\defense_summary.csv'
 $hlCsv = Join-Path $Ev 'adaptive_k_hailo_paired_20260928\defense_summary_paired.csv'
 $cpu = Import-Csv -Encoding UTF8 $cpuCsv | Where-Object { $_.scope -eq 'overall' }

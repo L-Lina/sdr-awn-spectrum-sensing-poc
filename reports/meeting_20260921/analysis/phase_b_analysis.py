@@ -38,6 +38,11 @@ BOOL_COLS = ["clean_correct", "attacked_correct", "attack_success",
 PRE_STAGES = ["embedding_ms", "energy_detection_ms", "region_postprocess_ms",
               "segmentation_alignment_ms", "awn_preprocess_ms"]
 
+# Main attack scope: pooled aggregates use only these attacks (9 profiles).
+# Per-profile rows of the other attacks are kept as recorded.
+MAIN_ATTACKS = ("fgsm", "pgd", "cw", "ead")
+POOL_ATTACK, POOL_PROFILE = "MAIN4", "FGSM_PGD_CW_EAD"
+
 RESULTS: dict = {}
 
 
@@ -72,6 +77,10 @@ def add_profile_label(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["profile"] = df["attack"] + "/" + df["attack_profile"]
     return df
+
+
+def main_scope(df: pd.DataFrame) -> pd.DataFrame:
+    return df[df["attack"].isin(MAIN_ATTACKS)]
 
 
 def sort_profiles(df: pd.DataFrame) -> pd.DataFrame:
@@ -318,9 +327,9 @@ def b4(cpu, npu):
 
 
 def defense_pooled(cpu, npu):
-    """Pooled over all 24 profiles, by Top-K (overall)."""
-    a = defense_agg(cpu["dfn"].assign(all_profiles="ALL_24"), ["all_profiles", "topk"])
-    b = defense_agg(npu["dfn"].assign(all_profiles="ALL_24"), ["all_profiles", "topk"])
+    """Pooled over the FGSM / PGD / CW / EAD profiles, by Top-K."""
+    a = defense_agg(main_scope(cpu["dfn"]).assign(all_profiles=POOL_PROFILE), ["all_profiles", "topk"])
+    b = defense_agg(main_scope(npu["dfn"]).assign(all_profiles=POOL_PROFILE), ["all_profiles", "topk"])
     a.insert(0, "backend", "CPU")
     b.insert(0, "backend", "NPU")
     return pd.concat([a, b], ignore_index=True)
@@ -328,16 +337,17 @@ def defense_pooled(cpu, npu):
 
 # ------------------------------------------------------ B5 / B6 modulation & SNR
 def by_dim(cpu, npu, dim: str, fname_prefix: str):
-    """Per-profile and pooled-over-24-profiles tables along one dimension."""
+    """Per-profile tables and a pooled row over the FGSM / PGD / CW / EAD profiles."""
     keys = [dim] + PKEY
     a = stack_backends(attack_agg, cpu["att"], npu["att"], keys)
     a = add_profile_label(a)
-    pooled_att = stack_backends(attack_agg, cpu["att"].assign(attack="ALL", attack_profile="ALL_24"),
-                                npu["att"].assign(attack="ALL", attack_profile="ALL_24"), keys)
+    pooled_att = stack_backends(
+        attack_agg, main_scope(cpu["att"]).assign(attack=POOL_ATTACK, attack_profile=POOL_PROFILE),
+        main_scope(npu["att"]).assign(attack=POOL_ATTACK, attack_profile=POOL_PROFILE), keys)
     pooled_att = add_profile_label(pooled_att)
     at = pd.concat([a, pooled_att], ignore_index=True)
     rank = {f"{x}/{y}": i for i, (x, y) in enumerate(ORDER)}
-    rank["ALL/ALL_24"] = len(ORDER)
+    rank[f"{POOL_ATTACK}/{POOL_PROFILE}"] = len(ORDER)
     at = at.sort_values(["backend", dim, "profile"],
                         key=lambda s: s.map(rank) if s.name == "profile" else s, kind="stable")
     first = ["backend", dim, "profile", "attack", "attack_profile"]
@@ -346,8 +356,9 @@ def by_dim(cpu, npu, dim: str, fname_prefix: str):
 
     dkeys = [dim] + PKEY + ["topk"]
     d = stack_backends(defense_agg, cpu["dfn"], npu["dfn"], dkeys)
-    dp = stack_backends(defense_agg, cpu["dfn"].assign(attack="ALL", attack_profile="ALL_24"),
-                        npu["dfn"].assign(attack="ALL", attack_profile="ALL_24"), dkeys)
+    dp = stack_backends(
+        defense_agg, main_scope(cpu["dfn"]).assign(attack=POOL_ATTACK, attack_profile=POOL_PROFILE),
+        main_scope(npu["dfn"]).assign(attack=POOL_ATTACK, attack_profile=POOL_PROFILE), dkeys)
     dd = pd.concat([add_profile_label(d), add_profile_label(dp)], ignore_index=True)
     dd = dd.sort_values(["backend", dim, "profile", "topk"],
                         key=lambda s: s.map(rank) if s.name == "profile" else s, kind="stable")
@@ -494,20 +505,20 @@ def b_extra(cpu, npu, tr):
             .groupby(["backend", "topk"]).head(4).groupby(["backend", "topk"]).share_pct.sum())
     RESULTS["topk_top4_pred_share_pct"] = {f"{b}_K{k}": float(v) for (b, k), v in top4.items()}
 
-    # share of recovered samples contributed by QAM64 + PAM4 + AM-DSB (pooled over profiles)
+    # share of recovered samples contributed by QAM64 + PAM4 + AM-DSB (pooled over main-scope profiles)
     fav = ["QAM64", "PAM4", "AM-DSB"]
     out = {}
     for name, d in (("CPU", cpu), ("NPU", npu)):
-        r = d["dfn"][d["dfn"].recovered]
+        r = main_scope(d["dfn"])[main_scope(d["dfn"]).recovered]
         for kk, gg in r.groupby("topk"):
             out[f"{name}_K{kk}"] = float(100 * gg.modulation.isin(fav).mean())
     RESULTS["recovered_share_qam64_pam4_amdsb_pct"] = out
 
-    # AM-DSB clean-correct rows, profiles with identical adversarial inputs:
+    # AM-DSB clean-correct rows, main-scope profiles with identical adversarial inputs:
     # fraction of attacked predictions equal to WBFM
     k = KEY + PKEY
-    m = cpu["att"][k + ["clean_correct", "attacked_pred", "adversarial_sha256"]].merge(
-        npu["att"][k + ["clean_correct", "attacked_pred", "adversarial_sha256"]], on=k,
+    m = main_scope(cpu["att"])[k + ["clean_correct", "attacked_pred", "adversarial_sha256"]].merge(
+        main_scope(npu["att"])[k + ["clean_correct", "attacked_pred", "adversarial_sha256"]], on=k,
         suffixes=("_c", "_n"), validate="one_to_one")
     m = add_profile_label(m)
     ident = set(tr[tr.backend_attributable].profile)
@@ -550,11 +561,11 @@ def main():
 
     # internal consistency: pooled ASR equals mean of per-profile ASR (equal denominators)
     for be in ("CPU", "NPU"):
-        s = att[att.backend == be]
+        s = main_scope(att[att.backend == be])
         assert s.n_clean_correct.nunique() == 1
         pooled_asr = 100 * s.n_attack_success.sum() / s.n_clean_correct.sum()
         assert abs(pooled_asr - s.cond_asr_pct.mean()) < 1e-9
-        RESULTS.setdefault("pooled_asr_all24_pct", {})[be] = float(pooled_asr)
+        RESULTS.setdefault("pooled_asr_main4_pct", {})[be] = float(pooled_asr)
 
     RESULTS["attack_zero_success_profiles"] = {
         be: att[(att.backend == be) & (att.n_attack_success == 0)].profile.tolist()
@@ -569,7 +580,9 @@ def main():
     # identity check: undefended retention == 100 - conditional ASR (pooled, per backend)
     for be in ("CPU", "NPU"):
         r0 = pooled[(pooled.backend == be)].retention_nodef_pct
-        assert (abs(r0 - (100 - RESULTS["pooled_asr_all24_pct"][be])) < 1e-9).all()
+        assert (abs(r0 - (100 - RESULTS["pooled_asr_main4_pct"][be])) < 1e-9).all()
+    RESULTS["main_attack_scope"] = {"attacks": list(MAIN_ATTACKS), "profiles": 9,
+                                    "note": "pooled aggregates restricted to FGSM/PGD/CW/EAD"}
     json.dump(RESULTS, open(HERE / "phase_b_results.json", "w"), indent=2, default=float)
     print("Phase B tables written to", OUT.relative_to(ROOT))
     for f in sorted(OUT.glob("*.csv")):

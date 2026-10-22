@@ -20,7 +20,7 @@
 |---|---|
 | 資料集 | RadioML 2016.10a；正式網格 11 種調變 × 20 個 SNR（−20 至 18 dB）× sample_index 0–9，共 2,200 個 clean 樣本 |
 | 分類器 | AWN（PyTorch checkpoint；Hailo-8 使用編譯後 HEF `awn_2016_10a_c5.hef`） |
-| 攻擊 | 正式攻擊設定共 17 種攻擊、24 個 profile（`configs/hailo_full_matrix.json`）；attack generation 一律使用可微分之 CPU AWN |
+| 攻擊 | 正式攻擊設定共 17 種攻擊、24 個 profile（`configs/hailo_full_matrix.json`）；attack generation 一律使用可微分之 CPU AWN。主研究攻擊範圍為 FGSM（eps 0.005／0.01／0.03／0.05）、PGD（eps 0.005／0.01／0.03）、CW、EAD 共 9 個 profile；第 5–7 節之合併指標僅使用此 9 個 profile，其餘攻擊之結果為歷史探索性結果，不納入合併指標與結論 |
 | 運算平台 | Raspberry Pi 5 CPU（torch 2.14.0+cpu）；Hailo-8 僅作為推論 backend |
 | 威脅層級 | A0 數位域：擾動直接作用於記憶體中的 AWN 輸入 IQ |
 | 範圍限制 | 本階段結果均為 digital-domain 驗證，**不是 OTA／RF validation** |
@@ -61,7 +61,7 @@
 
 ![圖 1、Raspberry Pi 5 B=1 攻擊生成延遲之 mkldnn ON/OFF 比較](figures/fig1_attack_acceleration.png)
 
-**圖 1、Raspberry Pi 5 B=1 攻擊生成延遲之 mkldnn ON/OFF 比較**　橫軸為中位延遲降低比例，由 mkldnn ON 與 OFF 之 pooled 中位延遲計算（100 ×（ON − OFF）÷ ON），各橫條標籤列出原始 ON → OFF 中位延遲。因各攻擊之延遲量級相差逾 30 倍（MI-FGSM 約 42 ms、EAD 約 1422 ms），圖中以比例呈現，未截斷任何資料。比較結果指出，在目前實驗設定下各代表性攻擊之降低比例介於 4.9%（FAB eps0.01）與 22.4%（Square）之間；DeepFool 未通過 pre-validation、FGSM 未達整合門檻，故未列入。圖資料：`figure_sources/fig1_attack_acceleration.csv`；primary evidence：`review_evidence/01_attack_accel/accel_phase1d3_mkldnn_b1_20260927_135420/validation.json`、`review_evidence/01_attack_accel/attack_b1_accel_full_20261004_100032/b1_acceleration_summary.csv`、`review_evidence/01_attack_accel/attack_b1_accel_full_20261004_174620/b1_acceleration_summary.csv`。
+**圖 1、Raspberry Pi 5 B=1 攻擊生成延遲之 mkldnn ON/OFF 比較**　橫軸為中位延遲降低比例，由 mkldnn ON 與 OFF 之 pooled 中位延遲計算（100 ×（ON − OFF）÷ ON），各橫條標籤列出原始 ON → OFF 中位延遲。因各攻擊之延遲量級相差逾 30 倍（MI-FGSM 約 42 ms、EAD 約 1422 ms），圖中以比例呈現，未截斷任何資料。主研究攻擊範圍中，PGD（eps0.03）之降低比例為 14.6%、EAD 為 14.0%（CW 為 11.1%，見上表，未列入本圖）；FGSM 未達整合門檻，故未列入。圖中其餘攻擊屬主範圍以外，為逐攻擊之個別量測，僅供參考；DeepFool 未通過 pre-validation，未列入。圖資料：`figure_sources/fig1_attack_acceleration.csv`；primary evidence：`review_evidence/01_attack_accel/accel_phase1d3_mkldnn_b1_20260927_135420/validation.json`、`review_evidence/01_attack_accel/attack_b1_accel_full_20261004_100032/b1_acceleration_summary.csv`、`review_evidence/01_attack_accel/attack_b1_accel_full_20261004_174620/b1_acceleration_summary.csv`。
 
 ## 4. Extended attack integration validation
 
@@ -81,31 +81,32 @@
 
 ## 5. Defense comparison on CPU
 
-所有防禦於同一批已儲存之對抗輸入（24 個 profile × 2,200 個樣本 = 52,800 列）上評估，分母一律為標準 AWN 之 clean_correct（31,152）與 attack success（20,960）。標準 AWN 之 clean accuracy 為 59.00%、attacked accuracy 為 30.73%、Conditional Attack Success Rate 為 67.28%。
+所有防禦於同一批已儲存之對抗輸入上評估；本節合併指標僅使用 FGSM、PGD、CW、EAD 共 9 個 profile（9 × 2,200 = 19,800 列），由 `defense_recovery_by_attack.csv` 之逐 profile 計數加總，分母一律為標準 AWN 之 clean_correct（11,682）與 attack success（6,739）。標準 AWN 之 clean accuracy 為 59.00%、attacked accuracy 為 35.56%、Conditional Attack Success Rate 為 57.69%。
 
 定義：recovery = recovered ÷ attack success；clean degradation = clean 正確但防禦後錯誤之數量 ÷ clean_correct；retention = clean 正確且防禦後正確 ÷ clean_correct；net gain = retention − 無防禦 retention。
 
 | 防禦 | Recovery（%） | Clean degradation（%） | Retention（%） | Net gain（pp） | Defended accuracy（%） |
 |---|---|---|---|---|---|
-| 無防禦 | 0.00 | 0.00 | 32.72 | 0.00 | 30.73 |
-| 固定 K=10 | 27.00 | 63.33 | 30.91 | −1.80 | 25.78 |
-| 固定 K=20 | 26.34 | 32.82 | 43.32 | +10.60 | 34.31 |
-| 固定 K=30 | 26.96 | 23.65 | 46.17 | +13.45 | 36.16 |
-| 固定 K=40 | 27.27 | 12.71 | 48.72 | +16.01 | 37.34 |
-| Adaptive-K | 27.08 | 5.24 | 49.57 | +16.85 | 36.96 |
-| Kalman filter | 11.15 | 80.59 | 15.78 | −16.93 | 15.64 |
-| Wiener filter | 18.78 | 39.91 | 35.92 | +3.20 | 30.89 |
-| Savitzky-Golay filter | 16.47 | 34.67 | 36.05 | +3.33 | 31.30 |
-| Gaussian filter | 16.15 | 33.13 | 36.10 | +3.39 | 31.20 |
-| FIR filter | 20.94 | 70.26 | 25.28 | −7.43 | 23.54 |
-| Adversarial training（exploratory） | 53.53 | 15.95 | 66.79 | +34.07 | 45.70 |
-| Adversarial training（leakage-free） | 56.67 | 18.57 | 68.62 | +35.90 | 46.65 |
+| 無防禦 | 0.00 | 0.00 | 42.31 | 0.00 | 35.56 |
+| 固定 K=10 | 28.62 | 63.33 | 32.08 | −10.23 | 25.94 |
+| 固定 K=20 | 31.65 | 32.82 | 48.96 | +6.64 | 36.84 |
+| 固定 K=30 | 32.45 | 23.65 | 53.36 | +11.04 | 39.41 |
+| 固定 K=40 | 33.92 | 12.71 | 57.92 | +15.61 | 41.70 |
+| Adaptive-K | 30.81 | 5.24 | 57.80 | +15.49 | 41.48 |
+| Kalman filter | 12.48 | 80.59 | 16.57 | −25.74 | 15.63 |
+| Wiener filter | 23.58 | 39.91 | 40.47 | −1.84 | 33.27 |
+| Savitzky-Golay filter | 21.31 | 34.67 | 41.45 | −0.86 | 34.41 |
+| Gaussian filter | 21.15 | 33.13 | 41.70 | −0.62 | 34.19 |
+| FIR filter | 22.24 | 70.26 | 25.58 | −16.74 | 23.66 |
+| Adversarial training（exploratory） | 54.58 | 15.95 | 70.08 | +27.77 | 47.19 |
 
-比較結果指出，Adaptive-K 之 recovery 與固定 K（26.34–27.27%）相近，clean degradation 為各訊號處理類防禦中最低（5.24%），net gain 為 +16.85 pp。五種傳統濾波器使用其原始實作之預設參數，未針對本管線調整，recovery 為 11.15–20.94%，clean degradation 為 33.13–80.59%。
+Clean degradation 以 2,200 個唯一 clean 樣本計算，與攻擊無關。Leakage-free adversarial training 之評估 run 無逐攻擊結果檔，無法限定於主範圍，不列入本表（見第 6 節）。
+
+比較結果指出，Adaptive-K 之 recovery（30.81%）介於固定 K（28.62–33.92%）之間，clean degradation 為各訊號處理類防禦中最低（5.24%），net gain 為 +15.49 pp，與固定 K=40（+15.61 pp）相近。五種傳統濾波器使用其原始實作之預設參數，未針對本管線調整，recovery 為 12.48–23.58%，clean degradation 為 33.13–80.59%，net gain 皆為負值（−25.74 至 −0.62 pp）。
 
 ![圖 2、CPU 數位域防禦之 recovery 與 clean degradation 取捨](figures/fig2_cpu_defense_tradeoff.png)
 
-**圖 2、CPU 數位域防禦之 recovery 與 clean degradation 取捨**　橫軸為 clean degradation，縱軸為 recovery，所有點使用相同之已儲存對抗輸入與標準 AWN 分母。可觀察到不同方法在 recovery 與 clean cost 之間呈現不同取捨：固定 K 之 recovery 相近而 clean degradation 隨 K 減少而上升；Adaptive-K 位於低 clean degradation 區域；adversarial training 之 recovery 較高，clean degradation 介於 Adaptive-K 與多數濾波器之間；五種濾波器（預設參數）之 recovery 較低。Exploratory AT 以空心標記表示，其訓練集與評估樣本存在重疊，不作為 leakage-free 基準。此圖不代表一般性的方法優劣排序。圖資料：`figure_sources/fig2_cpu_defense_tradeoff.csv`；primary evidence：`review_evidence/03_defense_recovery_cpu/defense_recovery_full_20261004_215947/defense_recovery_summary.csv`、`review_evidence/04_adversarial_training/defense_recovery_full_20261005_152728/defense_recovery_summary.csv`。
+**圖 2、CPU 數位域防禦之 recovery 與 clean degradation 取捨**　橫軸為 clean degradation，縱軸為 recovery，所有點使用相同之已儲存對抗輸入與標準 AWN 分母（FGSM／PGD／CW／EAD 9 個 profile，attack success 6,739 列）。可觀察到不同方法在 recovery 與 clean cost 之間呈現不同取捨：固定 K 之 recovery 相近而 clean degradation 隨 K 減少而上升；Adaptive-K 位於低 clean degradation 區域；exploratory adversarial training 之 recovery 較高，clean degradation 介於 Adaptive-K 與多數濾波器之間；五種濾波器（預設參數）之 recovery 較低。Exploratory AT 以空心標記表示，其訓練集與評估樣本存在重疊，不作為 leakage-free 基準；leakage-free AT 無逐攻擊來源，未列入本圖。此圖不代表一般性的方法優劣排序。圖資料：`figure_sources/fig2_cpu_defense_tradeoff.csv`；primary evidence：`review_evidence/03_defense_recovery_cpu/defense_recovery_full_20261004_215947/defense_recovery_by_attack.csv`。
 
 **Exploratory adversarial training 標示**：exploratory 列使用既有 checkpoint `2016.10a_AWN_at.pkl`，其訓練資料以 SNR ≥ 0 dB 全體資料隨機切分，2,200 個正式評估樣本中有 928 個位於其訓練集，存在 training／evaluation overlap，其訓練攻擊設定亦非本專案正式 profile。此列僅供參考，不作為正式 leakage-free baseline；正式基準見第 6 節。
 
@@ -125,7 +126,7 @@
 | Weighted validation | 0.7921 |
 | 模型 SHA-256 前綴 | `e3cdc7dd108a` |
 
-**正式 leakage-free transfer evaluation**（對抗輸入由標準 AWN 生成，再由 AT 模型分類；分母與第 5 節相同）
+**正式 leakage-free transfer evaluation（歷史範圍：24 個 profile 合併）**（對抗輸入由標準 AWN 生成，再由 AT 模型分類；分母為 24 個 profile 之 clean_correct 31,152 與 attack success 20,960）。此評估 run（`defense_recovery_full_20261005_152728`）僅保存合併結果，無逐攻擊結果檔，無法限定於 FGSM／PGD／CW／EAD；下表除 AT 模型 clean accuracy 與重疊數外，皆為歷史探索性數值，不作為主範圍結論。
 
 | 指標 | 值 |
 |---|---|
@@ -137,25 +138,25 @@
 | AT 模型 clean accuracy | 50.73% |
 | 評估樣本與訓練資料重疊 | 0 / 2,200 |
 
-**與 Adaptive-K 之取捨**：在相同分母下，leakage-free AT 的 recovery（56.67%）與 net gain（+35.90 pp）高於 Adaptive-K（27.08%、+16.85 pp），但 clean degradation 亦較高（18.57% 對 5.24%），AT 模型之 clean accuracy 為 50.73%，低於標準 AWN 之 59.00%，且需要重新訓練模型。Adaptive-K 之 recovery 較低，但 clean degradation 較小且不需重新訓練。兩者代表不同的 recovery 與 clean cost 取捨，本結果不支持一般性的優劣排序。
+**與 Adaptive-K 之取捨**：主範圍下之比較需要 leakage-free AT 之逐攻擊結果，目前未能進行。在 24 個 profile 合併之歷史範圍（相同分母）下，leakage-free AT 的 recovery（56.67%）與 net gain（+35.90 pp）高於 Adaptive-K（27.08%、+16.85 pp），clean degradation 亦較高（18.57% 對 5.24%）；此比較為歷史探索性結果。與攻擊無關之差異為：AT 模型之 clean accuracy 為 50.73%，低於標準 AWN 之 59.00%，且需要重新訓練模型；Adaptive-K 之 clean degradation 較小且不需重新訓練。本結果不支持一般性的優劣排序。
 
 ## 7. Hailo paired defense evaluation
 
-對抗輸入與第 5 節相同（由 PyTorch AWN 生成），於 Hailo-8 backend 進行分類，屬 surrogate transfer 評估。Hailo-8 之 clean accuracy 為 54.64%，Conditional Attack Success Rate 為 51.66%；配對驗證之所有 gate 結果為 PASS。
+對抗輸入與第 5 節相同（由 PyTorch AWN 生成），於 Hailo-8 backend 進行分類，屬 surrogate transfer 評估。合併指標僅使用 FGSM、PGD、CW、EAD 共 9 個 profile（`defense_summary_paired.csv` 之 profile 列加總）。Hailo-8 之 clean accuracy 為 54.64%，Conditional Attack Success Rate 為 44.46%（4,810 ÷ 10,818）；配對驗證之所有 gate 結果為 PASS。
 
 | 防禦 | Hailo recovery（%） | Hailo clean degradation（%） | Hailo net gain（pp） | CPU recovery（%） | CPU clean degradation（%） | CPU net gain（pp） |
 |---|---|---|---|---|---|---|
-| 固定 K=10 | 22.24 | 65.97 | −15.69 | 27.00 | 63.33 | −1.80 |
-| 固定 K=20 | 19.24 | 33.36 | −2.03 | 26.34 | 32.82 | +10.60 |
-| 固定 K=30 | 20.24 | 24.63 | +1.39 | 26.96 | 23.65 | +13.45 |
-| 固定 K=40 | 21.17 | 13.23 | +4.95 | 27.27 | 12.71 | +16.01 |
-| Adaptive-K | 14.11 | 4.91 | +3.16 | 27.08 | 5.24 | +16.85 |
+| 固定 K=10 | 23.49 | 65.97 | −22.80 | 28.62 | 63.33 | −10.23 |
+| 固定 K=20 | 23.33 | 33.36 | −5.32 | 31.65 | 32.82 | +6.64 |
+| 固定 K=30 | 24.41 | 24.63 | −0.31 | 32.45 | 23.65 | +11.04 |
+| 固定 K=40 | 26.09 | 13.23 | +4.81 | 33.92 | 12.71 | +15.61 |
+| Adaptive-K | 18.19 | 4.91 | +3.79 | 30.81 | 5.24 | +15.49 |
 
-**研究解讀**：CPU 與 Hailo-8 之防禦排序不完全一致。以 net gain 排序，CPU 上為 Adaptive-K 最高，Hailo-8 上為固定 K=40 最高；以 recovery 排序，Adaptive-K 在 CPU 上與固定 K 相近，在 Hailo-8 上則為五者最低。兩個 backend 之 clean degradation 差距在 2.7 pp 以內，recovery 差距較大（例如 Adaptive-K 為 27.08% 對 14.11%）；net gain 另受兩個 backend 無防禦 retention 不同（CPU 32.72%、Hailo-8 48.34%）之影響。此差異之成因目前尚未分析，backend-specific 的防禦行為值得後續研究。本節結果為數位域 transfer 評估，不代表實體射頻環境下的穩健性。
+**研究解讀**：以 net gain 排序，CPU 與 Hailo-8 上皆為固定 K=40 最高、Adaptive-K 次之，但 Adaptive-K 與 K=40 之差距在 CPU 上為 0.12 pp、在 Hailo-8 上為 1.02 pp。以 recovery 排序，Adaptive-K 在 CPU 上介於固定 K 之間（30.81%，固定 K 為 28.62–33.92%），在 Hailo-8 上則為五者最低（18.19%，固定 K 為 23.33–26.09%）。兩個 backend 之 clean degradation 差距在 2.7 pp 以內，recovery 差距較大（例如 Adaptive-K 為 30.81% 對 18.19%）；net gain 另受兩個 backend 無防禦 retention 不同（CPU 42.31%、Hailo-8 55.54%）之影響。此差異之成因目前尚未分析，backend-specific 的防禦行為值得後續研究。本節結果為數位域 transfer 評估，不代表實體射頻環境下的穩健性。
 
 ![圖 3、CPU 與 Hailo-8 防禦 net gain 比較](figures/fig3_cpu_hailo_defense_comparison.png)
 
-**圖 3、CPU 與 Hailo-8 防禦 net gain 比較**　單一縱軸為 net gain（pp），零基準線以上為相對無防禦之 retention 增加。同一組固定 K 與 Adaptive-K 在 CPU 與 Hailo-8 上之 net gain 排序不完全一致（CPU 上 Adaptive-K 最高，Hailo-8 上固定 K=40 最高），結果支持進一步分析 backend-specific behavior；此差異之成因需進一步分析。Hailo-8 結果為 surrogate transfer 之數位域評估。圖資料：`figure_sources/fig3_cpu_hailo_defense_comparison.csv`；primary evidence：`review_evidence/05_hailo_paired/adaptive_k_hailo_paired_20260928/defense_summary_paired.csv`（scope = overall）。
+**圖 3、CPU 與 Hailo-8 防禦 net gain 比較**　單一縱軸為 net gain（pp），零基準線以上為相對無防禦之 retention 增加。FGSM／PGD／CW／EAD 9 個 profile 合併。兩個 backend 上皆以固定 K=40 之 net gain 最高、Adaptive-K 次之；Adaptive-K 與 K=40 之差距在 Hailo-8 上較大（1.02 pp 對 CPU 0.12 pp），且 Hailo-8 上固定 K=10–30 之 net gain 皆為負值。此差異之成因需進一步分析。Hailo-8 結果為 surrogate transfer 之數位域評估。圖資料：`figure_sources/fig3_cpu_hailo_defense_comparison.csv`；primary evidence：`review_evidence/05_hailo_paired/adaptive_k_hailo_paired_20260928/defense_summary_paired.csv`（scope = profile，9 個主範圍 profile 加總）。
 
 ## 8. Main pipeline integration status
 
@@ -169,18 +170,19 @@ Adaptive-K 與 Hailo-8 兩組 pipeline 驗證為 interactive validation，於 Ra
 
 ## 9. 目前研究結論
 
-1. 在 Raspberry Pi 5、B=1 之目前設定下，僅於攻擊呼叫期間停用 mkldnn，15 個攻擊（PGD、BIM 與 13 個 extended attacks）之生成延遲中位數降低 4.9%（FAB eps0.01）至 22.4%（Square），且驗證結果未出現攻擊語意改變；FGSM 之收益低於實用門檻，DeepFool 未通過語意一致性門檻（位於決策邊界附近之數值敏感區域），兩者皆不納入 mkldnn-off 加速路徑，維持原執行方式。
-2. 在 CPU 數位域評估中，Adaptive-K 之 recovery 與固定 K 相近，而 clean degradation 為訊號處理類防禦中最低；五種傳統濾波器在預設參數下之 net gain 介於 −16.93 至 +3.39 pp。
-3. Leakage-free adversarial training 在 transfer 評估下之 recovery 與 net gain 高於 Adaptive-K，但伴隨較高之 clean degradation 與較低之 clean accuracy；兩者呈 recovery 與 clean cost 之取捨。
-4. Hailo-8 backend 上之防禦排序與 CPU 不完全一致，防禦效果可能具有 backend 相依性，需進一步分析。
+1. 在 Raspberry Pi 5、B=1 之目前設定下，僅於攻擊呼叫期間停用 mkldnn，主研究攻擊範圍中 PGD（eps0.03）、CW、EAD 之生成延遲中位數分別降低 14.6%、11.1%、14.0%，且驗證結果未出現攻擊語意改變；FGSM 之收益低於實用門檻，不納入 mkldnn-off 加速路徑，維持原執行方式。
+2. 在 CPU 數位域評估（FGSM／PGD／CW／EAD 9 個 profile 合併）中，Adaptive-K 之 recovery 介於固定 K 之間，net gain 與固定 K=40 相近，而 clean degradation 為訊號處理類防禦中最低；五種傳統濾波器在預設參數下之 net gain 介於 −25.74 至 −0.62 pp。
+3. Leakage-free adversarial training 之 transfer 評估僅有 24 個 profile 合併之歷史範圍結果，尚無法在主研究攻擊範圍與 Adaptive-K 比較；其 AT 模型 clean accuracy（50.73%）低於標準 AWN（59.00%）。
+4. Hailo-8 backend 與 CPU 上之 net gain 排序相同（固定 K=40 最高、Adaptive-K 次之），但 Adaptive-K 之 recovery 在 Hailo-8 上為五者最低，且固定 K=10–30 在 Hailo-8 上之 net gain 為負值；防禦效果可能具有 backend 相依性，需進一步分析。
 
 ## 10. 研究限制
 
 1. **Digital-domain only**：全部結果屬 A0 數位域，擾動直接作用於 AWN 輸入 IQ，未經空中傳輸或實體射頻通道。
 2. **Transfer evaluation**：AT 結果為 transfer 評估（對抗輸入由標準 AWN 生成），並非針對 AT 模型本身之 adaptive white-box robustness；其他防禦亦以未考慮防禦存在之攻擊評估。
-3. **訓練與評估攻擊之方法重疊**：leakage-free AT 之訓練攻擊（FGSM eps0.03、PGD eps0.03）屬於 24 個評估 profile 之一部分，樣本雖不重疊，攻擊方法有重疊。
+3. **訓練與評估攻擊之方法重疊**：leakage-free AT 之訓練攻擊（FGSM eps0.03、PGD eps0.03）屬於評估 profile 之一部分（亦屬主研究攻擊範圍），樣本雖不重疊，攻擊方法有重疊。
 4. **AT clean accuracy cost**：AT 模型 clean accuracy 為 50.73%，低於標準 AWN 之 59.00%；AT 訓練資料僅涵蓋 SNR ≥ 0 dB。
 5. **Hailo 為 backend-specific evaluation**：結果僅適用於目前 HEF 與 Hailo-8 量化模型，且為 surrogate transfer。
 6. **延遲範圍**：latency 結果僅適用於目前 Raspberry Pi 5、B=1 與 thread／backend 設定。
 7. **擾動量不可換算為 RF 量**：數位域擾動大小（eps）不可直接換算為 RF 功率、SIR 或 SNR。
 8. **傳統濾波器參數**：五種濾波器使用原始實作之預設參數，未針對本管線調整。
+9. **攻擊範圍與未能重算之項目**：第 5–7 節之合併指標僅含 FGSM、PGD、CW、EAD 之 9 個 profile。Leakage-free AT 之 transfer 評估與 exploratory AT 依訓練重疊分組之 recovery 無逐攻擊來源，於 `data/` 中標記為 `ALL_24_HISTORICAL`，未於主範圍重算。

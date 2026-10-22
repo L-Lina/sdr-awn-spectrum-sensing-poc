@@ -1,66 +1,66 @@
 source_result_dir,source_file,attack,profile,defense,metric_name,raw_count,denominator,value,unit,notes
 results/adaptive_k_hailo_paired_20260928,validation.json,,,,overall,,,PASS,label,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,hailo_recovery_pct,0,14902,0.0,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,hailo_clean_degradation_pct,0,28848,0.0,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,hailo_retention_pct,13946,28848,48.34303937881309,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,hailo_net_gain_pp,,,0.0,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,hailo_defended_acc_pct,17144,52800,32.46969696969697,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,hailo_clean_acc_pct,28848,52800,54.63636363636363,%,baseline
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,hailo_cond_attack_success_rate_pct,14902,28848,51.65696062118691,%,baseline; Hailo = surrogate transfer
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,cpu_recovery_pct,0,20960,0.0,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,cpu_clean_degradation_pct,0,31152,0.0,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,cpu_retention_pct,10192,31152,32.717000513610685,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,cpu_net_gain_pp,,,0.0,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,cpu_defended_acc_pct,16225,52800,30.729166666666668,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,cpu_clean_acc_pct,31152,52800,59.0,%,baseline
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,none,cpu_cond_attack_success_rate_pct,20960,31152,67.28299948638931,%,baseline; Hailo = surrogate transfer
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk10,hailo_recovery_pct,3314,14902,22.238625687827138,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk10,hailo_clean_degradation_pct,19032,28848,65.97337770382696,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk10,hailo_retention_pct,9420,28848,32.653910149750416,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk10,hailo_net_gain_pp,,,-15.689129229062672,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk10,hailo_defended_acc_pct,12488,52800,23.651515151515152,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk10,cpu_recovery_pct,5659,20960,26.999045801526716,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk10,cpu_clean_degradation_pct,19728,31152,63.32819722650231,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk10,cpu_retention_pct,9630,31152,30.912942989214176,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk10,cpu_net_gain_pp,,,-1.8040575243965087,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk10,cpu_defended_acc_pct,13613,52800,25.78219696969697,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk20,hailo_recovery_pct,2867,14902,19.23902831834653,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk20,hailo_clean_degradation_pct,9624,28848,33.36106489184692,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk20,hailo_retention_pct,13360,28848,46.31170271769273,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk20,hailo_net_gain_pp,,,-2.0313366611203563,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk20,hailo_defended_acc_pct,16773,52800,31.767045454545453,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk20,cpu_recovery_pct,5520,20960,26.33587786259542,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk20,cpu_clean_degradation_pct,10224,31152,32.81972265023113,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk20,cpu_retention_pct,13495,31152,43.3198510529019,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk20,cpu_net_gain_pp,,,10.602850539291218,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk20,cpu_defended_acc_pct,18118,52800,34.31439393939394,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk30,hailo_recovery_pct,3016,14902,20.2388941081734,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk30,hailo_clean_degradation_pct,7104,28848,24.625623960066555,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk30,hailo_retention_pct,14347,28848,49.73308374930671,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk30,hailo_net_gain_pp,,,1.3900443704936194,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk30,hailo_defended_acc_pct,17712,52800,33.54545454545455,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk30,cpu_recovery_pct,5651,20960,26.96087786259542,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk30,cpu_clean_degradation_pct,7368,31152,23.651771956856702,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk30,cpu_retention_pct,14382,31152,46.16718027734977,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk30,cpu_net_gain_pp,,,13.450179763739087,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk30,cpu_defended_acc_pct,19090,52800,36.15530303030303,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk40,hailo_recovery_pct,3155,14902,21.171654811434706,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk40,hailo_clean_degradation_pct,3816,28848,13.227953410981698,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk40,hailo_retention_pct,15373,28848,53.28965612867443,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk40,hailo_net_gain_pp,,,4.946616749861342,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk40,hailo_defended_acc_pct,18431,52800,34.90719696969697,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk40,cpu_recovery_pct,5715,20960,27.266221374045802,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk40,cpu_clean_degradation_pct,3960,31152,12.711864406779661,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk40,cpu_retention_pct,15178,31152,48.72239342578326,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk40,cpu_net_gain_pp,,,16.005392912172574,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,topk40,cpu_defended_acc_pct,19718,52800,37.34469696969697,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,adaptive_k_v2,hailo_recovery_pct,2103,14902,14.11219970473762,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,adaptive_k_v2,hailo_clean_degradation_pct,1416,28848,4.908485856905158,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,adaptive_k_v2,hailo_retention_pct,14857,28848,51.50097060454797,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,adaptive_k_v2,hailo_net_gain_pp,,,3.1579312257348846,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,adaptive_k_v2,hailo_defended_acc_pct,18125,52800,34.327651515151516,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,adaptive_k_v2,cpu_recovery_pct,5677,20960,27.084923664122137,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,adaptive_k_v2,cpu_clean_degradation_pct,1632,31152,5.238828967642527,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,adaptive_k_v2,cpu_retention_pct,15441,31152,49.56664098613251,%,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,adaptive_k_v2,cpu_net_gain_pp,,,16.849640472521827,pp,
-results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,ALL,adaptive_k_v2,cpu_defended_acc_pct,19516,52800,36.96212121212121,%,
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,hailo_recovery_pct,0,4810,0.0,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,hailo_clean_degradation_pct,0,10818,0.0,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,hailo_retention_pct,6008,10818,55.53706784987983,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,hailo_net_gain_pp,,,0.0,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,hailo_defended_acc_pct,7207,19800,36.398989898989896,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,hailo_clean_acc_pct,10818,19800,54.63636363636363,%,baseline; scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,hailo_cond_attack_success_rate_pct,4810,10818,44.46293215012017,%,baseline; Hailo = surrogate transfer; scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,cpu_recovery_pct,0,6739,0.0,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,cpu_clean_degradation_pct,0,11682,0.0,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,cpu_retention_pct,4943,11682,42.31296010957028,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,cpu_net_gain_pp,,,0.0,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,cpu_defended_acc_pct,7040,19800,35.55555555555556,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,cpu_clean_acc_pct,11682,19800,59.0,%,baseline; scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,none,cpu_cond_attack_success_rate_pct,6739,11682,57.68703989042972,%,baseline; Hailo = surrogate transfer; scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk10,hailo_recovery_pct,1130,4810,23.492723492723492,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk10,hailo_clean_degradation_pct,7137,10818,65.97337770382696,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk10,hailo_retention_pct,3542,10818,32.74172675171011,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk10,hailo_net_gain_pp,,,-22.79534109816972,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk10,hailo_defended_acc_pct,4671,19800,23.59090909090909,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk10,cpu_recovery_pct,1929,6739,28.624424988870754,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk10,cpu_clean_degradation_pct,7398,11682,63.32819722650231,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk10,cpu_retention_pct,3748,11682,32.08354733778462,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk10,cpu_net_gain_pp,,,-10.229412771785654,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk10,cpu_defended_acc_pct,5137,19800,25.944444444444443,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk20,hailo_recovery_pct,1122,4810,23.326403326403327,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk20,hailo_clean_degradation_pct,3609,10818,33.36106489184692,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk20,hailo_retention_pct,5432,10818,50.212608615270845,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk20,hailo_net_gain_pp,,,-5.324459234608987,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk20,hailo_defended_acc_pct,6732,19800,34.0,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk20,cpu_recovery_pct,2133,6739,31.651580353168125,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk20,cpu_clean_degradation_pct,3834,11682,32.81972265023113,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk20,cpu_retention_pct,5719,11682,48.95565827769217,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk20,cpu_net_gain_pp,,,6.642698168121896,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk20,cpu_defended_acc_pct,7295,19800,36.843434343434346,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk30,hailo_recovery_pct,1174,4810,24.407484407484407,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk30,hailo_clean_degradation_pct,2664,10818,24.625623960066555,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk30,hailo_retention_pct,5974,10818,55.222776853392496,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk30,hailo_net_gain_pp,,,-0.3142909964873368,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk30,hailo_defended_acc_pct,7228,19800,36.505050505050505,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk30,cpu_recovery_pct,2187,6739,32.4528861848939,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk30,cpu_clean_degradation_pct,2763,11682,23.651771956856702,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk30,cpu_retention_pct,6233,11682,53.355589796267765,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk30,cpu_net_gain_pp,,,11.042629686697488,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk30,cpu_defended_acc_pct,7803,19800,39.40909090909091,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk40,hailo_recovery_pct,1255,4810,26.091476091476093,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk40,hailo_clean_degradation_pct,1431,10818,13.227953410981698,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk40,hailo_retention_pct,6528,10818,60.3438713255685,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk40,hailo_net_gain_pp,,,4.8068034756886675,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk40,hailo_defended_acc_pct,7633,19800,38.55050505050505,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk40,cpu_recovery_pct,2286,6739,33.921946876391154,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk40,cpu_clean_degradation_pct,1485,11682,12.711864406779661,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk40,cpu_retention_pct,6766,11682,57.918164697825716,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk40,cpu_net_gain_pp,,,15.60520458825544,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,topk40,cpu_defended_acc_pct,8257,19800,41.7020202020202,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,adaptive_k_v2,hailo_recovery_pct,875,4810,18.19126819126819,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,adaptive_k_v2,hailo_clean_degradation_pct,531,10818,4.908485856905158,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,adaptive_k_v2,hailo_retention_pct,6418,10818,59.327047513403585,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,adaptive_k_v2,hailo_net_gain_pp,,,3.789979663523752,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,adaptive_k_v2,hailo_defended_acc_pct,7613,19800,38.44949494949495,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,adaptive_k_v2,cpu_recovery_pct,2076,6739,30.805757530790917,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,adaptive_k_v2,cpu_clean_degradation_pct,612,11682,5.238828967642527,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,adaptive_k_v2,cpu_retention_pct,6752,11682,57.79832220510187,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,adaptive_k_v2,cpu_net_gain_pp,,,15.485362095531592,pp,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)
+results/adaptive_k_hailo_paired_20260928,defense_summary_paired.csv,,FGSM_PGD_CW_EAD,adaptive_k_v2,cpu_defended_acc_pct,8214,19800,41.484848484848484,%,scope=profile rows pooled over main attack scope FGSM/PGD/CW/EAD (9 profiles)

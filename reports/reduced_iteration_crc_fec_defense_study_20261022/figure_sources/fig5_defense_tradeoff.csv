@@ -24,18 +24,18 @@ tradeoff_fec_off,EAD 5 x 10,ead,bss5_maxit10,topk20,K20,8.72727272727272,43.8679
 tradeoff_fec_off,EAD 5 x 10,ead,bss5_maxit10,topk30,K30,3.2727272727272663,37.735849056603776,61.6822429906542,data/attack_defense_summary.csv;data/clean_defense_summary.csv,,,,
 tradeoff_fec_off,EAD 5 x 10,ead,bss5_maxit10,topk40,K40,2.1818181818181728,35.37735849056604,64.01869158878505,data/attack_defense_summary.csv;data/clean_defense_summary.csv,,,,
 tradeoff_fec_off,EAD 5 x 10,ead,bss5_maxit10,adaptive_k,Adaptive-K,2.9090909090909065,40.56603773584906,58.87850467289719,data/attack_defense_summary.csv;data/clean_defense_summary.csv,,,,
-defense_latency,defense_on_attacked_input,,,topk10,K10,,,,data/latency_summary.csv,0.17997049999999998,0.3900048999999998,4200,
-defense_latency,defense_on_attacked_input,,,topk20,K20,,,,data/latency_summary.csv,0.122248,0.37472374999999986,4200,
-defense_latency,defense_on_attacked_input,,,topk30,K30,,,,data/latency_summary.csv,0.12261150000000001,0.3888868499999999,4200,
-defense_latency,defense_on_attacked_input,,,topk40,K40,,,,data/latency_summary.csv,0.1213165,0.38322134999999996,4200,
-defense_latency,defense_on_attacked_input,,,adaptive_k,Adaptive-K,,,,data/latency_summary.csv,0.5717835,1.0330581999999997,4200,
+defense_latency,defense_on_attacked_input,,,topk10,K10,,,,data/latency_summary.csv,0.162261,0.2142587999999999,4200,
+defense_latency,defense_on_attacked_input,,,topk20,K20,,,,data/latency_summary.csv,0.1195695,0.16245839999999998,4200,
+defense_latency,defense_on_attacked_input,,,topk30,K30,,,,data/latency_summary.csv,0.11852,0.1557932,4200,
+defense_latency,defense_on_attacked_input,,,topk40,K40,,,,data/latency_summary.csv,0.118315,0.15709934999999997,4200,
+defense_latency,defense_on_attacked_input,,,adaptive_k,Adaptive-K,,,,data/latency_summary.csv,0.5434285,0.65664015,4200,
 defense_latency,defense_on_clean_input,,,topk10,K10,,,,data/latency_summary.csv,0.168078,0.4390304,350,
 defense_latency,defense_on_clean_input,,,topk20,K20,,,,data/latency_summary.csv,0.130104,0.49237600000000004,350,
 defense_latency,defense_on_clean_input,,,topk30,K30,,,,data/latency_summary.csv,0.1346475,0.47596370000000016,350,
 defense_latency,defense_on_clean_input,,,topk40,K40,,,,data/latency_summary.csv,0.130125,0.48499960000000003,350,
 defense_latency,defense_on_clean_input,,,adaptive_k,Adaptive-K,,,,data/latency_summary.csv,0.59613,1.0647376,350,
-attack_latency_reference,FGSM eps 0.03,fgsm,eps0.03,,,,,,data/attack_defense_summary.csv,,,,2.8659
-attack_latency_reference,PGD steps 10,pgd,eps0.03_steps10,,,,,,data/attack_defense_summary.csv,,,,16.358187
-attack_latency_reference,CW steps 20,cw,c1_steps20_lr0.01,,,,,,data/attack_defense_summary.csv,,,,25.430632
-attack_latency_reference,EAD 9 x 100,ead,bss9_maxit100,,,,,,data/attack_defense_summary.csv,,,,532.914079
-attack_latency_reference,EAD 5 x 10,ead,bss5_maxit10,,,,,,data/attack_defense_summary.csv,,,,72.095218
+attack_latency_reference,FGSM eps 0.03,fgsm,eps0.03,,,,,,data/attack_defense_summary.csv,,,,2.638326
+attack_latency_reference,PGD steps 10,pgd,eps0.03_steps10,,,,,,data/attack_defense_summary.csv,,,,14.388775
+attack_latency_reference,CW steps 20,cw,c1_steps20_lr0.01,,,,,,data/attack_defense_summary.csv,,,,23.470464
+attack_latency_reference,EAD 9 x 100,ead,bss9_maxit100,,,,,,data/attack_defense_summary.csv,,,,488.255235
+attack_latency_reference,EAD 5 x 10,ead,bss5_maxit10,,,,,,data/attack_defense_summary.csv,,,,64.88292

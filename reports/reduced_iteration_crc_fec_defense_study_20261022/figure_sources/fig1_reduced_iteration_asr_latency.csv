@@ -1,7 +1,7 @@
 attack,setting,group,profile,conditional_asr_pct,n_attack_success,n_clean_correct,usable_threshold_pct,latency_median_ms,latency_reduction_pct,source_csv
-PGD,baseline,pgd,eps0.03_steps10,84.0909090909091,37,44,72.36,13.75806,0.0,data/amc_reduced_iteration_summary.csv
-PGD,reduced,pgd,eps0.03_steps7,77.27272727272727,34,44,72.36,9.8337655,28.523603618533432,data/amc_reduced_iteration_summary.csv
-CW,baseline,cw,c1_steps20_lr0.01,93.18181818181819,41,44,82.17,16.186108,0.0,data/amc_reduced_iteration_summary.csv
-CW,reduced,cw,c1_steps15_lr0.01,86.36363636363636,38,44,82.17,12.782522499999999,21.027819040871353,data/amc_reduced_iteration_summary.csv
-EAD,baseline,ead_phase1,bss9_maxit100,100.0,44,44,90.0,486.97740999999996,0.0,data/amc_reduced_iteration_summary.csv
-EAD,reduced,ead_phase2,bss5_maxit10,100.0,44,44,90.0,56.13638,88.47248787166534,data/amc_reduced_iteration_summary.csv
+PGD,baseline,pgd,eps0.03_steps10,84.0909090909091,37,44,72.36,13.565304999999999,0.0,data/amc_reduced_iteration_summary.csv
+PGD,reduced,pgd,eps0.03_steps7,77.27272727272727,34,44,72.36,9.7591115,28.058296514527314,data/amc_reduced_iteration_summary.csv
+CW,baseline,cw,c1_steps20_lr0.01,93.18181818181819,41,44,82.17,15.8802155,0.0,data/amc_reduced_iteration_summary.csv
+CW,reduced,cw,c1_steps15_lr0.01,86.36363636363636,38,44,82.17,13.8638475,12.697359176265588,data/amc_reduced_iteration_summary.csv
+EAD,baseline,ead_phase1,bss9_maxit100,100.0,44,44,90.0,450.76021000000003,0.0,data/amc_reduced_iteration_summary.csv
+EAD,reduced,ead_phase2,bss5_maxit10,100.0,44,44,90.0,51.0026025,88.68520304842346,data/amc_reduced_iteration_summary.csv

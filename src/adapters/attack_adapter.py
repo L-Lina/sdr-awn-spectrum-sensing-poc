@@ -208,23 +208,23 @@ else:
     TemperatureLogitsWrapper = None  # torch unavailable -- apply() falls back to dummy_attack before this is ever used
 
 
-# Phase 1 attack acceleration (Raspberry Pi 5 / torch 2.14.0+cpu; docs/research/
-# PERFORMANCE_AND_LATENCY_ANALYSIS_ZH_TW.md section 17): at B=1 oneDNN only runs AWN's four
-# forward GEMMs (plus a weight reorder per call), and disabling it around the attack call alone
-# measured -6.2 ms per PGD/BIM call with attack semantics preserved. Measured ONLY for these two
-# attacks at B=1; at B=32 the same switch made the forward >4x slower, so it must never be applied
-# to batches. Opt-in via AttackAdapter(b1_pgd_bim_mkldnn_off=True); default behavior unchanged.
+# Optional backend-toggle path retained for historical compatibility. It reproduces an exploratory
+# latency measurement on Raspberry Pi 5 / torch 2.14.0+cpu (docs/research/
+# PERFORMANCE_AND_LATENCY_ANALYSIS_ZH_TW.md section 17) in which oneDNN was disabled around the
+# PGD/BIM attack call at B=1. That measurement is not an attack-acceleration method and does not
+# generalise to other platforms; formal attack evaluations use the default path. Never applied to
+# batches (at B=32 the same switch made the forward >4x slower). Opt-in via
+# AttackAdapter(b1_pgd_bim_mkldnn_off=True); default False.
 _B1_MKLDNN_OFF_ATTACKS = frozenset({"pgd", "bim"})
 
-# Extended B=1 set (results/attack_b1_accel_full_20261004_100032, experiments/
-# benchmark_attack_b1_acceleration_full_pi5.py, Raspberry Pi 5, intra 4 / interop 1, 88-sample formal subset):
-# each attack's formal profile had mkldnn OFF faster in 8/8 thermally clean pairs (sign test p = 0.0078),
-# 0 SEMANTIC_DIFFERENT / 0 INVALID / 0 exceptions, benchmark ON path bit-identical to apply() on 88/88.
-# fab (all three formal profiles) and autoattack were added after the targeted rerun of the same
-# benchmark (--profiles fab/eps0.005,fab/eps0.01,autoattack/eps0.03_standard; autoattack with its
-# otherwise wall-clock sub-attack seed fixed per sample), which classified them SPEEDUP_CANDIDATE.
-# Explicit list -- an attack is added only after that evidence. Not included: fgsm (no material benefit),
-# deepfool (2/88 deterministic SEMANTIC_DIFFERENT). Opt-in via AttackAdapter(b1_mkldnn_off_extended=True).
+# Extended optional backend-toggle set, retained for historical compatibility with the exploratory
+# Raspberry Pi 5 backend-toggle latency measurement (results/attack_b1_accel_full_20261004_100032,
+# experiments/benchmark_attack_b1_acceleration_full_pi5.py, intra 4 / interop 1, 88-sample formal subset;
+# fab and autoattack from the targeted rerun of the same benchmark). An attack was listed when that
+# measurement recorded 0 SEMANTIC_DIFFERENT / 0 INVALID / 0 exceptions and the benchmark ON path was
+# bit-identical to apply() on 88/88; fgsm and deepfool (2/88 deterministic SEMANTIC_DIFFERENT) are not
+# listed. Not an attack-acceleration method; formal attack evaluations use the default path.
+# Opt-in via AttackAdapter(b1_mkldnn_off_extended=True); default False.
 _B1_MKLDNN_OFF_EXTENDED_ATTACKS = frozenset({
     "mifgsm", "difgsm", "vmifgsm", "vnifgsm", "rfgsm", "tpgd", "cw", "fab", "square", "apgd", "apgdt",
     "autoattack", "ead"})
@@ -346,7 +346,8 @@ class AttackAdapter:
                  b1_mkldnn_off_extended: bool = False) -> None:
         """awn_model: the real torch nn.Module from AWNModelAdapter, or None if it's running dummy.
 
-        b1_pgd_bim_mkldnn_off: opt-in Phase 1 acceleration (default False = legacy behavior). When
+        b1_pgd_bim_mkldnn_off: optional backend-toggle path retained for historical compatibility
+        (default False = PyTorch default backend path). When
         True, apply() disables mkldnn ONLY around atk(x, y) and ONLY for pgd/bim with N == 1; clean
         prediction, pre/post-processing, diagnostics, other attacks and N > 1 are unaffected.
 

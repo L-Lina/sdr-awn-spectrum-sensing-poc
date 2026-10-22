@@ -219,7 +219,7 @@ def v1_parity(args, st, ref) -> dict:
 
 
 # =========================================================================== V2 / V3
-def chain_rows(awn, attack_adapter, snrs, n_bursts, profiles, topk_adapter=None, topk=None) -> list:
+def chain_rows(awn, attack_adapter, snrs, n_bursts, profiles, topk_adapter=None, topk=None, x_store=None) -> list:
     rows = []
     for prof in profiles:
         for mod in stx.digital_modulations():
@@ -230,11 +230,14 @@ def chain_rows(awn, attack_adapter, snrs, n_bursts, profiles, topk_adapter=None,
                         b = stx.generate_frame(mod, snr, seed, fec)
                         a_seed = formal.derive_seed(BASE_SEED, mod, int(snr), i,
                                                     f"{prof['attack']}|{prof['profile']}|fec{int(fec)}")
-                        r, _ = scp.run_burst_chain(b, awn=awn, attack_adapter=attack_adapter, attack=prof["attack"],
-                                                   eps=prof["eps"], torch_seed=seed, attack_seed=a_seed,
-                                                   attack_kwargs=prof.get("kwargs"), topk_adapter=topk_adapter,
-                                                   topk=topk)
+                        r, x_rx = scp.run_burst_chain(b, awn=awn, attack_adapter=attack_adapter, attack=prof["attack"],
+                                                      eps=prof["eps"], torch_seed=seed, attack_seed=a_seed,
+                                                      attack_kwargs=prof.get("kwargs"), topk_adapter=topk_adapter,
+                                                      topk=topk)
                         r.update(profile=prof["profile"], burst_index=i)
+                        if x_store is not None:
+                            x_store[f"{prof['attack']}|{prof['profile']}|{r['defense']}|{mod}|{snr}|fec{int(fec)}|{i}"] = \
+                                np.array(x_rx)
                         rows.append(r)
     return rows
 
@@ -327,6 +330,10 @@ def main() -> None:
     ap.add_argument("--attack-bursts", type=int, default=2)
     ap.add_argument("--torch-threads", type=int, default=1)
     ap.add_argument("--out-dir", default=None)
+    ap.add_argument("--save-x-adv", action="store_true",
+                    help="write V3 receiver-input windows (x_adv, or Top-K output for the defended rows) to x_adv_v3.npz")
+    ap.add_argument("--legacy-backend-toggle", action="store_true",
+                    help="comparison only: reproduce the superseded run that passed both mkldnn-off opt-ins")
     args = ap.parse_args()
 
     import torch
@@ -335,7 +342,8 @@ def main() -> None:
     torch.set_num_threads(args.torch_threads)
 
     ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
-    out = (REPO_ROOT / (args.out_dir or f"results/synth_crc_fec_integration_{ts}")).resolve()
+    name = f"synth_crc_fec_integration_{'legacy_toggle_repro_' if args.legacy_backend_toggle else ''}{ts}"
+    out = (REPO_ROOT / (args.out_dir or f"results/{name}")).resolve()
     out.mkdir(parents=True, exist_ok=False)
     _LOG = (out / "run.log").open("w")
     t_start = time.monotonic()
@@ -364,10 +372,13 @@ def main() -> None:
 
         with contextlib.redirect_stdout(io.StringIO()):
             awn = AWNModelAdapter(str(ckpt))
-            attack_adapter = AttackAdapter(awn_model=awn.model, b1_pgd_bim_mkldnn_off=True,
-                                           b1_mkldnn_off_extended=True)
+            attack_adapter = AttackAdapter(awn_model=awn.model, **(
+                {"b1_pgd_bim_mkldnn_off": True, "b1_mkldnn_off_extended": True} if args.legacy_backend_toggle else {}))
             topk_adapter = TopKAdapter()
         checks["real_backends_loaded"] = awn.status == "ok" and attack_adapter.status == "ok"
+        checks["backend_toggle_matches_configuration"] = (
+            bool(attack_adapter.b1_pgd_bim_mkldnn_off) == args.legacy_backend_toggle
+            and bool(attack_adapter.b1_mkldnn_off_extended) == args.legacy_backend_toggle)
 
         log("V2 clean chain ...")
         none_prof = [{"attack": "none", "profile": "none", "eps": 0.0}]
@@ -406,8 +417,14 @@ def main() -> None:
              "kwargs": {"attack_params": {"binary_search_steps": 5, "max_iterations": 10, "lr": 0.01,
                                           "initial_const": 1e-3, "beta": 1e-3, "kappa": 0, "abort_early": True}}},
         ]
-        v3_rows = chain_rows(awn, attack_adapter, [18], args.attack_bursts, profiles)
-        v3_rows += chain_rows(awn, attack_adapter, [18], args.attack_bursts, profiles[1:2], topk_adapter, 20)
+        x_store = {} if args.save_x_adv else None
+        v3_rows = chain_rows(awn, attack_adapter, [18], args.attack_bursts, profiles, x_store=x_store)
+        v3_rows += chain_rows(awn, attack_adapter, [18], args.attack_bursts, profiles[1:2], topk_adapter, 20,
+                              x_store=x_store)
+        if x_store is not None:
+            keys = sorted(x_store)
+            np.savez_compressed(out / "x_adv_v3.npz", keys=np.array(keys),
+                                **{f"a{j}": x_store[k] for j, k in enumerate(keys)})
         write_csv(out / "v3_attack_chain.csv", v3_rows)
         v3_summary = summarize(v3_rows)
         write_csv(out / "v3_attack_chain_summary.csv", v3_summary)
@@ -440,7 +457,14 @@ def main() -> None:
                               "adversarial_rf_commit": EXPECTED_ADV_RF_COMMIT},
                 "burst_params": stx.LEGACY_CRC_PIPELINE_BURST, "base_seed": BASE_SEED,
                 "seed_rule": "derive_seed(42, mod, snr, burst_index, 'synth_txrx|fec<0|1>') -> "
-                             "np.random.default_rng(seed) per burst; torch.manual_seed(seed) before the attack"}
+                             "np.random.default_rng(seed) per burst; torch.manual_seed(seed) before the attack",
+                "backend_toggle": (
+                    {"mkldnn_backend_toggle": "enabled (comparison-only reproduction of the superseded configuration)",
+                     "run_role": "legacy_toggle_reproduction; not a formal run",
+                     "b1_pgd_bim_mkldnn_off": True, "b1_mkldnn_off_extended": True}
+                    if args.legacy_backend_toggle else
+                    {"mkldnn_backend_toggle": "disabled / default path (PyTorch default backend; AttackAdapter defaults)",
+                     "run_role": "formal", "b1_pgd_bim_mkldnn_off": False, "b1_mkldnn_off_extended": False})}
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, default=str))
     log(f"validation {validation['overall']} failed={failed} -> {out} ({time.monotonic() - t_start:.0f} s)")
     _LOG.close()

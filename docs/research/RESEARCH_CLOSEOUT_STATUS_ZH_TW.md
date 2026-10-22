@@ -89,31 +89,35 @@ Option ON 分類計數（88 樣本／profile）：
 | ead | 9 | 79 | 0 | 0 |
 | 集合外（fgsm×4、pgd×3、bim、deepfool；option ON 不套用） | 各 88 | 0 | 0 | 0 |
 
-## 四、Adaptive-K CPU effectiveness（`results/adaptive_k_effectiveness_20260927_164906/`，scope = overall，24 profiles × 2,200 = 52,800 列）
+## 四、Adaptive-K CPU effectiveness（`results/adaptive_k_effectiveness_20260927_164906/`；FGSM／PGD／CW／EAD 9 個 profile × 2,200 = 19,800 列）
 
-共同分母：clean accuracy 59.00%、attacked accuracy 30.73%、Conditional Attack Success Rate 67.28%（attack success 20,960 列）。
+合併指標僅使用主研究攻擊範圍 FGSM（eps 0.005／0.01／0.03／0.05）、PGD（eps 0.005／0.01／0.03）、CW、EAD 共 9 個 profile，由 `results/adaptive_k_hailo_paired_20260928/defense_summary_paired.csv` 之 profile 列（`cpu_*` 計數）加總；該檔之 CPU 值經 gate 驗證與本節 run 一致。其餘 15 個 profile 之結果不納入合併指標與結論。共同分母：clean accuracy 59.00%、attacked accuracy 35.56%、Conditional Attack Success Rate 57.69%（attack success 6,739／clean_correct 11,682）。
 
 | 防禦 | recovery (%) | clean degradation (%) | retention (%) | net gain (pp) | defended accuracy (%) |
 |---|---|---|---|---|---|
-| 無防禦 | 0.00 | 0.00 | 32.72 | 0.00 | 30.73 |
-| 固定 K=10 | 27.00 | 63.33 | 30.91 | −1.80 | 25.78 |
-| 固定 K=20 | 26.34 | 32.82 | 43.32 | 10.60 | 34.31 |
-| 固定 K=30 | 26.96 | 23.65 | 46.17 | 13.45 | 36.16 |
-| 固定 K=40 | 27.27 | 12.71 | 48.72 | 16.01 | 37.34 |
-| Adaptive-K v2 | 27.08 | 5.24 | 49.57 | 16.85 | 36.96 |
+| 無防禦 | 0.00 | 0.00 | 42.31 | 0.00 | 35.56 |
+| 固定 K=10 | 28.62 | 63.33 | 32.08 | −10.23 | 25.94 |
+| 固定 K=20 | 31.65 | 32.82 | 48.96 | 6.64 | 36.84 |
+| 固定 K=30 | 32.45 | 23.65 | 53.36 | 11.04 | 39.41 |
+| 固定 K=40 | 33.92 | 12.71 | 57.92 | 15.61 | 41.70 |
+| Adaptive-K v2 | 30.81 | 5.24 | 57.80 | 15.49 | 41.48 |
 
-## 五、Adaptive-K Hailo paired（`results/adaptive_k_hailo_paired_20260928/`，scope = overall，52,800 列）
+Clean degradation 與攻擊無關。Adaptive-K v2 之 net gain 與固定 K=40 相近（15.49 對 15.61 pp），clean degradation 為各防禦最低，recovery 介於固定 K 之間。
 
-validation overall = PASS（全部 gates 為 true，含 CPU 重算與 Phase B 一致、Adaptive-K defended IQ 雜湊與 Phase B 一致、無攻擊重新生成）。HEF：`awn_2016_10a_c5.hef`，SHA-256 `6e54266f7e5931e432d4e5e67cd8e4a6e14863c16a94ff02a1946d21abc73dbb`。對抗輸入為 PyTorch surrogate 生成後於 Hailo-8 評估（transfer），Hailo-8 評估之 clean accuracy 54.64%、attacked accuracy 32.47%、Conditional Attack Success Rate 51.66%。
+## 五、Adaptive-K Hailo paired（`results/adaptive_k_hailo_paired_20260928/`；scope = profile，FGSM／PGD／CW／EAD 9 個 profile 加總，19,800 列）
+
+validation overall = PASS（全部 gates 為 true，含 CPU 重算與 Phase B 一致、Adaptive-K defended IQ 雜湊與 Phase B 一致、無攻擊重新生成）。HEF：`awn_2016_10a_c5.hef`，SHA-256 `6e54266f7e5931e432d4e5e67cd8e4a6e14863c16a94ff02a1946d21abc73dbb`。對抗輸入為 PyTorch surrogate 生成後於 Hailo-8 評估（transfer），合併指標僅使用上述 9 個主範圍 profile。Hailo-8 評估之 clean accuracy 54.64%、attacked accuracy 36.40%、Conditional Attack Success Rate 44.46%（4,810／10,818）。
 
 | 防禦 | CPU recovery (%) | CPU clean degr. (%) | CPU net gain (pp) | Hailo recovery (%)（95% CI） | Hailo clean degr. (%) | Hailo retention (%) | Hailo net gain (pp) | Hailo defended acc. (%) |
 |---|---|---|---|---|---|---|---|---|
-| 無防禦 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 48.34 | 0.00 | 32.47 |
-| 固定 K=10 | 27.00 | 63.33 | −1.80 | 22.24（21.58–22.91） | 65.97 | 32.65 | −15.69 | 23.65 |
-| 固定 K=20 | 26.34 | 32.82 | 10.60 | 19.24（18.61–19.88） | 33.36 | 46.31 | −2.03 | 31.77 |
-| 固定 K=30 | 26.96 | 23.65 | 13.45 | 20.24（19.60–20.89） | 24.63 | 49.73 | 1.39 | 33.55 |
-| 固定 K=40 | 27.27 | 12.71 | 16.01 | 21.17（20.52–21.83） | 13.23 | 53.29 | 4.95 | 34.91 |
-| Adaptive-K v2 | 27.08 | 5.24 | 16.85 | 14.11（13.56–14.68） | 4.91 | 51.50 | 3.16 | 34.33 |
+| 無防禦 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 55.54 | 0.00 | 36.40 |
+| 固定 K=10 | 28.62 | 63.33 | −10.23 | 23.49（22.32–24.71） | 65.97 | 32.74 | −22.80 | 23.59 |
+| 固定 K=20 | 31.65 | 32.82 | 6.64 | 23.33（22.15–24.54） | 33.36 | 50.21 | −5.32 | 34.00 |
+| 固定 K=30 | 32.45 | 23.65 | 11.04 | 24.41（23.21–25.64） | 24.63 | 55.22 | −0.31 | 36.51 |
+| 固定 K=40 | 33.92 | 12.71 | 15.61 | 26.09（24.87–27.35） | 13.23 | 60.34 | 4.81 | 38.55 |
+| Adaptive-K v2 | 30.81 | 5.24 | 15.49 | 18.19（17.13–19.31） | 4.91 | 59.33 | 3.79 | 38.45 |
+
+兩個 backend 上皆以固定 K=40 之 net gain 最高、Adaptive-K v2 次之；Adaptive-K v2 之 Hailo recovery 為各防禦最低。Recovery 95% CI 為 Wilson 區間，樣本視為獨立。
 
 ## 六、Formal latency（`formal_latency_20260928d`，overall PASS，10/10 cells THERMAL_CLEAN）
 
@@ -133,26 +137,28 @@ validation overall = PASS（全部 gates 為 true，含 CPU 重算與 Phase B �
 
 ## 七、Defense recovery full comparison（`results/defense_recovery_full_20261004_215947/`）
 
-Runner：`experiments/benchmark_defense_recovery_comparison_pi5.py --full --adv-store-dir results/adaptive_k_effectiveness_20260927_164906`。所有防禦在同一批 stored adversarial IQ（第四節之 52,800 列）上評估，分母為標準 AWN 的 clean_correct（31,152）／attack_success（20,960）；指標定義同第四節。status = complete、攻擊列 633,600（12 defenses × 52,800）、clean 列 26,400、invalid defenses 0、unavailable 0。固定 Top-K 與 Adaptive-K 的 recovered 計數（5659／5520／5651／5715／5677）與第四節完全一致。
+Runner：`experiments/benchmark_defense_recovery_comparison_pi5.py --full --adv-store-dir results/adaptive_k_effectiveness_20260927_164906`。所有防禦在同一批 stored adversarial IQ 上評估；合併指標僅使用 FGSM／PGD／CW／EAD 9 個 profile（19,800 列），由 `defense_recovery_by_attack.csv` 之逐 profile 計數加總，分母為標準 AWN 的 clean_correct（11,682）／attack_success（6,739）；指標定義同第四節。status = complete、攻擊列 633,600（12 defenses × 52,800）、clean 列 26,400、invalid defenses 0、unavailable 0。固定 Top-K 與 Adaptive-K 的 recovered 計數（1929／2133／2187／2286／2076）與第四節完全一致。
 
 | 防禦 | recovery (%)（95% CI） | clean degradation (%) | retention (%) | net gain (pp) | defended acc. (%) | clean defended acc. (%) |
 |---|---|---|---|---|---|---|
-| 無防禦 | 0.00 | 0.00 | 32.72 | 0.00 | 30.73 | 59.00 |
-| 固定 K=10 | 27.00（26.40–27.60） | 63.33 | 30.91 | −1.80 | 25.78 | 27.00 |
-| 固定 K=20 | 26.34（25.74–26.94） | 32.82 | 43.32 | 10.60 | 34.31 | 45.55 |
-| 固定 K=30 | 26.96（26.36–27.57） | 23.65 | 46.17 | 13.45 | 36.16 | 50.05 |
-| 固定 K=40 | 27.27（26.67–27.87） | 12.71 | 48.72 | 16.01 | 37.34 | 55.05 |
-| Adaptive-K v2 | 27.08（26.49–27.69） | 5.24 | 49.57 | 16.85 | 36.96 | 57.32 |
-| Signal filter：Kalman | 11.15（10.73–11.58） | 80.59 | 15.78 | −16.93 | 15.64 | 15.91 |
-| Signal filter：Wiener | 18.78（18.26–19.32） | 39.91 | 35.92 | 3.20 | 30.89 | 42.18 |
-| Signal filter：Savitzky-Golay | 16.47（15.97–16.98） | 34.67 | 36.05 | 3.33 | 31.30 | 45.82 |
-| Signal filter：Gaussian | 16.15（15.66–16.66） | 33.13 | 36.10 | 3.39 | 31.20 | 45.95 |
-| Signal filter：FIR | 20.94（20.39–21.49） | 70.26 | 25.28 | −7.43 | 23.54 | 24.55 |
-| AT transfer（exploratory） | 53.53（52.85–54.20） | 15.95 | 66.79 | 34.07 | 45.70 | 52.18 |
+| 無防禦 | 0.00 | 0.00 | 42.31 | 0.00 | 35.56 | 59.00 |
+| 固定 K=10 | 28.62（27.56–29.72） | 63.33 | 32.08 | −10.23 | 25.94 | 27.00 |
+| 固定 K=20 | 31.65（30.55–32.77） | 32.82 | 48.96 | 6.64 | 36.84 | 45.55 |
+| 固定 K=30 | 32.45（31.35–33.58） | 23.65 | 53.36 | 11.04 | 39.41 | 50.05 |
+| 固定 K=40 | 33.92（32.80–35.06） | 12.71 | 57.92 | 15.61 | 41.70 | 55.05 |
+| Adaptive-K v2 | 30.81（29.71–31.92） | 5.24 | 57.80 | 15.49 | 41.48 | 57.32 |
+| Signal filter：Kalman | 12.48（11.71–13.29） | 80.59 | 16.57 | −25.74 | 15.63 | 15.91 |
+| Signal filter：Wiener | 23.58（22.58–24.61） | 39.91 | 40.47 | −1.84 | 33.27 | 42.18 |
+| Signal filter：Savitzky-Golay | 21.31（20.35–22.30） | 34.67 | 41.45 | −0.86 | 34.41 | 45.82 |
+| Signal filter：Gaussian | 21.15（20.19–22.14） | 33.13 | 41.70 | −0.62 | 34.19 | 45.95 |
+| Signal filter：FIR | 22.24（21.27–23.25） | 70.26 | 25.58 | −16.74 | 23.66 | 24.55 |
+| AT transfer（exploratory） | 54.58（53.39–55.76） | 15.95 | 70.08 | 27.77 | 47.19 | 52.18 |
+
+Clean degradation 與 clean defended accuracy 以 2,200 個唯一 clean 樣本計算，與攻擊無關。五種 signal filter 之 net gain 在主範圍下皆為負值。
 
 五種 signal filter 使用 `external/adversarial-rf/util/defense_registry.py` 之預設參數，未針對本管線調整，亦未指定其中任何一種為唯一正式 Signal Filter。
 
-**Exploratory AT 標示**：`external/adversarial-rf/awn_fpga/2016.10a_AWN_at.pkl`（SHA-256 `b0fa1b84…6ebfca`）由 `adv_train.py` 以 SNR ≥ 0 全部資料隨機切分訓練／驗證（seed 42、val_ratio 0.15），其訓練攻擊為 eps 0.1 之 FGSM／PGD／EAD-L1／EAD-EN，非本專案正式 profile。重現該切分後，2,200 個評估樣本中有 **928** 個位於其訓練集（`at_train_overlap.csv`：in_at_train = True 之 22,272 攻擊列 recovery 61.38%，False 之 30,528 列 recovery 43.47%；後者包含全部 SNR < 0 樣本，兩組差異同時受 SNR 分佈影響，不應解讀為 leakage 效應大小）。此 checkpoint 僅為 exploratory baseline，不作為 leakage-free 正式基準。
+**Exploratory AT 標示**：`external/adversarial-rf/awn_fpga/2016.10a_AWN_at.pkl`（SHA-256 `b0fa1b84…6ebfca`）由 `adv_train.py` 以 SNR ≥ 0 全部資料隨機切分訓練／驗證（seed 42、val_ratio 0.15），其訓練攻擊為 eps 0.1 之 FGSM／PGD／EAD-L1／EAD-EN，非本專案正式 profile。重現該切分後，2,200 個評估樣本中有 **928** 個位於其訓練集（`at_train_overlap.csv`，歷史範圍：24 個 profile 合併，無逐攻擊拆分，未於主範圍重算：in_at_train = True 之 22,272 攻擊列 recovery 61.38%，False 之 30,528 列 recovery 43.47%；後者包含全部 SNR < 0 樣本，兩組差異同時受 SNR 分佈影響，不應解讀為 leakage 效應大小）。此 checkpoint 僅為 exploratory baseline，不作為 leakage-free 正式基準。
 
 ## 八、Leakage-free adversarial training（`results/adversarial_training_20261004_230802/`）
 
@@ -169,7 +175,9 @@ Runner：`experiments/benchmark_defense_recovery_comparison_pi5.py --full --adv-
 | best_model.pkl SHA-256 | `e3cdc7dd108a905c8cb98b90732200211bd626ee41ecd73348aa97f275bffc15` |
 | best_model.config.json | split_method = train_adversarial_awn、formal_eval_samples_excluded = true、functional_check_only = false |
 
-## 九、Leakage-free AT-only transfer comparison（`results/defense_recovery_full_20261005_152728/`）
+## 九、Leakage-free AT-only transfer comparison（`results/defense_recovery_full_20261005_152728/`；歷史範圍：24 個 profile 合併）
+
+此 run 僅保存合併結果，無逐攻擊結果檔，無法限定於 FGSM／PGD／CW／EAD；下列 recovery、retention、net gain 與 defended accuracy 為 24 個 profile 合併之歷史探索性數值，不作為主範圍結論，亦不與第四、七節之主範圍數值直接比較。AT 模型 clean accuracy（50.73%）與 clean degradation（以 2,200 個唯一 clean 樣本計算，18.57%）與攻擊無關。
 
 `--defenses adversarial_training --adv-store-dir results/adaptive_k_effectiveness_20260927_164906 --at-checkpoint results/adversarial_training_20261004_230802/best_model.pkl`；status = complete、攻擊列 105,600（none + AT）、provenance = **leakage_free**、eval_samples_in_at_train = **0**／2,200、未執行 white-box（0 列）。
 
@@ -178,7 +186,7 @@ Runner：`experiments/benchmark_defense_recovery_comparison_pi5.py --full --adv-
 | 無防禦 | 0.00 | 0.00 | 32.72 | 0.00 | 30.73 | 59.00 |
 | AT transfer（leakage-free） | 56.67（55.99–57.33） | 18.57 | 68.62 | 35.90 | 46.65 | 50.73 |
 
-分母與第七節相同（同一批 stored adversarial IQ、標準 AWN 的 clean_correct 31,152／attack_success 20,960）。欄位與定義（`defense_recovery_summary.csv`；`eval_parts/` 逐列重新計數結果相同）：
+分母為 24 個 profile 之 clean_correct 31,152／attack_success 20,960（同一批 stored adversarial IQ），與第七節之主範圍分母不同。欄位與定義（`defense_recovery_summary.csv`；`eval_parts/` 逐列重新計數結果相同）：
 
 | 欄位 | 值 | 定義 |
 |---|---|---|
@@ -200,11 +208,11 @@ Runner：`experiments/benchmark_defense_recovery_comparison_pi5.py --full --adv-
 ## 十一、結論邊界
 
 1. 第七、九節所有防禦皆以「針對標準 AWN 生成、且不知道防禦存在」的對抗輸入評估（non-adaptive）。AT 列為 transfer 設定：對抗輸入由標準 AWN 生成，再由 AT 模型分類；未執行針對 AT 模型本身的 white-box 攻擊，因此不構成對自適應攻擊者的穩健性結論。
-2. Leakage-free AT 的訓練攻擊（fgsm/eps0.03、pgd/eps0.03）屬於 24 個評估 profile 之列；其餘 profile 對 AT 而言為訓練未見攻擊。本文件未拆解見過／未見攻擊之差異。
+2. Leakage-free AT 的訓練攻擊（fgsm/eps0.03、pgd/eps0.03）屬於評估 profile 之列（亦屬主研究攻擊範圍）；其餘 profile 對 AT 而言為訓練未見攻擊。本文件未拆解見過／未見攻擊之差異。
 3. Leakage-free AT 僅以 SNR ≥ 0 dB 訓練，評估涵蓋 −20 至 18 dB；AT 模型 clean accuracy（50.73%）低於標準 AWN（59.00%），clean degradation 18.57%。
 4. Exploratory 與 leakage-free AT 的訓練設定不同（攻擊組合、eps、資料切分），兩者之差不能作為資料洩漏效應的估計。
 5. Hailo-8 結果為 surrogate transfer；未評估直接針對量化模型的攻擊。
 6. Backend toggle（mkldnn ON／OFF）之延遲差異為探索性 latency observation，僅適用於 Raspberry Pi 5、torch 2.14.0+cpu、intra 4／interop 1、B=1，不足以建立 ARM 平台之一般性 acceleration claim，亦不可跨平台泛化；AutoAttack 延遲分佈具重尾（p95 遠高於 median），配對比值以 median 表示。
 7. Adaptive-K 與 Hailo main-pipeline wiring 驗證為互動執行結果，數字來自執行輸出，未保存可重新檢查的結果檔。
 8. 全部結果屬 A0 數位域（攻擊直接作用於記憶體中的 AWN 輸入 IQ），不涉及空中傳輸或實體射頻通道，不能據以推論 OTA／RF 攻擊或防禦的可行性。
-9. Adaptive-K 與 AT 呈取捨關係：在同一分母下，leakage-free AT transfer 的 recovery（56.67%）與 net gain（35.90 pp）較高，但 clean degradation（18.57%）較高且需要重新訓練；Adaptive-K v2 的 recovery（27.08%）較低，clean degradation（5.24%）較低且不需訓練。兩者評估設定皆為 non-adaptive，不據此排定一般性的優劣。
+9. 合併指標限於 FGSM、PGD、CW、EAD 之 9 個 profile。Leakage-free AT 之 transfer 評估僅有 24 個 profile 合併之歷史範圍結果，尚無法在主範圍與 Adaptive-K 比較；與攻擊無關之差異為：AT 模型 clean accuracy（50.73%）低於標準 AWN（59.00%）且需要重新訓練，Adaptive-K v2 之 clean degradation（5.24%）較低且不需訓練。兩者評估設定皆為 non-adaptive，不據此排定一般性的優劣。

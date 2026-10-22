@@ -243,6 +243,9 @@ def main() -> None:
     ap.add_argument("--interop-threads", type=int, default=1)
     ap.add_argument("--smoke", action="store_true", help="baseline + lowest setting per attack, 1 burst/cell")
     ap.add_argument("--out-dir", default=None)
+    ap.add_argument("--save-x-adv", action="store_true", help="write attacked windows (x_adv.npz) after the run")
+    ap.add_argument("--legacy-backend-toggle", action="store_true",
+                    help="comparison only: reproduce the superseded run that passed both mkldnn-off opt-ins")
     args = ap.parse_args()
 
     import torch
@@ -253,7 +256,7 @@ def main() -> None:
     from src.adapters.awn_adapter import AWNModelAdapter
 
     ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
-    out = (REPO_ROOT / (args.out_dir or f"results/reduced_iteration_crc_fec_vm_{'smoke_' if args.smoke else ''}{ts}"))
+    out = (REPO_ROOT / (args.out_dir or f"results/{amc_study.run_dir_name('reduced_iteration_crc_fec_vm', args)}"))
     out = out.resolve()
     out.mkdir(parents=True, exist_ok=False)
     fh = (out / "run.log").open("w")
@@ -275,8 +278,10 @@ def main() -> None:
             raise RuntimeError(f"preflight failed: {checks}")
         with contextlib.redirect_stdout(io.StringIO()):
             awn = AWNModelAdapter(str(ckpt))
-            adapter = AttackAdapter(awn_model=awn.model, b1_pgd_bim_mkldnn_off=True, b1_mkldnn_off_extended=True)
+            adapter = AttackAdapter(awn_model=awn.model, **amc_study.backend_toggle_kwargs(args.legacy_backend_toggle))
         checks["real_backends_loaded"] = awn.status == "ok" and adapter.status == "ok"
+        checks["backend_toggle_matches_configuration"] = amc_study.backend_toggle_ok(args.legacy_backend_toggle, adapter)
+        state["backend_toggle"] = amc_study.backend_toggle_manifest(args.legacy_backend_toggle, adapter)
         if not checks["real_backends_loaded"]:
             raise RuntimeError(f"backend not loaded: awn={awn.notes} attack={adapter.notes}")
 
@@ -318,10 +323,12 @@ def main() -> None:
                     a_seed = formal.derive_seed(BASE_SEED, mod, snr, i,
                                                 f"{prof['attack']}|{prof['profile']}|fec{int(fec)}")
                     tc = time.perf_counter_ns()
-                    r, _ = scp.run_burst_chain(b, awn=awn, attack_adapter=adapter, attack=prof["attack"],
-                                               eps=prof["eps"], torch_seed=seed, attack_seed=a_seed,
-                                               attack_kwargs=kw)
+                    r, x_rx = scp.run_burst_chain(b, awn=awn, attack_adapter=adapter, attack=prof["attack"],
+                                                  eps=prof["eps"], torch_seed=seed, attack_seed=a_seed,
+                                                  attack_kwargs=kw)
                     r["chain_latency_ms"] = (time.perf_counter_ns() - tc) / 1e6
+                    if args.save_x_adv:
+                        x_store[f"{prof['attack']}|{prof['profile']}|{mod}|{snr}|fec{int(fec)}|{i}"] = np.array(x_rx)
                     r.update(group=group, profile=prof["profile"], is_baseline=prof["is_baseline"],
                              steps=prof["steps"], binary_search_steps=prof["binary_search_steps"],
                              max_iterations=prof["max_iterations"], burst_index=i, burst_seed=seed,
@@ -330,11 +337,14 @@ def main() -> None:
                 log(f"[{group}] {prof['attack']}/{prof['profile']}: {len(bursts)} bursts "
                     f"({time.monotonic() - t0:.0f} s)", fh)
 
+        x_store = {}
         run_group("fgsm", amc_study.fgsm_profiles())
         run_group("pgd", amc_study.pgd_profiles())
         run_group("cw", amc_study.cw_profiles())
         run_group("ead_phase1", amc_study.ead_phase1_profiles())
         run_group("ead_phase2", amc_study.ead_phase2_profiles(args.ead_phase2_max_iterations))
+        if args.save_x_adv:
+            amc_study.save_x_adv(out / "x_adv.npz", x_store)
         state["completed"] = True
     except Exception as exc:  # noqa: BLE001 -- recorded; validation FAILs
         state["error"] = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
@@ -384,7 +394,8 @@ def main() -> None:
     checks["all_four_attacks_present"] = {r["attack"] for r in rows} >= {"fgsm", "pgd", "cw", "ead"}
     gated = ["completed", "attack_fallback_zero", "demod_status_allowed_only", "crc_pass_is_bool", "no_nan_inf",
              "expected_matrix_complete", "degenerate_excluded_from_summary_and_min", "all_four_attacks_present",
-             "adversarial_rf_at_pin", "awn_submodule_at_pin", "checkpoint_hash_ok", "real_backends_loaded"]
+             "adversarial_rf_at_pin", "awn_submodule_at_pin", "checkpoint_hash_ok", "real_backends_loaded",
+             "backend_toggle_matches_configuration"]
     failed = [k for k in gated if not checks.get(k)]
     validation = {
         "overall": "PASS" if not failed else "FAIL", "failed_checks": failed, "checks": checks,
@@ -416,7 +427,7 @@ def main() -> None:
                                "after --warmup untimed calls per profile",
                     "secondary": "run_burst_chain() wall time (AMC x2, attack, demod x4, FEC decode, CRC)",
                     "platform": "VMware VM on i7-11700, torch intra 1 / interop 1; not a native-desktop latency"},
-        "mkldnn_note": "AttackAdapter B=1 mkldnn-off opt-ins as in the AMC study; validated on Raspberry Pi only",
+        "backend_toggle": state.get("backend_toggle") or amc_study.backend_toggle_manifest(args.legacy_backend_toggle),
         "validation_overall": validation["overall"]}
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, default=str))
     log(f"validation {validation['overall']} failed={failed} ({time.monotonic() - t_start:.0f} s)", fh)

@@ -1,28 +1,28 @@
 item,scope,value,source_file
-platform,all,VMware Virtual Platform (VMware),results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-cpu_model,all,11th Gen Intel(R) Core(TM) i7-11700 @ 2.50GHz,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-python,all,3.13.11,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-torch,all,2.10.0+cu128,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-torchattacks,all,3.5.1,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-numpy,all,2.4.3,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-torch_intra_op_threads,R1/R3/R4/R5,1/1/1/1,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-torch_inter_op_threads,R1/R3/R4/R5,1/1/1/1,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-repo_head,all,4e710d77029c235e06819bf37a9116d88dfae637,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-adversarial_rf_commit,all,ced705ed861bde352841b0b8bd038a6449e0fa4d,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-checkpoint_sha256,all,8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-dataset_sha256,AMC-only (R1),b29ccc25b00d0718cd3b70ffa9158662ec83f6d9b63ffd845c7bcbe3b3096e8c,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-attack_adapter_options,R1/R3/R4,"AttackAdapter(b1_pgd_bim_mkldnn_off=True, b1_mkldnn_off_extended=True)",results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-amc_samples,R1,"88 = 11 modulations x SNR {-20,-6,6,18} dB x sample_index {0,1}; B=1",results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-amc_latency_protocol,R1,3 untimed warm-up calls per profile pass; 4 replications (352 calls per profile); profile order reversed on odd replications,results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-amc_usable_criterion,R1,"conditional ASR >= 0.9 x formal 2,200-sample CPU baseline",results/reduced_iteration_attacks_vm_20261022_084556/manifest.json
-synthetic_bursts,R3/R4/R5,"8 digital modulations x SNR 18 dB x FEC requested {off,on} x 25 bursts",results/reduced_iteration_crc_fec_vm_20261022_093829/manifest.json
-synthetic_burst_params,R3/R4/R5,"{""n_symbols"": 16, ""n_pilots"": 2, ""sps"": 8, ""beta"": 0.35, ""target_rms"": 0.0082, ""cfo_std"": 0.0, ""n_guard"": 16}",results/reduced_iteration_crc_fec_vm_20261022_093829/manifest.json
-soft_decision_viterbi,R3/R4/R5,True,results/reduced_iteration_crc_fec_vm_20261022_093829/manifest.json
-crc_usable_criterion,R3,metric >= 0.9 x same-domain baseline (same FEC setting),results/reduced_iteration_crc_fec_vm_20261022_093829/manifest.json
-defense_fixed,R4/R5,"TopKAdapter(mode='fixed').apply(x_adv, topk=K) -> external/adversarial-rf/util/defense.py:fft_topk_denoise; full complex FFT, top-K bins kept per I/Q channel",results/reduced_iteration_crc_fec_defense_vm_20261022_103042/manifest.json
-defense_adaptive,R4/R5,TopKAdapter(mode='adaptive').apply(x_adv) -> external/adversarial-rf/util/defense.py:adaptive_k_v2_snr_defense with default parameters,results/reduced_iteration_crc_fec_defense_vm_20261022_103042/manifest.json
-adaptive_k_default_parameters,R4/R5,"{""ratio_thresh"": 0.05, ""flatness_threshold"": 0.4, ""quant_levels"": 32, ""pilot_k"": 10, ""snr_low"": 3.0, ""snr_high"": 10.0, ""k_max_low_snr"": 35, ""k_max_high_snr"": 20}",results/reduced_iteration_crc_fec_defense_vm_20261022_103042/manifest.json
-adaptive_k_snr_source,R4/R5,"blind waveform estimate: production _estimate_snr_from_fft on the defense input's own FFT (sum of top-pilot_k PSD bins / sum of remaining bins, linear); no experiment metadata or injected SNR",results/reduced_iteration_crc_fec_defense_vm_20261022_103042/manifest.json
-defense_evaluation,R4,post-attack defense evaluation: one x_adv per burst/profile shared by all defense branches; the attack is not defense-aware,results/reduced_iteration_crc_fec_defense_vm_20261022_103042/manifest.json
-seed_rule,R3/R4/R5,"burst: derive_seed(42, mod, snr, i, 'synth_txrx|fec<0|1>'); torch.manual_seed(burst seed) before every attack; attack seed derive_seed(..., '<attack>|<profile>|fec<0|1>')",results/reduced_iteration_crc_fec_defense_vm_20261022_103042/manifest.json
-integration_reference,R2,"{""synth_txrx"": ""external/adversarial-rf/util/synth_txrx.py"", ""legacy_pipeline"": ""external/adversarial-rf/crc_defense_pipeline_fec.py"", ""adversarial_rf_commit"": ""ced705ed861bde352841b0b8bd038a6449e0fa4d""}",results/synth_crc_fec_integration_20261022_090735/manifest.json
+platform,all,VMware Virtual Platform (VMware),results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+cpu_model,all,11th Gen Intel(R) Core(TM) i7-11700 @ 2.50GHz,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+python,all,3.13.11,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+torch,all,2.10.0+cu128,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+torchattacks,all,3.5.1,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+numpy,all,2.4.3,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+torch_intra_op_threads,R1/R3/R4/R5,1/1/1/1,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+torch_inter_op_threads,R1/R3/R4/R5,1/1/1/1,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+repo_head,all,f49d618d74ce7d6e9ba497566a3f780d2d5acaa2,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+adversarial_rf_commit,all,ced705ed861bde352841b0b8bd038a6449e0fa4d,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+checkpoint_sha256,all,8af0458f2570c465b5bb0ebad00817944f8171d888cd7cff1324ecb258820695,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+dataset_sha256,AMC-only (R1),b29ccc25b00d0718cd3b70ffa9158662ec83f6d9b63ffd845c7bcbe3b3096e8c,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+attack_adapter_options,R1/R2/R3/R4,AttackAdapter default options (PyTorch default backend path),results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+amc_samples,R1,"88 = 11 modulations x SNR {-20,-6,6,18} dB x sample_index {0,1}; B=1",results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+amc_latency_protocol,R1,3 untimed warm-up calls per profile pass; 4 replications (352 calls per profile); profile order reversed on odd replications,results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+amc_usable_criterion,R1,"conditional ASR >= 0.9 x formal 2,200-sample CPU baseline",results/reduced_iteration_attacks_vm_20261022_185732/manifest.json
+synthetic_bursts,R3/R4/R5,"8 digital modulations x SNR 18 dB x FEC requested {off,on} x 25 bursts",results/reduced_iteration_crc_fec_vm_20261022_190944/manifest.json
+synthetic_burst_params,R3/R4/R5,"{""n_symbols"": 16, ""n_pilots"": 2, ""sps"": 8, ""beta"": 0.35, ""target_rms"": 0.0082, ""cfo_std"": 0.0, ""n_guard"": 16}",results/reduced_iteration_crc_fec_vm_20261022_190944/manifest.json
+soft_decision_viterbi,R3/R4/R5,True,results/reduced_iteration_crc_fec_vm_20261022_190944/manifest.json
+crc_usable_criterion,R3,metric >= 0.9 x same-domain baseline (same FEC setting),results/reduced_iteration_crc_fec_vm_20261022_190944/manifest.json
+defense_fixed,R4/R5,"TopKAdapter(mode='fixed').apply(x_adv, topk=K) -> external/adversarial-rf/util/defense.py:fft_topk_denoise; full complex FFT, top-K bins kept per I/Q channel",results/reduced_iteration_crc_fec_defense_vm_20261022_192248/manifest.json
+defense_adaptive,R4/R5,TopKAdapter(mode='adaptive').apply(x_adv) -> external/adversarial-rf/util/defense.py:adaptive_k_v2_snr_defense with default parameters,results/reduced_iteration_crc_fec_defense_vm_20261022_192248/manifest.json
+adaptive_k_default_parameters,R4/R5,"{""ratio_thresh"": 0.05, ""flatness_threshold"": 0.4, ""quant_levels"": 32, ""pilot_k"": 10, ""snr_low"": 3.0, ""snr_high"": 10.0, ""k_max_low_snr"": 35, ""k_max_high_snr"": 20}",results/reduced_iteration_crc_fec_defense_vm_20261022_192248/manifest.json
+adaptive_k_snr_source,R4/R5,"blind waveform estimate: production _estimate_snr_from_fft on the defense input's own FFT (sum of top-pilot_k PSD bins / sum of remaining bins, linear); no experiment metadata or injected SNR",results/reduced_iteration_crc_fec_defense_vm_20261022_192248/manifest.json
+defense_evaluation,R4,post-attack defense evaluation: one x_adv per burst/profile shared by all defense branches; the attack is not defense-aware,results/reduced_iteration_crc_fec_defense_vm_20261022_192248/manifest.json
+seed_rule,R3/R4/R5,"burst: derive_seed(42, mod, snr, i, 'synth_txrx|fec<0|1>'); torch.manual_seed(burst seed) before every attack; attack seed derive_seed(..., '<attack>|<profile>|fec<0|1>')",results/reduced_iteration_crc_fec_defense_vm_20261022_192248/manifest.json
+integration_reference,R2,"{""synth_txrx"": ""external/adversarial-rf/util/synth_txrx.py"", ""legacy_pipeline"": ""external/adversarial-rf/crc_defense_pipeline_fec.py"", ""adversarial_rf_commit"": ""ced705ed861bde352841b0b8bd038a6449e0fa4d""}",results/synth_crc_fec_integration_20261022_190837/manifest.json

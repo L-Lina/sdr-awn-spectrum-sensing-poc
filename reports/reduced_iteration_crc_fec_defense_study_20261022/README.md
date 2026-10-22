@@ -18,13 +18,13 @@
 
 | 代號 | Run 目錄 | 內容 |
 |---|---|---|
-| R1 | `results/reduced_iteration_attacks_vm_20261022_084556/` | RadioML 2016.10a AMC-only reduced-iteration（88 樣本，27 profiles） |
-| R2 | `results/synth_crc_fec_integration_20261022_090735/` | Synthetic TX/RX CRC/FEC chain 整合驗證 |
-| R3 | `results/reduced_iteration_crc_fec_vm_20261022_093829/` | Synthetic TX/RX reduced-iteration × CRC × FEC（SNR 18 dB，25 bursts/cell，26 unique profiles） |
-| R4 | `results/reduced_iteration_crc_fec_defense_vm_20261022_103042/` | 12 attack profiles × 6 defenses × CRC × FEC（28,800 rows） |
+| R1 | `results/reduced_iteration_attacks_vm_20261022_185732/` | RadioML 2016.10a AMC-only reduced-iteration（88 樣本，27 profiles） |
+| R2 | `results/synth_crc_fec_integration_20261022_190837/` | Synthetic TX/RX CRC/FEC chain 整合驗證 |
+| R3 | `results/reduced_iteration_crc_fec_vm_20261022_190944/` | Synthetic TX/RX reduced-iteration × CRC × FEC（SNR 18 dB，25 bursts/cell，26 unique profiles） |
+| R4 | `results/reduced_iteration_crc_fec_defense_vm_20261022_192248/` | 12 attack profiles × 6 defenses × CRC × FEC（28,800 rows） |
 | R5 | `results/clean_crc_fec_defense_vm_20261022_104250/` | Clean-only defense control（2,400 rows，無攻擊） |
 
-各來源檔之路徑、位元組數與 SHA-256 列於 `data/source_manifest.csv`。`results/` 不納入版本控制；完整 run 目錄另以 `research_results_20261022.zip` 封存。
+各來源檔之路徑、位元組數與 SHA-256 列於 `data/source_manifest.csv`。`results/` 不納入版本控制；完整 run 目錄另以 `research_results_20261022_default_backend.zip` 封存。先前之 `research_results_20261022.zip` 為已被取代之歷史封存，不作為本研究之來源。
 
 ## 4. `data/`
 

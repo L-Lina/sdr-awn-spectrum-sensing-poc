@@ -29,10 +29,10 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "reports" / "reduced_iteration_crc_fec_defense_study_20261022"
-R1 = "results/reduced_iteration_attacks_vm_20261022_084556"
-R2 = "results/synth_crc_fec_integration_20261022_090735"
-R3 = "results/reduced_iteration_crc_fec_vm_20261022_093829"
-R4 = "results/reduced_iteration_crc_fec_defense_vm_20261022_103042"
+R1 = "results/reduced_iteration_attacks_vm_20261022_185732"
+R2 = "results/synth_crc_fec_integration_20261022_190837"
+R3 = "results/reduced_iteration_crc_fec_vm_20261022_190944"
+R4 = "results/reduced_iteration_crc_fec_defense_vm_20261022_192248"
 R5 = "results/clean_crc_fec_defense_vm_20261022_104250"
 RUNS = (R1, R2, R3, R4, R5)
 REQUIRED = {
@@ -42,8 +42,9 @@ REQUIRED = {
     R4: ("validation.json", "manifest.json", "profile_summary.csv", "defense_summary.csv", "modulation_summary.csv",
          "adaptive_k_selection_summary.csv", "latency_summary.csv", "raw_samples.csv"),
     R5: ("validation.json", "manifest.json", "defense_clean_summary.csv", "modulation_summary.csv",
-         "adaptive_k_selection_summary.csv", "latency_summary.csv", "attack_run_decomposition.csv", "raw_samples.csv"),
+         "adaptive_k_selection_summary.csv", "latency_summary.csv", "raw_samples.csv"),
 }
+FORMAL_ATTACK_RUNS = (R1, R2, R3, R4)  # runs that generate attacks: must use the AttackAdapter default path
 FOUR = {"fgsm", "pgd", "cw", "ead"}
 DEF = ["none", "topk10", "topk20", "topk30", "topk40", "adaptive_k"]
 DEF_LABEL = {"none": "none", "topk10": "K10", "topk20": "K20", "topk30": "K30", "topk40": "K40",
@@ -97,6 +98,51 @@ def preflight():
             require((REPO / run / fn).is_file(), f"required source file missing: {run}/{fn}")
         v = json.loads((REPO / run / "validation.json").read_text())
         require(v.get("overall") == "PASS", f"{run}/validation.json overall is {v.get('overall')!r}, not PASS")
+    for run in FORMAL_ATTACK_RUNS:
+        m = json.loads((REPO / run / "manifest.json").read_text())
+        v = json.loads((REPO / run / "validation.json").read_text())
+        bt = m.get("backend_toggle") or {}
+        require("legacy_toggle_repro" not in run and bt.get("run_role") == "formal"
+                and bt.get("b1_pgd_bim_mkldnn_off") is False and bt.get("b1_mkldnn_off_extended") is False
+                and v["checks"].get("backend_toggle_matches_configuration") is True,
+                f"{run} is not a formal default-backend run: {bt}")
+
+
+def decomposition(r4_raw, r5_raw):
+    """Join the clean-only control (R5) with the attack run (R4) on (modulation, FEC request, burst index,
+    defense): for every clean-correct burst counted as attack success after defense, whether the same defense
+    alone already misclassifies the clean burst (rule of experiments/benchmark_clean_crc_fec_defense_vm.py)."""
+    clean = {(r["true_modulation"], r["fec_requested"] == "True", int(r["burst_index"]), r["defense"]): r
+             for r in rd(r5_raw)}
+    groups, cross = {}, Counter()
+    for r in rd(r4_raw):
+        if r["payload_degenerate"] == "True":
+            continue
+        c = clean.get((r["true_modulation"], r["fec_requested"] == "True", int(r["burst_index"]), r["defense"]))
+        if c is None:
+            continue
+        c_wrong = c["clean_correct_after_defense"] != "True"
+        if r["defense"] == "none":
+            cross["compared"] += 1
+            cross["identical"] += int(r["clean_pred"] == c["clean_pred_none"])
+        g = groups.setdefault((r["attack"], r["profile"], r["effective_fec"], r["defense"]), Counter())
+        if r["clean_correct"] != "True":
+            continue
+        g["n"] += 1
+        g["clean_wrong"] += int(c_wrong)
+        if r["attack_success_after_defense"] == "True":
+            g["after"] += 1
+            g["after_and_clean_wrong"] += int(c_wrong)
+    require(cross["compared"] > 0 and cross["identical"] == cross["compared"],
+            f"clean predictions of the attack run and the clean-only control differ: {dict(cross)}")
+    out = {}
+    for k, g in groups.items():
+        n = g["n"]
+        out[k] = {"clean_defense_misclassification_pct_of_clean_correct": 100 * g["clean_wrong"] / n if n else "",
+                  "n_success_after_where_clean_defense_also_wrong": g["after_and_clean_wrong"],
+                  "share_of_success_after_explained_by_clean_defense_pct":
+                      100 * g["after_and_clean_wrong"] / g["after"] if g["after"] else ""}
+    return out
 
 
 # ======================================================================================== data/
@@ -189,8 +235,7 @@ def build_data():
 
     p4 = rd(f"{R4}/profile_summary.csv")
     d4 = {(r["attack"], r["profile"], r["effective_fec"], r["defense"]): r for r in rd(f"{R4}/defense_summary.csv")}
-    dec = {(r["attack"], r["profile"], r["effective_fec"], r["defense"]): r
-           for r in rd(f"{R5}/attack_run_decomposition.csv")}
+    dec = decomposition(f"{R4}/raw_samples.csv", f"{R5}/raw_samples.csv")
     rows = []
     for r in p4:
         k = (r["attack"], r["profile"], r["effective_fec"], r["defense"])
@@ -223,7 +268,7 @@ def build_data():
                      "share_of_success_after_explained_by_clean_defense_pct":
                          dd.get("share_of_success_after_explained_by_clean_defense_pct", ""),
                      "source_file": f"{R4}/profile_summary.csv;{R4}/defense_summary.csv;"
-                                    f"{R5}/defense_clean_summary.csv;{R5}/attack_run_decomposition.csv"})
+                                    f"{R5}/defense_clean_summary.csv;{R4}/raw_samples.csv;{R5}/raw_samples.csv"})
     rows.sort(key=lambda r: (r["attack"], r["profile"], r["fec"], DEF.index(r["defense"])))
     require(len(rows) == 12 * 2 * 6, f"expected 144 attack x defense rows, found {len(rows)}")
     require({r["defense"] for r in rows} == set(DEF), "attack x defense matrix lacks a defense branch")
@@ -364,7 +409,7 @@ def build_data():
         ("adversarial_rf_commit", "all", m1["git"]["adversarial_rf_head"], R1),
         ("checkpoint_sha256", "all", m1["inputs"]["checkpoint_sha256"], R1),
         ("dataset_sha256", "AMC-only (R1)", m1["inputs"]["dataset_sha256"], R1),
-        ("attack_adapter_options", "R1/R3/R4", m1["mkldnn_options"]["adapter"], R1),
+        ("attack_adapter_options", "R1/R2/R3/R4", "AttackAdapter default options (PyTorch default backend path)", R1),
         ("amc_samples", "R1", "88 = 11 modulations x SNR {-20,-6,6,18} dB x sample_index {0,1}; B=1", R1),
         ("amc_latency_protocol", "R1", "3 untimed warm-up calls per profile pass; 4 replications (352 calls per "
                                        "profile); profile order reversed on odd replications", R1),
@@ -1231,7 +1276,8 @@ def build_report(D):
     w("## 10. 實驗限制\n")
     w(f"1. **Latency 平台**：所有 latency 為 x86 VM latency（{e['dmi_product_name']}，Intel Core i7-11700，torch intra-op "
       f"{e['torch_num_threads']}、inter-op {e['torch_num_interop_threads']}，B = 1），不代表 native desktop、嵌入式平台或加速器之"
-      "延遲。")
+      "延遲。Attack latency 為 PyTorch 預設 backend 路徑下之量測，僅用於比較 reduced-iteration／reduced-search-budget "
+      "設定。")
     w(f"2. **樣本數**：AMC-only 之 conditional ASR 分母為 {n_cc_amc}；synthetic 資料域 FEC on 之分母為 {cc_on}，recovery rate "
       "之分母為 attack success 數。接近準則門檻之設定具抽樣敏感性。")
     w("3. **掃描範圍與準則**：Minimum usable setting 僅於所列離散設定與 90% baseline-efficacy criterion 下成立。PGD 之 alpha "
@@ -1270,13 +1316,13 @@ README = """# reduced_iteration_crc_fec_defense_study_20261022
 
 | 代號 | Run 目錄 | 內容 |
 |---|---|---|
-| R1 | `results/reduced_iteration_attacks_vm_20261022_084556/` | RadioML 2016.10a AMC-only reduced-iteration（88 樣本，27 profiles） |
-| R2 | `results/synth_crc_fec_integration_20261022_090735/` | Synthetic TX/RX CRC/FEC chain 整合驗證 |
-| R3 | `results/reduced_iteration_crc_fec_vm_20261022_093829/` | Synthetic TX/RX reduced-iteration × CRC × FEC（SNR 18 dB，25 bursts/cell，26 unique profiles） |
-| R4 | `results/reduced_iteration_crc_fec_defense_vm_20261022_103042/` | 12 attack profiles × 6 defenses × CRC × FEC（28,800 rows） |
-| R5 | `results/clean_crc_fec_defense_vm_20261022_104250/` | Clean-only defense control（2,400 rows，無攻擊） |
+| R1 | `@R1@/` | RadioML 2016.10a AMC-only reduced-iteration（88 樣本，27 profiles） |
+| R2 | `@R2@/` | Synthetic TX/RX CRC/FEC chain 整合驗證 |
+| R3 | `@R3@/` | Synthetic TX/RX reduced-iteration × CRC × FEC（SNR 18 dB，25 bursts/cell，26 unique profiles） |
+| R4 | `@R4@/` | 12 attack profiles × 6 defenses × CRC × FEC（28,800 rows） |
+| R5 | `@R5@/` | Clean-only defense control（2,400 rows，無攻擊） |
 
-各來源檔之路徑、位元組數與 SHA-256 列於 `data/source_manifest.csv`。`results/` 不納入版本控制；完整 run 目錄另以 `research_results_20261022.zip` 封存。
+各來源檔之路徑、位元組數與 SHA-256 列於 `data/source_manifest.csv`。`results/` 不納入版本控制；完整 run 目錄另以 `research_results_20261022_default_backend.zip` 封存。先前之 `research_results_20261022.zip` 為已被取代之歷史封存，不作為本研究之來源。
 
 ## 4. `data/`
 
@@ -1344,7 +1390,10 @@ def main():
     D = build_data()
     build_figures(D)
     build_report(D)
-    (OUT / "README.md").write_text(README, encoding="utf-8")
+    readme = README
+    for tag, run in (("@R1@", R1), ("@R2@", R2), ("@R3@", R3), ("@R4@", R4), ("@R5@", R5)):
+        readme = readme.replace(tag, run)
+    (OUT / "README.md").write_text(readme, encoding="utf-8")
     n = write_manifest()
     self_check()
     after = {p: (p.stat().st_size, p.stat().st_mtime_ns) for run in RUNS for p in (REPO / run).rglob("*") if p.is_file()}

@@ -73,7 +73,7 @@ BASE_SEED = 42
 EXPECTED_CHECKPOINT_SHA256 = amc_study.EXPECTED_CHECKPOINT_SHA256
 EXPECTED_ADV_RF_COMMIT = amc_study.EXPECTED_ADV_RF_COMMIT
 EXPECTED_AWN_COMMIT = "0b3d2b2d3d5d4761e73eb91e223844b4b8585b53"
-PRIOR_CRC_RUN = "results/reduced_iteration_crc_fec_vm_20261022_093829"
+PRIOR_CRC_RUN = "results/reduced_iteration_crc_fec_vm_20261022_190944"
 FIXED_KS = (10, 20, 30, 40)
 DEFENSES = ("none",) + tuple(f"topk{k}" for k in FIXED_KS) + ("adaptive_k",)
 ALLOWED_DEMOD_STATUS = {stx.DEMOD_OK, stx.DEMOD_NOT_DIGITAL, stx.DEMOD_FAMILY_MISMATCH}
@@ -232,6 +232,11 @@ def main() -> None:
     ap.add_argument("--interop-threads", type=int, default=1)
     ap.add_argument("--smoke", action="store_true", help="1 burst/cell; FGSM eps0.03, PGD steps5, CW steps10, EAD 5x10")
     ap.add_argument("--out-dir", default=None)
+    ap.add_argument("--prior-crc-run", default=PRIOR_CRC_RUN,
+                    help="reduced-iteration CRC/FEC run used for the informational attack-reproduction check")
+    ap.add_argument("--save-x-adv", action="store_true", help="write x_adv arrays (x_adv.npz) after the run")
+    ap.add_argument("--legacy-backend-toggle", action="store_true",
+                    help="comparison only: reproduce the superseded run that passed both mkldnn-off opt-ins")
     args = ap.parse_args()
 
     import torch
@@ -245,7 +250,7 @@ def main() -> None:
 
     ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
     out = (REPO_ROOT / (args.out_dir or
-                        f"results/reduced_iteration_crc_fec_defense_vm_{'smoke_' if args.smoke else ''}{ts}")).resolve()
+                        f"results/{amc_study.run_dir_name('reduced_iteration_crc_fec_defense_vm', args)}")).resolve()
     out.mkdir(parents=True, exist_ok=False)
     fh = (out / "run.log").open("w")
     t_start = time.monotonic()
@@ -272,12 +277,14 @@ def main() -> None:
 
         with contextlib.redirect_stdout(_Null()):
             awn = AWNModelAdapter(str(ckpt))
-            adapter = AttackAdapter(awn_model=awn.model, b1_pgd_bim_mkldnn_off=True, b1_mkldnn_off_extended=True)
+            adapter = AttackAdapter(awn_model=awn.model, **amc_study.backend_toggle_kwargs(args.legacy_backend_toggle))
             topk_fixed = tka.TopKAdapter(mode="fixed")
             topk_adapt = tka.TopKAdapter(mode="adaptive")
         checks["real_backends_loaded"] = (awn.status == "ok" and adapter.status == "ok" and topk_fixed.backend_available
                                           and topk_fixed.backend_name == tka._REAL_SOURCE
                                           and topk_adapt.backend_name == tka._ADAPTIVE_SOURCE)
+        checks["backend_toggle_matches_configuration"] = amc_study.backend_toggle_ok(args.legacy_backend_toggle, adapter)
+        state["backend_toggle"] = amc_study.backend_toggle_manifest(args.legacy_backend_toggle, adapter)
         checks["adaptive_is_production_function"] = (tka._real_adaptive_k_v2_snr_defense is D.adaptive_k_v2_snr_defense
                                                      and tka._real_fft_topk_denoise is D.fft_topk_denoise)
         if not (checks["real_backends_loaded"] and checks["adaptive_is_production_function"]):
@@ -337,6 +344,7 @@ def main() -> None:
                            "adaptive_route": i0["route"], "adaptive_snr_value": i0["snr_value"],
                            "adaptive_k_max": i0["k_max"], "adaptive_knee_uncapped": i0["knee_uncapped"]}
 
+        x_store = {}
         for prof in profs:
             t0p = time.monotonic()
             kw = attack_kwargs(prof)
@@ -353,6 +361,8 @@ def main() -> None:
                 x_adv = np.ascontiguousarray(x_adv, dtype=np.float32)
                 x_adv.setflags(write=False)
                 adv_sha = formal.sha256_array(x_adv)
+                if args.save_x_adv:
+                    x_store[f"{prof['attack']}|{prof['profile']}|{mod}|{args.snr}|fec{int(fec)}|{i}"] = np.array(x_adv)
                 label = base_row["true_label"]
                 for dname in DEFENSES:
                     in_sha = formal.sha256_array(x_adv)
@@ -410,6 +420,8 @@ def main() -> None:
                     rows.append(row)
             log(f"{prof['attack']}/{prof['profile']}: {len(bursts)} bursts x {len(DEFENSES)} defenses "
                 f"({time.monotonic() - t0p:.0f} s)", fh)
+        if args.save_x_adv:
+            amc_study.save_x_adv(out / "x_adv.npz", x_store)
         state["completed"] = True
     except Exception as exc:  # noqa: BLE001 -- recorded; validation FAILs
         state["error"] = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
@@ -535,7 +547,7 @@ def main() -> None:
     checks["all_four_attacks_present"] = {r["attack"] for r in rows} >= {"fgsm", "pgd", "cw", "ead"}
     # informational: x_adv regenerated under the prior run's seeds -> same attacked prediction / linf
     prior = {}
-    pp = REPO_ROOT / PRIOR_CRC_RUN / "raw_bursts.csv"
+    pp = REPO_ROOT / args.prior_crc_run / "raw_bursts.csv"
     if pp.exists():
         with pp.open(newline="") as f:
             for r in csv.DictReader(f):
@@ -554,14 +566,14 @@ def main() -> None:
              "fixed_k_matches_selected_k", "same_x_adv_across_defenses", "demod_status_allowed_only", "crc_pass_is_bool",
              "no_nan_inf", "payload_degenerate_excluded_from_aggregates", "matrix_complete", "all_four_attacks_present",
              "adversarial_rf_at_pin", "awn_submodule_at_pin", "checkpoint_hash_ok", "real_backends_loaded",
-             "adaptive_is_production_function"]
+             "adaptive_is_production_function", "backend_toggle_matches_configuration"]
     failed = [k for k in gated if not checks.get(k)]
     validation = {"overall": "PASS" if not failed else "FAIL", "failed_checks": failed, "checks": checks,
                   "counters": dict(counters), "n_rows": len(rows), "n_valid_rows": len(valid),
                   "n_degenerate_rows": len(rows) - len(valid), "expected_rows": expected,
                   "n_burst_profile_units": len(by_burst), "n_profiles": len(profs), "n_bursts": n_bursts_total,
                   "informational": {"prior_run_attack_reproduction": {"compared": cmp_n, "identical_pred_and_linf": cmp_ok,
-                                                                      "prior_run": PRIOR_CRC_RUN}},
+                                                                      "prior_run": args.prior_crc_run}},
                   "error": state.get("error")}
     (out / "validation.json").write_text(json.dumps(validation, indent=2, default=str))
     manifest = {
@@ -597,7 +609,7 @@ def main() -> None:
                     "attack_plus_defense_latency_ms_derived": "composite = attack latency + defense latency of the "
                                                               "same burst; derived, not a measured call",
                     "platform": "x86 VM latency: VMware VM, i7-11700, torch intra 1 / interop 1"},
-        "mkldnn_note": "AttackAdapter B=1 mkldnn-off opt-ins as in previous runs; validated on Raspberry Pi only",
+        "backend_toggle": state.get("backend_toggle") or amc_study.backend_toggle_manifest(args.legacy_backend_toggle),
         "validation_overall": validation["overall"]}
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, default=str))
     log(f"validation {validation['overall']} failed={failed} ({time.monotonic() - t_start:.0f} s)", fh)

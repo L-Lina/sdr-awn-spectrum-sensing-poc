@@ -75,7 +75,7 @@ Minimum usable setting 指在目前掃描範圍與既定 efficacy criterion 下�
 | 平台 | VMware Virtual Platform，Intel Core i7-11700；latency 均為 x86 VM latency |
 | 軟體 | Python 3.13.11、torch 2.10.0+cu128、torchattacks 3.5.1、numpy 2.4.3 |
 | Threads | torch intra-op 1、inter-op 1 |
-| Commits | repository `4e710d77`；`external/adversarial-rf` `ced705ed` |
+| Commits | repository `f49d618d`；`external/adversarial-rf` `ced705ed` |
 | Checkpoint | `2016.10a_AWN.pkl`，SHA-256 `8af0458f…0695` |
 | AMC-only latency | 每 profile 4 replications × 88 = 352 次呼叫，profile 順序於奇數 replication 反轉 |
 | Synthetic latency | 每 burst × profile 1 次計時呼叫；defense latency 為 `TopKAdapter.apply()` 呼叫時間 |
@@ -90,26 +90,26 @@ Minimum usable setting 指在目前掃描範圍與既定 efficacy criterion 下�
 
 | 攻擊 | 設定 | conditional ASR | 滿足準則 | Latency（ms） | Latency 降低 |
 |---|---|---|---|---|---|
-| FGSM | eps 0.005／0.01／0.03／0.05 | 13.6%／27.3%／63.6%／79.5% | N/A | 2.45／2.56／2.47／2.50 | N/A |
-| PGD | steps 1／2／3／5 | 20.5%／40.9%／52.3%／70.5% | 否 | 2.41／3.77／4.99／7.38 | 82.5%／72.6%／63.7%／46.4% |
-| PGD | **steps 7** | **77.3%** | 是 | **9.83** | **28.5%** |
-| PGD | steps 10（baseline） | 84.1% | 是 | 13.76 | N/A |
-| CW | steps 1／2／3／5／10 | 0.0%／11.4%／22.7%／47.7%／75.0% | 否 | 3.28／5.25／7.16／10.76／12.66 | 79.8%／67.6%／55.8%／33.5%／21.8% |
-| CW | **steps 15** | **86.4%** | 是 | **12.78** | **21.0%** |
-| CW | steps 20（baseline） | 93.2% | 是 | 16.19 | N/A |
-| EAD | bss 9 × max_it 10／20／30／50／75 | 100% | 是 | 99.53／142.97／198.16／282.41／377.66 | 79.6%／70.6%／59.3%／42.0%／22.4% |
-| EAD | bss 9 × max_it 100（baseline） | 100% | 是 | 486.98 | N/A |
-| EAD | max_it 10 × bss 1／3 | 0.0%／25.0% | 否 | 7.57／28.53 | 98.4%／94.1% |
-| EAD | **max_it 10 × bss 5** | **100%** | 是 | **56.14** | **88.5%** |
+| FGSM | eps 0.005／0.01／0.03／0.05 | 13.6%／27.3%／63.6%／79.5% | N/A | 2.47／2.42／2.44／2.50 | N/A |
+| PGD | steps 1／2／3／5 | 20.5%／40.9%／52.3%／70.5% | 否 | 2.49／3.72／4.94／7.40 | 81.6%／72.6%／63.6%／45.5% |
+| PGD | **steps 7** | **77.3%** | 是 | **9.76** | **28.1%** |
+| PGD | steps 10（baseline） | 84.1% | 是 | 13.57 | N/A |
+| CW | steps 1／2／3／5／10 | 0.0%／11.4%／22.7%／47.7%／75.0% | 否 | 3.40／5.46／7.40／10.90／13.49 | 78.6%／65.6%／53.4%／31.4%／15.0% |
+| CW | **steps 15** | **86.4%** | 是 | **13.86** | **12.7%** |
+| CW | steps 20（baseline） | 93.2% | 是 | 15.88 | N/A |
+| EAD | bss 9 × max_it 10／20／30／50／75 | 100% | 是 | 90.45／133.33／172.07／252.56／343.16 | 79.9%／70.4%／61.8%／44.0%／23.9% |
+| EAD | bss 9 × max_it 100（baseline） | 100% | 是 | 450.76 | N/A |
+| EAD | max_it 10 × bss 1／3 | 0.0%／25.0% | 否 | 7.11／25.36 | 98.4%／94.4% |
+| EAD | **max_it 10 × bss 5** | **100%** | 是 | **51.00** | **88.7%** |
 
 ### 3.2 結果
 
 在 AMC-only 資料域與 90% 正式 baseline 準則下，於目前掃描範圍與既定 efficacy criterion 下的最低可用設定如下：
 
-- PGD 由 10 steps 降至 7 steps，conditional ASR 由 84.1% 降至 77.3%，attack-generation latency median 由 13.76 ms 降至 9.83 ms（降低 28.5%）；5 steps 之 70.5% 低於門檻 72.36%。
-- CW 由 20 steps 降至 15 steps，conditional ASR 由 93.2% 降至 86.4%，latency median 由 16.19 ms 降至 12.78 ms（降低 21.0%）。
-- EAD 由 bss 9 × max_iterations 100 降至 bss 5 × max_iterations 10，conditional ASR 由 100% 維持於 100%，latency median 由 486.98 ms 降至 56.14 ms（降低 88.5%）。bss 3 之 conditional ASR 為 25.0%。
-- FGSM 為單步攻擊，無 iteration 可降低；latency median 介於 2.45–2.56 ms。
+- PGD 由 10 steps 降至 7 steps，conditional ASR 由 84.1% 降至 77.3%，attack-generation latency median 由 13.57 ms 降至 9.76 ms（降低 28.1%）；5 steps 之 70.5% 低於門檻 72.36%。
+- CW 由 20 steps 降至 15 steps，conditional ASR 由 93.2% 降至 86.4%，latency median 由 15.88 ms 降至 13.86 ms（降低 12.7%）。
+- EAD 由 bss 9 × max_iterations 100 降至 bss 5 × max_iterations 10，conditional ASR 由 100% 維持於 100%，latency median 由 450.76 ms 降至 51.00 ms（降低 88.7%）。bss 3 之 conditional ASR 為 25.0%。
+- FGSM 為單步攻擊，無 iteration 可降低；latency median 介於 2.42–2.50 ms。
 
 ![Figure 1](figures/fig1_reduced_iteration_asr_latency.png)
 
@@ -139,12 +139,12 @@ Synthetic TX/RX chain 直接包裝 `external/adversarial-rf/util/synth_txrx.py` 
 
 | 攻擊 | FEC | conditional ASR | Oracle CRC｜attack success | Predicted CRC｜attack success | Latency median（ms） |
 |---|---|---|---|---|---|
-| PGD steps 10 | off | 54.7%（117/214） | 88.9%（104/117） | 0.9%（1/117） | 16.19 |
-| PGD steps 10 | on | 100%（54/54） | 100%（54/54） | 1.9%（1/54） | 16.42 |
-| CW steps 20 | off | 78.0%（167/214） | 97.6%（163/167） | 0.6%（1/167） | 25.58 |
-| CW steps 20 | on | 100%（54/54） | 100%（54/54） | 1.9%（1/54） | 14.80 |
-| EAD bss 9 × max_it 100 | off | 100%（214/214） | 98.1%（210/214） | 0.9%（2/214） | 521.48 |
-| EAD bss 9 × max_it 100 | on | 100%（54/54） | 100%（54/54） | 1.9%（1/54） | 502.42 |
+| PGD steps 10 | off | 54.7%（117/214） | 88.9%（104/117） | 0.9%（1/117） | 14.32 |
+| PGD steps 10 | on | 100%（54/54） | 100%（54/54） | 1.9%（1/54） | 14.42 |
+| CW steps 20 | off | 78.0%（167/214） | 97.6%（163/167） | 0.6%（1/167） | 23.02 |
+| CW steps 20 | on | 100%（54/54） | 100%（54/54） | 1.9%（1/54） | 12.13 |
+| EAD bss 9 × max_it 100 | off | 100%（214/214） | 98.1%（210/214） | 0.9%（2/214） | 481.69 |
+| EAD bss 9 × max_it 100 | on | 100%（54/54） | 100%（54/54） | 1.9%（1/54） | 458.91 |
 
 於全部 reduced-iteration profiles（FGSM、PGD、CW、EAD），attack success 條件下之 oracle CRC pass 與 oracle frame correct 相同：FEC off 為 79.7%–100%，FEC on 為 98.1%–100%；oracle receiver 無 CRC false accept。在 attack success 條件下，多數樣本仍可於 oracle receiver 下正確恢復 payload。
 
@@ -159,12 +159,12 @@ Synthetic TX/RX chain 直接包裝 `external/adversarial-rf/util/synth_txrx.py` 
 | 攻擊 | FEC | Minimum usable setting | conditional ASR | Oracle CRC｜attack success | Latency median（ms） | Latency 降低 |
 |---|---|---|---|---|---|---|
 | FGSM | off／on | 單步，無 iteration sweep | N/A | N/A | N/A | N/A |
-| PGD | off | steps 7 | 53.7% | 89.6% | 12.56 | 22.4% |
-| PGD | on | steps 5 | 98.1% | 100% | 9.73 | 40.8% |
-| CW | off | steps 20（掃描範圍內無法降低） | 78.0% | 97.6% | 25.58 | 0% |
-| CW | on | steps 10 | 100% | 100% | 12.40 | 16.2% |
-| EAD | off | bss 5 × max_it 10 | 99.1% | 96.2% | 68.14 | 86.9% |
-| EAD | on | bss 5 × max_it 10 | 100% | 98.1% | 58.74 | 88.3% |
+| PGD | off | steps 7 | 53.7% | 89.6% | 10.20 | 28.8% |
+| PGD | on | steps 5 | 98.1% | 100% | 7.70 | 46.6% |
+| CW | off | steps 20（掃描範圍內無法降低） | 78.0% | 97.6% | 23.02 | 0% |
+| CW | on | steps 10 | 100% | 100% | 9.95 | 18.0% |
+| EAD | off | bss 5 × max_it 10 | 99.1% | 96.2% | 64.27 | 86.7% |
+| EAD | on | bss 5 × max_it 10 | 100% | 98.1% | 53.40 | 88.4% |
 
 ### 4.5 FEC 之影響
 
@@ -273,11 +273,11 @@ FEC off 之分母為 275 bursts（無防禦時 clean_correct 214），FEC on 為
 
 | 防禦 | Attacked 輸入 median／mean／p95（ms，n = 4,200） | Clean 輸入 median／mean／p95（ms，n = 350） |
 |---|---|---|
-| K10 | 0.180／0.208／0.390 | 0.168／0.206／0.439 |
-| K20 | 0.122／0.163／0.375 | 0.130／0.193／0.492 |
-| K30 | 0.123／0.163／0.389 | 0.135／0.195／0.476 |
-| K40 | 0.121／0.161／0.383 | 0.130／0.199／0.485 |
-| Adaptive-K | 0.572／0.638／1.033 | 0.596／0.675／1.065 |
+| K10 | 0.162／0.165／0.214 | 0.168／0.206／0.439 |
+| K20 | 0.120／0.126／0.162 | 0.130／0.193／0.492 |
+| K30 | 0.119／0.125／0.156 | 0.135／0.195／0.476 |
+| K40 | 0.118／0.125／0.157 | 0.130／0.199／0.485 |
+| Adaptive-K | 0.543／0.554／0.657 | 0.596／0.675／1.065 |
 
 ### 8.2 Attack 與 defense 之 composite latency
 
@@ -285,14 +285,14 @@ Composite latency 為同一 burst 之 attack-generation latency 與 defense late
 
 | 組合（FEC off） | Attack latency median（ms） | Defense latency median（ms） | Composite median（ms） |
 |---|---|---|---|
-| PGD steps 10 + none | 16.36 | N/A | 16.36 |
-| PGD steps 7 + Adaptive-K | 10.58 | 0.558 | 11.18 |
-| CW steps 20 + K20 | 25.43 | 0.122 | 25.54 |
-| EAD 9 × 100 + none | 532.91 | N/A | 532.91 |
-| EAD 9 × 100 + K40 | 532.91 | 0.117 | 533.19 |
-| EAD 5 × 10 + K40 | 72.10 | 0.119 | 72.20 |
+| PGD steps 10 + none | 14.39 | N/A | 14.39 |
+| PGD steps 7 + Adaptive-K | 10.52 | 0.529 | 11.06 |
+| CW steps 20 + K20 | 23.47 | 0.119 | 23.59 |
+| EAD 9 × 100 + none | 488.26 | N/A | 488.26 |
+| EAD 9 × 100 + K40 | 488.26 | 0.116 | 488.36 |
+| EAD 5 × 10 + K40 | 64.88 | 0.116 | 65.00 |
 
-Defense latency 相對 attack-generation latency 之比例小：Adaptive-K（0.572 ms）約為 PGD steps 7（10.58 ms）之 5.4%，約為 EAD 9 × 100（532.91 ms）之 0.11%。
+Defense latency 相對 attack-generation latency 之比例小：Adaptive-K（0.543 ms）約為 PGD steps 7（10.52 ms）之 5.2%，約為 EAD 9 × 100（488.26 ms）之 0.11%。
 
 ### 8.3 取捨
 
@@ -302,22 +302,22 @@ Defense latency 相對 attack-generation latency 之比例小：Adaptive-K（0.5
 
 - K10 位於 clean degradation 58.2 pp 之位置，各攻擊之 recovery rate 介於 21.2%–26.3%，其防禦後誤判主要為 defense-induced misclassification。
 - K20 之 clean degradation 為 8.7 pp（FEC off），對 CW 與 EAD 5 × 10 之 recovery rate 高於 K30、K40 與 Adaptive-K，但 attack success 條件下之 oracle frame correct 低於 K30、K40 與 Adaptive-K。
-- K40 與 Adaptive-K 之 clean degradation 為 2.2 pp 與 2.9 pp（FEC off），對 EAD 9 × 100 之 recovery rate 為 66.8% 與 63.6%，對 PGD steps 10 為 2.6% 與 3.4%。Adaptive-K 之 defense latency 約為 fixed K 之 4.7 倍（0.572 ms 與 0.121 ms），兩者均遠小於 attack-generation latency。
+- K40 與 Adaptive-K 之 clean degradation 為 2.2 pp 與 2.9 pp（FEC off），對 EAD 9 × 100 之 recovery rate 為 66.8% 與 63.6%，對 PGD steps 10 為 2.6% 與 3.4%。Adaptive-K 之 defense latency 約為 fixed K 之 4.6 倍（0.543 ms 與 0.118 ms），兩者均遠小於 attack-generation latency。
 
 ## 9. 主要研究發現
 
-1. 在 AMC-only 資料域與 90% 正式 baseline 準則下，於目前掃描範圍與既定 efficacy criterion 下的最低可用設定，PGD、CW、EAD 分別為 steps 7（ASR 77.3%）、steps 15（86.4%）與 bss 5 × max_iterations 10（100%），attack-generation latency median 分別降低 28.5%、21.0% 與 88.5%。FGSM 為單步攻擊，無 iteration 可降低。
+1. 在 AMC-only 資料域與 90% 正式 baseline 準則下，於目前掃描範圍與既定 efficacy criterion 下的最低可用設定，PGD、CW、EAD 分別為 steps 7（ASR 77.3%）、steps 15（86.4%）與 bss 5 × max_iterations 10（100%），attack-generation latency median 分別降低 28.1%、12.7% 與 88.7%。FGSM 為單步攻擊，無 iteration 可降低。
 2. 在 synthetic TX/RX 資料域，攻擊成功誤導 AMC 後，oracle receiver 之 frame correct 於 FEC off 為 79.7%–100%，於 FEC on 為 98.1%–100%；在 attack success 條件下，多數樣本仍可於 oracle receiver 下正確恢復 payload。
 3. Predicted-AMC receiver 在 attack success 條件下之 frame correct 為 0%；其 0.0%–3.8% 之 CRC pass 均為 CRC-8 false accept，不構成 payload recovery。
 4. Fixed Top-K 與 Adaptive-K 之 recovery 隨攻擊類型差異大：對 EAD 9 × 100 之 recovery rate 最高達 66.8%（K40，FEC off），對 PGD 之 K30、K40 與 Adaptive-K 於 FEC off 與 FEC on 為 1.9%–6.1%。Reduced EAD 之 recovery rate 低於 baseline EAD。
 5. K10 本身造成 58.2 pp（FEC off）與 40.0 pp（FEC on）之 clean degradation，其防禦後誤判於 FEC off 有 95.2%–100%、FEC on 有 94.4%–100% 可由 defense-induced misclassification 解釋。
 6. K40 與 Adaptive-K 之 clean degradation 於 FEC off 為 2.2 pp 與 2.9 pp，於 FEC on 為 2.7 pp 與 5.3 pp；FEC on 時 K20、K30、K40 與 Adaptive-K 之 clean oracle frame correct 均為 100%。
 7. Adaptive-K 於全部樣本走 narrowband route，blind SNR estimate median 約 5–7 dB（injected 18 dB），selected K 大多位於 21–35；其 clean degradation 介於 K30 與 K40 之間。
-8. Defense latency（fixed K 約 0.12–0.18 ms，Adaptive-K 約 0.57 ms）相對 attack-generation latency 小，攻擊端之 iteration 設定為 composite latency 之主要決定因素。
+8. Defense latency（fixed K 約 0.12–0.16 ms，Adaptive-K 約 0.54 ms）相對 attack-generation latency 小，攻擊端之 iteration 設定為 composite latency 之主要決定因素。
 
 ## 10. 實驗限制
 
-1. **Latency 平台**：所有 latency 為 x86 VM latency（VMware Virtual Platform，Intel Core i7-11700，torch intra-op 1、inter-op 1，B = 1），不代表 native desktop、嵌入式平台或加速器之延遲。
+1. **Latency 平台**：所有 latency 為 x86 VM latency（VMware Virtual Platform，Intel Core i7-11700，torch intra-op 1、inter-op 1，B = 1），不代表 native desktop、嵌入式平台或加速器之延遲。Attack latency 為 PyTorch 預設 backend 路徑下之量測，僅用於比較 reduced-iteration／reduced-search-budget 設定。
 2. **樣本數**：AMC-only 之 conditional ASR 分母為 44；synthetic 資料域 FEC on 之分母為 54，recovery rate 之分母為 attack success 數。接近準則門檻之設定具抽樣敏感性。
 3. **掃描範圍與準則**：Minimum usable setting 僅於所列離散設定與 90% baseline-efficacy criterion 下成立。PGD 之 alpha 固定為 eps／4；EAD Phase 2 僅於 max_iterations 10 下掃描 bss。
 4. **兩資料域之 baseline 與 latency protocol 不同**：AMC-only 以正式 2,200 樣本 conditional ASR 為 baseline、每 profile 352 次呼叫；synthetic 資料域以同資料域 baseline profile 為基準、每 burst 一次呼叫。兩資料域之 ASR 與 latency 不可直接比較。

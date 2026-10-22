@@ -27,8 +27,9 @@ pred_changed (attacked_pred != clean_pred) is recorded for information only.
 
 Attack call
 -----------
-production AttackAdapter(awn.model, b1_pgd_bim_mkldnn_off=True, b1_mkldnn_off_extended=True).apply()
-with the formal arguments of run_cpu_full_matrix.py (temperature 1.0, diagnostics off,
+production AttackAdapter(awn.model).apply() with its default options (b1_pgd_bim_mkldnn_off=False,
+b1_mkldnn_off_extended=False: PyTorch default backend path, no backend toggle) and the formal arguments
+of run_cpu_full_matrix.py (temperature 1.0, diagnostics off,
 seed = derive_seed(..., f"{attack}|{profile_id}")), preceded by an untimed
 torch.manual_seed(formal sample seed) on every call. Any attack_status != "ok" or a backend other
 than the real torchattacks path aborts the run. A configuration that torchattacks itself rejects is
@@ -42,6 +43,10 @@ restoration; excludes seeding, AWN attacked inference and metric computation). A
 redirected to a null sink for every call (timed or not). Per profile: --warmup untimed calls, then
 the 88 samples; --replications passes, with the profile order of each attack group reversed on odd
 replications (fixed alternating order). No thermal gate / governor / cooldown (not a Pi benchmark).
+
+--save-x-adv writes replication-0 x_adv arrays to x_adv_rep0.npz after the run (not timed).
+--legacy-backend-toggle is for comparison only: it reproduces the superseded configuration that passed both
+mkldnn-off opt-ins, writes to a *_legacy_toggle_repro_* directory and is never a formal run.
 
 Run from the repo root:
     ~/adversarial-rf/.venv/bin/python experiments/benchmark_reduced_iteration_attacks_vm.py \
@@ -180,6 +185,41 @@ def write_csv(path: Path, rows: List[dict], fields: Optional[List[str]] = None) 
 
 
 # =========================================================================== profiles
+LEGACY_TOGGLE_KWARGS = {"b1_pgd_bim_mkldnn_off": True, "b1_mkldnn_off_extended": True}
+
+
+def backend_toggle_kwargs(legacy: bool) -> dict:
+    """AttackAdapter keyword options: defaults (no backend toggle) unless reproducing the superseded run."""
+    return dict(LEGACY_TOGGLE_KWARGS) if legacy else {}
+
+
+def backend_toggle_manifest(legacy: bool, adapter=None) -> dict:
+    flags = {"b1_pgd_bim_mkldnn_off": bool(getattr(adapter, "b1_pgd_bim_mkldnn_off", legacy)),
+             "b1_mkldnn_off_extended": bool(getattr(adapter, "b1_mkldnn_off_extended", legacy))}
+    if legacy:
+        return {"mkldnn_backend_toggle": "enabled (comparison-only reproduction of the superseded configuration)",
+                "run_role": "legacy_toggle_reproduction; not a formal run", **flags}
+    return {"mkldnn_backend_toggle": "disabled / default path (PyTorch default backend; AttackAdapter defaults)",
+            "run_role": "formal", **flags}
+
+
+def backend_toggle_ok(legacy: bool, adapter) -> bool:
+    want = bool(legacy)
+    return (bool(adapter.b1_pgd_bim_mkldnn_off) == want and bool(adapter.b1_mkldnn_off_extended) == want)
+
+
+def save_x_adv(path: Path, arrays: dict) -> None:
+    """Write {key: x_adv} as one compressed npz (keys sorted); written after all timed calls."""
+    keys = sorted(arrays)
+    np.savez_compressed(path, keys=np.array(keys), **{f"a{i}": arrays[k] for i, k in enumerate(keys)})
+
+
+def run_dir_name(base: str, args) -> str:
+    tag = "smoke_" if getattr(args, "smoke", False) else ""
+    tag += "legacy_toggle_repro_" if getattr(args, "legacy_backend_toggle", False) else ""
+    return f"{base}_{tag}{_dt.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+
 def make_profile(group: str, attack: str, profile_id: str, *, eps: float, attack_params: dict,
                  cw_c: float = 1.0, cw_steps: int = 20, cw_lr: float = 0.01, alpha=None, steps=None,
                  bss=None, max_iter=None, is_baseline: bool = False) -> dict:
@@ -309,8 +349,9 @@ def run(args, out_dir: Path, state: dict) -> None:
 
     with contextlib.redirect_stdout(_NULL):
         awn = AWNModelAdapter(str(ckpt), device="cpu")
-        adapter = AttackAdapter(awn_model=awn.model, device="cpu",
-                                b1_pgd_bim_mkldnn_off=True, b1_mkldnn_off_extended=True)
+        adapter = AttackAdapter(awn_model=awn.model, device="cpu", **backend_toggle_kwargs(args.legacy_backend_toggle))
+    checks["backend_toggle_matches_configuration"] = backend_toggle_ok(args.legacy_backend_toggle, adapter)
+    state["backend_toggle"] = backend_toggle_manifest(args.legacy_backend_toggle, adapter)
     checks["real_awn_loaded"] = awn.status == "ok" and awn.model is not None
     checks["real_attack_backend_loaded"] = (adapter.status == "ok" and adapter.backend_name == am._REAL_ATTACK_SOURCE
                                             and am._import_error is None)
@@ -403,7 +444,7 @@ def run(args, out_dir: Path, state: dict) -> None:
         return x_adv, meta, dt, attack_seed, mk_after
 
     def expected_mkldnn_off(attack: str) -> bool:
-        return attack in ("pgd", "cw", "ead")
+        return args.legacy_backend_toggle and attack in ("pgd", "cw", "ead")
 
     def run_group(group: str, profiles: List[dict]) -> None:
         if args.smoke:
@@ -454,6 +495,8 @@ def run(args, out_dir: Path, state: dict) -> None:
                     sha = formal.sha256_array(x_adv)
                     if rep == 0:
                         res["rep0_sha"][s["pos"]], res["rep0_succ"][s["pos"]] = sha, success
+                        if args.save_x_adv:
+                            x_store[f"{group}|{prof['attack']}|{prof['profile']}|{s['pos']}"] = np.array(x_adv)
                         same_out, same_succ = True, True
                     else:
                         same_out = sha == res["rep0_sha"][s["pos"]]
@@ -484,6 +527,7 @@ def run(args, out_dir: Path, state: dict) -> None:
         for prof in valid:
             results[pkey(prof)]["status"] = "COMPLETE"
 
+    x_store = {}
     run_group("fgsm", fgsm_profiles())
     run_group("pgd", pgd_profiles())
     run_group("cw", cw_profiles())
@@ -507,6 +551,8 @@ def run(args, out_dir: Path, state: dict) -> None:
     log(f"EAD Phase 2: max_iterations={chosen} ({note})")
     run_group("ead_phase2", ead_phase2_profiles(chosen))
     raw_f.close()
+    if args.save_x_adv:
+        save_x_adv(out_dir / "x_adv_rep0.npz", x_store)
     state["completed"] = True
 
 
@@ -603,11 +649,13 @@ def write_outputs(args, out_dir: Path, state: dict) -> dict:
         len(r["rows"]) == n_expected * reps and len({x["sample_pos"] for x in r["rows"]}) == n_expected
         for r in complete) and all(r["status"] in ("COMPLETE", "INVALID_CONFIGURATION") for r in results.values())
     checks["mkldnn_opt_in_applied_as_expected"] = all(r["mkldnn_flag_bad"] == 0 for r in results.values())
+    checks.setdefault("backend_toggle_matches_configuration", False)
     checks["attack_success_repeatable_across_reps"] = all(r["success_mismatch"] == 0 for r in results.values())
     checks["script_completed"] = bool(state.get("completed"))
     fail_keys = ["real_awn_loaded", "real_attack_backend_loaded", "fallback_count_zero", "dataset_hash_ok",
                  "checkpoint_hash_ok", "sample_matrix_complete", "no_nan_inf", "script_completed",
                  "adversarial_rf_at_pin", "torchattacks_3_5_1", "mkldnn_opt_in_applied_as_expected",
+                 "backend_toggle_matches_configuration",
                  "attack_success_repeatable_across_reps"]
     failed = [k for k in fail_keys if not checks.get(k, False)]
     validation = {
@@ -636,12 +684,14 @@ def main() -> None:
     ap.add_argument("--torch-threads", type=int, default=0, help="0 = keep torch default")
     ap.add_argument("--interop-threads", type=int, default=0, help="0 = keep torch default")
     ap.add_argument("--out-dir", default=None)
+    ap.add_argument("--save-x-adv", action="store_true", help="write replication-0 x_adv arrays (x_adv_rep0.npz)")
+    ap.add_argument("--legacy-backend-toggle", action="store_true",
+                    help="comparison only: reproduce the superseded run that passed both mkldnn-off opt-ins")
     args = ap.parse_args()
     if args.replications < 2 and not args.smoke:
         ap.error("--replications must be >= 2 for the full run")
 
-    ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
-    name = f"reduced_iteration_attacks_vm_{'smoke_' if args.smoke else ''}{ts}"
+    name = run_dir_name("reduced_iteration_attacks_vm", args)
     out_dir = (REPO_ROOT / (args.out_dir or f"results/{name}")).resolve()
     out_dir.mkdir(parents=True, exist_ok=False)
     _LOG_FH = (out_dir / "run.log").open("w")
@@ -700,14 +750,11 @@ def main() -> None:
                            "tails (PGD steps10 median 29.7 ms, p95 613 ms) vs intra 1 (median 14.7 ms, p95 18.7 ms); "
                            "the formal run uses intra 1 / interop 1.",
             },
-            "mkldnn_options": {
-                "adapter": "AttackAdapter(b1_pgd_bim_mkldnn_off=True, b1_mkldnn_off_extended=True)",
-                "pgd": "B=1 PGD/BIM mkldnn-off opt-in", "cw_ead": "extended B=1 mkldnn-off opt-in",
-                "fgsm": "original path (not in either list)",
-                "caveat": "These optimizations were validated on Raspberry Pi 5 (aarch64) only. The latency in this "
-                          "run is a new measurement on an x86 VM; Pi performance conclusions must not be carried "
-                          "over, and this run does not evaluate whether mkldnn-off helps on x86.",
-            },
+            "backend_toggle": state.get("backend_toggle") or backend_toggle_manifest(args.legacy_backend_toggle),
+            "attack_adapter_options": ("AttackAdapter(b1_pgd_bim_mkldnn_off=True, b1_mkldnn_off_extended=True)"
+                                       if args.legacy_backend_toggle else
+                                       "AttackAdapter defaults (b1_pgd_bim_mkldnn_off=False, "
+                                       "b1_mkldnn_off_extended=False)"),
             "validation_overall": validation["overall"],
         }
         (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, default=str))

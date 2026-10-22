@@ -1,0 +1,23 @@
+check,raw_count,denominator,value,source_file
+overall,,,PASS,results/synth_crc_fec_integration_20261022_090735/validation.json
+v1_tx_identical_bursts,640,640,True,results/synth_crc_fec_integration_20261022_090735/validation.json
+v1_encoded_bits_ok_bursts,640,640,True,results/synth_crc_fec_integration_20261022_090735/validation.json
+v1_decode_crc_identical_comparisons,28160,28160,True,results/synth_crc_fec_integration_20261022_090735/validation.json
+v1_family_mismatch_legacy_exception_confirmed,7680,,,results/synth_crc_fec_integration_20261022_090735/validation.json
+v1_integrated_vs_legacy_window_divergence_fsk,576,,all divergences are FSK bursts with a modified window,results/synth_crc_fec_integration_20261022_090735/validation.json
+v2_noiseless_oracle_crc_100pct,,,True,results/synth_crc_fec_integration_20261022_090735/validation.json
+v3_attack_chain_complete,,,True,results/synth_crc_fec_integration_20261022_090735/validation.json
+v4_fail_closed_tests_passed,7,7,True,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[8PSK,fec=off]",,25,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[8PSK,fec=on]",,25,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[BPSK,fec=off]",,50,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[CPFSK,fec=off]",,50,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[GFSK,fec=off]",,50,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[PAM4,fec=off]",,25,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[PAM4,fec=on]",,25,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[QAM16,fec=off]",,25,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[QAM16,fec=on]",,25,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[QAM64,fec=off]",,25,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[QAM64,fec=on]",,25,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[QPSK,fec=off]",,25,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json
+"v2_snr18_clean_oracle_crc_pass_pct[QPSK,fec=on]",,25,100.0,results/synth_crc_fec_integration_20261022_090735/validation.json

@@ -1,0 +1,73 @@
+fec,defense,defense_label,series,metric,value,denominator,source_csv,attack,profile
+off,none,none,clean burst,oracle_frame_correct_pct,100.0,275,data/clean_defense_summary.csv,,
+off,none,none,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,80.8080808080808,99,data/attack_defense_summary.csv,fgsm,eps0.03
+off,none,none,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,88.88888888888889,117,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+off,none,none,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,97.60479041916167,167,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+off,none,none,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,98.13084112149532,214,data/attack_defense_summary.csv,ead,bss9_maxit100
+off,none,none,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,96.22641509433963,212,data/attack_defense_summary.csv,ead,bss5_maxit10
+off,topk10,K10,clean burst,oracle_frame_correct_pct,39.63636363636363,275,data/clean_defense_summary.csv,,
+off,topk10,K10,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,32.323232323232325,99,data/attack_defense_summary.csv,fgsm,eps0.03
+off,topk10,K10,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,34.18803418803419,117,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+off,topk10,K10,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,31.137724550898202,167,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+off,topk10,K10,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,38.78504672897196,214,data/attack_defense_summary.csv,ead,bss9_maxit100
+off,topk10,K10,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,39.62264150943396,212,data/attack_defense_summary.csv,ead,bss5_maxit10
+off,topk20,K20,clean burst,oracle_frame_correct_pct,93.45454545454545,275,data/clean_defense_summary.csv,,
+off,topk20,K20,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,72.72727272727273,99,data/attack_defense_summary.csv,fgsm,eps0.03
+off,topk20,K20,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,81.19658119658119,117,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+off,topk20,K20,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,85.02994011976048,167,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+off,topk20,K20,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,89.7196261682243,214,data/attack_defense_summary.csv,ead,bss9_maxit100
+off,topk20,K20,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,86.32075471698113,212,data/attack_defense_summary.csv,ead,bss5_maxit10
+off,topk30,K30,clean burst,oracle_frame_correct_pct,96.72727272727273,275,data/clean_defense_summary.csv,,
+off,topk30,K30,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,77.77777777777777,99,data/attack_defense_summary.csv,fgsm,eps0.03
+off,topk30,K30,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,82.90598290598291,117,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+off,topk30,K30,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,93.41317365269461,167,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+off,topk30,K30,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,94.39252336448598,214,data/attack_defense_summary.csv,ead,bss9_maxit100
+off,topk30,K30,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,91.50943396226415,212,data/attack_defense_summary.csv,ead,bss5_maxit10
+off,topk40,K40,clean burst,oracle_frame_correct_pct,98.54545454545455,275,data/clean_defense_summary.csv,,
+off,topk40,K40,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,79.79797979797979,99,data/attack_defense_summary.csv,fgsm,eps0.03
+off,topk40,K40,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,84.61538461538461,117,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+off,topk40,K40,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,95.80838323353294,167,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+off,topk40,K40,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,97.19626168224299,214,data/attack_defense_summary.csv,ead,bss9_maxit100
+off,topk40,K40,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,95.75471698113208,212,data/attack_defense_summary.csv,ead,bss5_maxit10
+off,adaptive_k,Adaptive-K,clean burst,oracle_frame_correct_pct,97.0909090909091,275,data/clean_defense_summary.csv,,
+off,adaptive_k,Adaptive-K,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,77.77777777777777,99,data/attack_defense_summary.csv,fgsm,eps0.03
+off,adaptive_k,Adaptive-K,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,82.90598290598291,117,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+off,adaptive_k,Adaptive-K,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,95.80838323353294,167,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+off,adaptive_k,Adaptive-K,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,94.85981308411215,214,data/attack_defense_summary.csv,ead,bss9_maxit100
+off,adaptive_k,Adaptive-K,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,92.9245283018868,212,data/attack_defense_summary.csv,ead,bss5_maxit10
+on,none,none,clean burst,oracle_frame_correct_pct,100.0,75,data/clean_defense_summary.csv,,
+on,none,none,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,100.0,52,data/attack_defense_summary.csv,fgsm,eps0.03
+on,none,none,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+on,none,none,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+on,none,none,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,ead,bss9_maxit100
+on,none,none,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,98.14814814814815,54,data/attack_defense_summary.csv,ead,bss5_maxit10
+on,topk10,K10,clean burst,oracle_frame_correct_pct,66.66666666666667,75,data/clean_defense_summary.csv,,
+on,topk10,K10,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,59.61538461538461,52,data/attack_defense_summary.csv,fgsm,eps0.03
+on,topk10,K10,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,62.96296296296296,54,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+on,topk10,K10,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,66.66666666666667,54,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+on,topk10,K10,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,61.111111111111114,54,data/attack_defense_summary.csv,ead,bss9_maxit100
+on,topk10,K10,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,62.96296296296296,54,data/attack_defense_summary.csv,ead,bss5_maxit10
+on,topk20,K20,clean burst,oracle_frame_correct_pct,100.0,75,data/clean_defense_summary.csv,,
+on,topk20,K20,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,100.0,52,data/attack_defense_summary.csv,fgsm,eps0.03
+on,topk20,K20,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+on,topk20,K20,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+on,topk20,K20,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,ead,bss9_maxit100
+on,topk20,K20,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,98.14814814814815,54,data/attack_defense_summary.csv,ead,bss5_maxit10
+on,topk30,K30,clean burst,oracle_frame_correct_pct,100.0,75,data/clean_defense_summary.csv,,
+on,topk30,K30,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,100.0,52,data/attack_defense_summary.csv,fgsm,eps0.03
+on,topk30,K30,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+on,topk30,K30,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+on,topk30,K30,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,ead,bss9_maxit100
+on,topk30,K30,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,98.14814814814815,54,data/attack_defense_summary.csv,ead,bss5_maxit10
+on,topk40,K40,clean burst,oracle_frame_correct_pct,100.0,75,data/clean_defense_summary.csv,,
+on,topk40,K40,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,100.0,52,data/attack_defense_summary.csv,fgsm,eps0.03
+on,topk40,K40,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+on,topk40,K40,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+on,topk40,K40,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,ead,bss9_maxit100
+on,topk40,K40,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,98.14814814814815,54,data/attack_defense_summary.csv,ead,bss5_maxit10
+on,adaptive_k,Adaptive-K,clean burst,oracle_frame_correct_pct,100.0,75,data/clean_defense_summary.csv,,
+on,adaptive_k,Adaptive-K,FGSM eps 0.03,oracle_frame_correct_given_attack_success_before_pct,100.0,52,data/attack_defense_summary.csv,fgsm,eps0.03
+on,adaptive_k,Adaptive-K,PGD steps 10,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+on,adaptive_k,Adaptive-K,CW steps 20,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+on,adaptive_k,Adaptive-K,EAD 9 x 100,oracle_frame_correct_given_attack_success_before_pct,100.0,54,data/attack_defense_summary.csv,ead,bss9_maxit100
+on,adaptive_k,Adaptive-K,EAD 5 x 10,oracle_frame_correct_given_attack_success_before_pct,98.14814814814815,54,data/attack_defense_summary.csv,ead,bss5_maxit10

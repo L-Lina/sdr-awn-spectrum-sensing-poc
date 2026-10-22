@@ -1,0 +1,36 @@
+panel,defense,defense_label,fec,series,value,unit,raw_count,denominator,source_csv,attack,profile
+clean_degradation,topk10,K10,off,clean,58.18181818181817,pp,161,275,data/clean_defense_summary.csv,,
+clean_degradation,topk10,K10,on,clean,40.0,pp,34,75,data/clean_defense_summary.csv,,
+clean_degradation,topk20,K20,off,clean,8.72727272727272,pp,25,275,data/clean_defense_summary.csv,,
+clean_degradation,topk20,K20,on,clean,16.0,pp,13,75,data/clean_defense_summary.csv,,
+clean_degradation,topk30,K30,off,clean,3.2727272727272663,pp,9,275,data/clean_defense_summary.csv,,
+clean_degradation,topk30,K30,on,clean,8.0,pp,7,75,data/clean_defense_summary.csv,,
+clean_degradation,topk40,K40,off,clean,2.1818181818181728,pp,7,275,data/clean_defense_summary.csv,,
+clean_degradation,topk40,K40,on,clean,2.6666666666666714,pp,3,75,data/clean_defense_summary.csv,,
+clean_degradation,adaptive_k,Adaptive-K,off,clean,2.9090909090909065,pp,8,275,data/clean_defense_summary.csv,,
+clean_degradation,adaptive_k,Adaptive-K,on,clean,5.333333333333329,pp,6,75,data/clean_defense_summary.csv,,
+recovery_fec_off,topk10,K10,off,FGSM eps 0.03,21.21212121212121,%,21,99,data/attack_defense_summary.csv,fgsm,eps0.03
+recovery_fec_off,topk20,K20,off,FGSM eps 0.03,16.161616161616163,%,16,99,data/attack_defense_summary.csv,fgsm,eps0.03
+recovery_fec_off,topk30,K30,off,FGSM eps 0.03,8.080808080808081,%,8,99,data/attack_defense_summary.csv,fgsm,eps0.03
+recovery_fec_off,topk40,K40,off,FGSM eps 0.03,6.0606060606060606,%,6,99,data/attack_defense_summary.csv,fgsm,eps0.03
+recovery_fec_off,adaptive_k,Adaptive-K,off,FGSM eps 0.03,9.090909090909092,%,9,99,data/attack_defense_summary.csv,fgsm,eps0.03
+recovery_fec_off,topk10,K10,off,PGD steps 10,23.076923076923077,%,27,117,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+recovery_fec_off,topk20,K20,off,PGD steps 10,11.11111111111111,%,13,117,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+recovery_fec_off,topk30,K30,off,PGD steps 10,3.4188034188034186,%,4,117,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+recovery_fec_off,topk40,K40,off,PGD steps 10,2.5641025641025643,%,3,117,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+recovery_fec_off,adaptive_k,Adaptive-K,off,PGD steps 10,3.4188034188034186,%,4,117,data/attack_defense_summary.csv,pgd,eps0.03_steps10
+recovery_fec_off,topk10,K10,off,CW steps 20,26.347305389221557,%,44,167,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+recovery_fec_off,topk20,K20,off,CW steps 20,35.92814371257485,%,60,167,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+recovery_fec_off,topk30,K30,off,CW steps 20,31.137724550898202,%,52,167,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+recovery_fec_off,topk40,K40,off,CW steps 20,23.952095808383234,%,40,167,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+recovery_fec_off,adaptive_k,Adaptive-K,off,CW steps 20,29.34131736526946,%,49,167,data/attack_defense_summary.csv,cw,c1_steps20_lr0.01
+recovery_fec_off,topk10,K10,off,EAD 9 x 100,23.364485981308412,%,50,214,data/attack_defense_summary.csv,ead,bss9_maxit100
+recovery_fec_off,topk20,K20,off,EAD 9 x 100,60.2803738317757,%,129,214,data/attack_defense_summary.csv,ead,bss9_maxit100
+recovery_fec_off,topk30,K30,off,EAD 9 x 100,61.6822429906542,%,132,214,data/attack_defense_summary.csv,ead,bss9_maxit100
+recovery_fec_off,topk40,K40,off,EAD 9 x 100,66.82242990654206,%,143,214,data/attack_defense_summary.csv,ead,bss9_maxit100
+recovery_fec_off,adaptive_k,Adaptive-K,off,EAD 9 x 100,63.55140186915888,%,136,214,data/attack_defense_summary.csv,ead,bss9_maxit100
+recovery_fec_off,topk10,K10,off,EAD 5 x 10,22.641509433962263,%,48,212,data/attack_defense_summary.csv,ead,bss5_maxit10
+recovery_fec_off,topk20,K20,off,EAD 5 x 10,43.867924528301884,%,93,212,data/attack_defense_summary.csv,ead,bss5_maxit10
+recovery_fec_off,topk30,K30,off,EAD 5 x 10,37.735849056603776,%,80,212,data/attack_defense_summary.csv,ead,bss5_maxit10
+recovery_fec_off,topk40,K40,off,EAD 5 x 10,35.37735849056604,%,75,212,data/attack_defense_summary.csv,ead,bss5_maxit10
+recovery_fec_off,adaptive_k,Adaptive-K,off,EAD 5 x 10,40.56603773584906,%,86,212,data/attack_defense_summary.csv,ead,bss5_maxit10

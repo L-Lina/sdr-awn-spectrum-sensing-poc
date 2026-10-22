@@ -317,7 +317,7 @@ Defense latency 相對 attack-generation latency 之比例小：Adaptive-K（0.5
 
 ## 10. 實驗限制
 
-1. **Latency 平台**：所有 latency 為 x86 VM latency（VMware Virtual Platform，Intel Core i7-11700，torch intra-op 1、inter-op 1，B = 1），不代表 native desktop、嵌入式平台或加速器之延遲。AttackAdapter 之 mkldnn-off 選項原於 Raspberry Pi 5 驗證，本研究未評估其於 x86 之效益。
+1. **Latency 平台**：所有 latency 為 x86 VM latency（VMware Virtual Platform，Intel Core i7-11700，torch intra-op 1、inter-op 1，B = 1），不代表 native desktop、嵌入式平台或加速器之延遲。
 2. **樣本數**：AMC-only 之 conditional ASR 分母為 44；synthetic 資料域 FEC on 之分母為 54，recovery rate 之分母為 attack success 數。接近準則門檻之設定具抽樣敏感性。
 3. **掃描範圍與準則**：Minimum usable setting 僅於所列離散設定與 90% baseline-efficacy criterion 下成立。PGD 之 alpha 固定為 eps／4；EAD Phase 2 僅於 max_iterations 10 下掃描 bss。
 4. **兩資料域之 baseline 與 latency protocol 不同**：AMC-only 以正式 2,200 樣本 conditional ASR 為 baseline、每 profile 352 次呼叫；synthetic 資料域以同資料域 baseline profile 為基準、每 burst 一次呼叫。兩資料域之 ASR 與 latency 不可直接比較。

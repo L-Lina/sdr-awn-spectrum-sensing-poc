@@ -1231,7 +1231,7 @@ def build_report(D):
     w("## 10. 實驗限制\n")
     w(f"1. **Latency 平台**：所有 latency 為 x86 VM latency（{e['dmi_product_name']}，Intel Core i7-11700，torch intra-op "
       f"{e['torch_num_threads']}、inter-op {e['torch_num_interop_threads']}，B = 1），不代表 native desktop、嵌入式平台或加速器之"
-      "延遲。AttackAdapter 之 mkldnn-off 選項原於 Raspberry Pi 5 驗證，本研究未評估其於 x86 之效益。")
+      "延遲。")
     w(f"2. **樣本數**：AMC-only 之 conditional ASR 分母為 {n_cc_amc}；synthetic 資料域 FEC on 之分母為 {cc_on}，recovery rate "
       "之分母為 attack success 數。接近準則門檻之設定具抽樣敏感性。")
     w("3. **掃描範圍與準則**：Minimum usable setting 僅於所列離散設定與 90% baseline-efficacy criterion 下成立。PGD 之 alpha "

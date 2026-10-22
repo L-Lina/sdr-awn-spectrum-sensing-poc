@@ -10,8 +10,8 @@
 
 | 檔案 | 用途 | 對應報告章節 |
 |---|---|---|
-| `attack_acceleration_summary.csv` | 各攻擊 profile 之 mkldnn ON／OFF 中位延遲、配對差、配對結果、語意分類計數、處置，以及 DeepFool 兩個 SEMANTIC_DIFFERENT 樣本之索引欄位 | 第 3 節 |
-| `attack_integration_validation_summary.csv` | PGD／BIM 與 extended 13 attacks 之整合驗證：option OFF parity、option ON 語意分類計數、control 攻擊結果 | 第 4 節 |
+| `attack_acceleration_summary.csv` | 探索性 backend-toggle latency 量測之歷史紀錄：各攻擊 profile 之 mkldnn ON／OFF 中位延遲、配對差、配對結果、語意分類計數、當時之處置分類，以及 DeepFool 兩個 SEMANTIC_DIFFERENT 樣本之索引欄位；不作為攻擊加速結論，檔名與欄位值沿用原始 artifact | 附錄 A.1 |
+| `attack_integration_validation_summary.csv` | Backend-toggle opt-in 選項（PGD／BIM 與 extended 13 attacks）之輸出一致性驗證：option OFF parity、option ON 語意分類計數、control 攻擊結果 | 附錄 A.2 |
 | `defense_recovery_cpu_summary.csv` | CPU 上 12 列防禦（含 exploratory AT）於 FGSM／PGD／CW／EAD 9 個 profile 合併（`profile = FGSM_PGD_CW_EAD`）之 recovery、95% CI、clean degradation、retention、net gain、defended accuracy；leakage-free AT 列無逐攻擊來源，標記為 `ALL_24_HISTORICAL` | 第 5 節 |
 | `adversarial_training_summary.csv` | Leakage-free AT 訓練紀錄（資料切分、訓練攻擊、best epoch、validation 指標、模型雜湊）、transfer 評估結果，以及 exploratory AT 之訓練／評估重疊紀錄 | 第 5、6 節 |
 | `hailo_defense_summary.csv` | CPU 與 Hailo-8 配對評估於 FGSM／PGD／CW／EAD 9 個 profile 合併之 recovery、clean degradation、retention、net gain 與 baseline | 第 7 節 |
@@ -22,7 +22,7 @@
 
 | 項目 | 用途 |
 |---|---|
-| `figures/` | 報告插圖（PNG）：圖 1 攻擊生成延遲 mkldnn ON/OFF 比較（第 3 節）、圖 2 CPU 防禦 recovery 與 clean degradation 取捨（第 5 節）、圖 3 CPU 與 Hailo-8 net gain 比較（第 7 節） |
+| `figures/` | 報告插圖（PNG）：圖 1 攻擊生成延遲 mkldnn ON/OFF 比較（exploratory backend-toggle measurement，附錄 A.1）、圖 2 CPU 防禦 recovery 與 clean degradation 取捨（第 5 節）、圖 3 CPU 與 Hailo-8 net gain 比較（第 7 節） |
 | `figure_sources/` | 每張圖所使用之數值；每列保留來源 `source_result_dir` 與 `source_csv`。圖 1 之降低比例由原始 ON／OFF 中位延遲計算，計算公式與結果保存於 `reduction_pct`、`reduction_formula` 欄位；圖 3 另保存 CPU 值與 `data/defense_recovery_cpu_summary.csv` 之一致性檢查欄位 |
 | `EVIDENCE_INDEX.md` | 依報告章節列出各項 claim／metric 之 source artifact、evidence type、是否有 persistent artifact 與備註，供查核使用 |
 
@@ -34,8 +34,8 @@
 
 | 資料夾 | 內容 |
 |---|---|
-| `01_attack_accel/` | Phase 1D-3（PGD／BIM）、15-attack full benchmark、targeted rerun 之 summary 與 per-profile 結果；DeepFool pre-validation 逐樣本分類 |
-| `02_attack_integration/` | PGD／BIM 與 extended 13 attacks 之整合驗證 |
+| `01_attack_accel/` | 探索性 backend-toggle latency 量測：Phase 1D-3（PGD／BIM）、15-attack full benchmark、targeted rerun 之 summary 與 per-profile 結果；DeepFool pre-validation 逐樣本分類 |
+| `02_attack_integration/` | Backend-toggle opt-in 選項（PGD／BIM 與 extended 13 attacks）之輸出一致性驗證 |
 | `03_defense_recovery_cpu/` | CPU 防禦比較之 summary、clean degradation、AT 重疊分析、manifest |
 | `04_adversarial_training/` | Leakage-free AT 訓練 manifest、模型設定紀錄、training log，以及 AT-only transfer 比較結果 |
 | `05_hailo_paired/` | CPU 與 Hailo-8 配對評估之 validation、manifest 與 defense summary |

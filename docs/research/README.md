@@ -49,7 +49,7 @@ order:
    對照表，用於快速定位任一項結果的來源檔案。
 
 10. **[RESEARCH_CLOSEOUT_STATUS_ZH_TW.md](RESEARCH_CLOSEOUT_STATUS_ZH_TW.md)**
-   -- 研究收尾狀態：17-attack B=1 加速最終處置（PGD/BIM 與 extended 13 attacks）、
+   -- 研究收尾狀態：17-attack B=1 backend toggle 探索性 latency 量測（歷史紀錄；不作為攻擊加速結論）、
    integration validation、Adaptive-K CPU 與 Hailo paired effectiveness、formal latency、
    defense recovery comparison（exploratory AT 標示 train/eval overlap）、
    leakage-free adversarial training 與其 AT-only transfer comparison，以及結論邊界。

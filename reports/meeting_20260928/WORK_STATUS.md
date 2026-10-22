@@ -16,7 +16,7 @@
 
 皆位於 `meeting_20260928_evidence/results/`：
 
-- 攻擊加速：`accel_phase1a_formal_20260926_152737`、`accel_phase1b_20260926_155342`、`accel_phase1c_bim_diag_20260926_162116`、`accel_phase1c_bim_semantic_audit_20260926_162812`、`accel_phase1c_v2_formal_20260926_164547`、`accel_phase1d0_thermal_20260927_092156`、`accel_phase1d0b_pair_20260927_111224`、`accel_phase1d1_profile_20260927_120159`、`accel_phase1d2_backend_20260927_{123643,124116,124938}`、`accel_phase1d3_mkldnn_b1_20260927_135420`、`accel_phase1_final_integration_20260927_153520`
+- 攻擊生成延遲（探索性量測）：`accel_phase1a_formal_20260926_152737`、`accel_phase1b_20260926_155342`、`accel_phase1c_bim_diag_20260926_162116`、`accel_phase1c_bim_semantic_audit_20260926_162812`、`accel_phase1c_v2_formal_20260926_164547`、`accel_phase1d0_thermal_20260927_092156`、`accel_phase1d0b_pair_20260927_111224`、`accel_phase1d1_profile_20260927_120159`、`accel_phase1d2_backend_20260927_{123643,124116,124938}`、`accel_phase1d3_mkldnn_b1_20260927_135420`、`accel_phase1_final_integration_20260927_153520`
 - Adaptive-K：`adaptive_k_parity_20260927_162249`、`adaptive_k_effectiveness_20260927_164906`、`adaptive_k_hailo_paired_20260928`
 - 延遲：`formal_latency_20260928d`（PRIMARY_FORMAL）
 

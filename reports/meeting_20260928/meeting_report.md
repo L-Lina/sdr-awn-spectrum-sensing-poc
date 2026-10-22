@@ -1,4 +1,4 @@
-# Raspberry Pi 5 攻擊生成加速、Adaptive-K 防禦與 CPU／Hailo-8 正式延遲評估：研究進度報告
+# Raspberry Pi 5 攻擊生成延遲探索性量測、Adaptive-K 防禦與 CPU／Hailo-8 正式延遲評估：研究進度報告
 
 **報告日期**：2026-09-28　｜　**涵蓋期間**：2026-09-21 checkpoint 之後至 2026-09-28　｜　**平台**：Raspberry Pi 5（Cortex-A76 ×4）＋ Hailo-8　｜　**資料集**：RadioML 2016.10a　｜　**模型**：AWN（PyTorch 原模型／Hailo-8 HEF `awn_2016_10a_c5.hef`）
 
@@ -10,7 +10,7 @@
 
 1. [摘要](#1-摘要)
 2. [與前次 checkpoint 的銜接](#2-與前次-checkpoint-的銜接)
-3. [研究線 A：Pi 5 上 B=1 攻擊生成的加速](#3-研究線-api-5-上-b1-攻擊生成的加速)
+3. [研究線 A：Pi 5 上 B=1 攻擊生成延遲之探索性量測](#3-研究線-api-5-上-b1-攻擊生成延遲之探索性量測)
 4. [研究線 B：Adaptive-K 實作一致性與防禦效果（CPU）](#4-研究線-badaptive-k-實作一致性與防禦效果cpu)
 5. [研究線 C：Hailo-8 配對評估](#5-研究線-chailo-8-配對評估)
 6. [研究線 D：正式延遲量測方法學與結果](#6-研究線-d正式延遲量測方法學與結果)
@@ -27,7 +27,7 @@
 
 | 研究線 | 本週可支持的結論（皆附條件） | 主要 evidence |
 |---|---|---|
-| A. 攻擊生成加速 | 在 88 樣本子集、B=1、熱控制條件下，僅在 PGD／BIM 的 `atk(x, y)` 呼叫期間關閉 oneDNN（mkldnn），中位延遲由 42.53 → 36.33 ms（PGD）與 43.84 → 37.63 ms（BIM），配對差中位數約 −6.2 ms（8/8 對皆較快，sign test p = 0.0078），攻擊輸出未出現語意差異。此選項已以 opt-in 方式整合至 `AttackAdapter`（`b1_pgd_bim_mkldnn_off`，預設 `False`），整合驗證 PASS；正式 CPU full matrix 尚未使用此選項重跑。Batching 可提高 throughput，但單一樣本的決策延遲並未降低。 | `accel_phase1d3_mkldnn_b1_20260927_135420`、`accel_phase1_final_integration_20260927_153520`、`accel_phase1c_v2_formal_20260926_164547`、`accel_phase1d0_thermal_20260927_092156` |
+| A. 攻擊生成延遲（探索性） | 本研究線為探索性 latency 量測，不列為攻擊加速結論。PyTorch backend toggle（僅在 PGD／BIM 的 `atk(x, y)` 呼叫期間關閉 oneDNN／mkldnn）在 88 樣本子集、B=1、熱控制條件下量測到中位延遲 42.53 → 36.33 ms（PGD）與 43.84 → 37.63 ms（BIM）；此為單一平台之觀察，不足以建立 ARM 平台之一般性 acceleration claim（§3）。`AttackAdapter` 之 `b1_pgd_bim_mkldnn_off` 為預設關閉之實驗選項，正式 CPU full matrix 未使用。Batching 可提高 throughput，但單一樣本的決策延遲並未降低。 | `accel_phase1d3_mkldnn_b1_20260927_135420`、`accel_phase1_final_integration_20260927_153520`、`accel_phase1c_v2_formal_20260926_164547`、`accel_phase1d0_thermal_20260927_092156` |
 | B. Adaptive-K（CPU） | Parity 驗證結果為：production 實作與 reference 在真實資料（2200 clean、264 attacked）上的分支、K 與 Top-K 決策完全一致（第二次 run，gate 經修訂，見 §4.1）。Effectiveness 實驗（FGSM／PGD／CW／EAD 9 個 profile 合併）結果為：Adaptive-K 的 clean degradation 5.24%，低於固定 K=40 的 12.71%；retention 57.80%，對無防禦之淨增益 +15.49 pp，與 K=40（+15.61 pp）相近。以上為演算法與實驗驗證；repository 之 main pipeline 尚未整合 Adaptive-K（§10）。 | `adaptive_k_parity_20260927_162249`、`adaptive_k_effectiveness_20260927_164906` |
 | C. Hailo-8 配對 | 以 CPU 上儲存的同一批對抗 IQ 送入 Hailo-8（surrogate transfer）時，Adaptive-K 的 clean degradation 4.91%，為各防禦中最低；但 recovery 18.19%、retention 淨增益 +3.79 pp（FGSM／PGD／CW／EAD 9 個 profile 合併），低於固定 K=40（26.09%、+4.81 pp）。CPU 與 Hailo 上的防禦排序並不相同。 | `adaptive_k_hailo_paired_20260928` |
 | D. 正式延遲 | 採用 PRIMARY_FORMAL run `formal_latency_20260928d`（10/10 cells accepted，全部 THERMAL_CLEAN）。直接量測結果（無防禦）：Hailo adapter round trip 中位 0.656 ms，CPU AWN adapter 2.42 ms；配對差 −1.76 ms（440/440 對）。Clean pipeline（evaluation path，量測值）中位：CPU 5.60 ms、Hailo 3.79 ms；加上 Adaptive-K 後為 6.06 ms、4.38 ms。Deployment estimate 為推導值，另列。 | `formal_latency_20260928d` |
@@ -42,20 +42,22 @@
 
 | 0921 報告之限制或觀察 | 本週對應研究線 |
 |---|---|
-| 攻擊生成為離線 host CPU 成本，中位 63–67 ms，依演算法差異極大（§8） | A：以 PGD／BIM 為對象，研究 Pi 5 上 B=1 攻擊生成時間可否在不改變攻擊語意下降低 |
+| 攻擊生成為離線 host CPU 成本，中位 63–67 ms，依演算法差異極大（§8） | A：以 PGD／BIM 為對象，探索性量測 Pi 5 上 B=1 攻擊生成延遲之組成，以及 thread、batching 與 PyTorch backend 設定對延遲之影響 |
 | 「Top-K 為固定 K：未評估自適應 K」（§10 第 7 點） | B、C：Adaptive-K 之實作一致性、CPU 效果與 Hailo 配對評估 |
 | 延遲為兩次分開執行之 runner 紀錄，未記錄硬體狀態，host 端階段含 run-to-run 變動（§10 第 8 點） | D：具熱控制、配對設計與量測／推導分類的正式延遲 benchmark |
 
 ---
 
-## 3. 研究線 A：Pi 5 上 B=1 攻擊生成的加速
+## 3. 研究線 A：Pi 5 上 B=1 攻擊生成延遲之探索性量測
+
+**定位**：本節為 Raspberry Pi 5（ARM64／AArch64）上 B=1 攻擊生成延遲之探索性量測。其中 PyTorch backend toggle（僅於攻擊呼叫期間關閉 oneDNN／mkldnn）之結果，為單一平台、單一 torch 版本（2.14.0+cpu）、B=1、88 樣本子集下之 latency observation，不構成攻擊加速方法，亦不足以推論關閉 mkldnn 對 ARM 平台具一般性效果或可跨平台泛化。攻擊計算量之正式分析以降低迭代次數與搜尋預算（reduced-iteration）為主線，見 `reports/reduced_iteration_crc_fec_defense_study_20261022/`。
 
 ### 3.1 研究問題與範圍
 
 - **問題**：在 Raspberry Pi 5 CPU 上，B=1 的 PGD／BIM（ε = 0.03）單樣本攻擊生成約需 47–48 ms（中位數，Phase 1a）。實驗腳本以 40 ms 為判準（`accel_phase1b` validation notes、`accel_phase1d0b` 之 `gap_to_40ms`），探討在不改變攻擊數學定義與輸出語意的條件下，這段延遲能否降低。
 - **對象**：FGSM ε=0.03、PGD ε=0.03、BIM ε=0.03（torchattacks 3.5.1）。
 - **樣本**：88 個樣本（11 種調變 × SNR ∈ {−20, −6, 6, 18} dB × sample index {0, 1}），皆取自正式 CPU run `results/cpu_full_matrix_20260921_seedaligned`，`clean_input_sha256` 逐筆比對（`accel_phase1a_formal_20260926_152737/manifest.json`）。
-- **正確性原則**：每一個加速變體都必須先通過輸出一致性檢查，才會報告其延遲。
+- **正確性原則**：每一個量測變體都必須先通過輸出一致性檢查，才會報告其延遲。
 
 ### 3.2 研究脈絡：各實驗所檢驗的假設
 
@@ -66,12 +68,12 @@
 | 1c batching preflight | Batching 能否在 bitwise 一致的前提下提高 throughput | BIM B=2 時 PAM4 / 6 dB / idx 1 與 B=1 anchor 不一致（max abs diff 1.07×10⁻³），依嚴格規則中止 | 需要先判斷這項差異是否改變攻擊語意 |
 | BIM 分歧診斷 | 分歧來自 batch 夥伴互動、loss reduction，還是 batch shape 相關的數值差異 | 見 §3.4 | 結果與「batched forward 的浮點差異」假設一致 |
 | BIM 語意稽核 | 分歧是否改變 attacked prediction／attack_success | 704 筆中 SEMANTIC_DIFFERENT = 0 | 採用 v2 規則（bitwise 與 semantic 分級） |
-| 1c v2 formal | 在 v2 規則下量測 batching 的 throughput 與延遲 | 72 cells PASS；PGD／BIM 之 throughput 加速比最高 5.16×（BIM B=32 intra4），但 PGD／BIM 的批次完成時間皆高於 40 ms | Batching 只改善 throughput，無法降低單樣本決策延遲 |
+| 1c v2 formal | 在 v2 規則下量測 batching 的 throughput 與延遲 | 72 cells PASS；PGD／BIM 之 throughput 比最高 5.16×（BIM B=32 intra4），但 PGD／BIM 的批次完成時間皆高於 40 ms | Batching 只改善 throughput，無法降低單樣本決策延遲 |
 | 1d0／1d0b 熱控制與配對 | 控制熱狀態後，thread 效果的方向為何 | intra4 比 intra1 快約 4%（每種攻擊 4/4 對） | 熱控制條件下 B=1 仍高於 40 ms |
 | 1d1 B=1 profiling | B=1 時間分布在哪些階段 | forward 約佔 57%、autograd.grad 約佔 35% | 下一步檢查 forward／backward 的 backend |
-| 1d2 backend profiling | B=1 與 B=32 的 oneDNN 效果是否相同 | B=1 forward 在 mkldnn 關閉時較快（off/on ≈ 0.76）；B=32 則相反（off/on ≈ 4.1–4.2） | 提出「僅於 B=1 攻擊呼叫期間關閉 mkldnn」的假設 |
-| 1d3 MKLDNN B=1 | 驗證上述假設的延遲效益與正確性 | PGD／BIM 各降低約 6.2 ms，8/8 對，無語意差異 | 以 opt-in 方式整合 |
-| 整合驗證 | 整合後的預設行為不變、範圍限制正確、延遲方向可重現 | PASS | 本輪 Phase 1 結束 |
+| 1d2 backend profiling | B=1 與 B=32 的 oneDNN 設定對 forward 延遲之影響 | B=1 forward 在 mkldnn 關閉時較快（off/on ≈ 0.76）；B=32 則相反（off/on ≈ 4.1–4.2） | 安排 B=1 攻擊呼叫期間 backend toggle 之配對量測 |
+| 1d3 backend toggle B=1 | 配對量測 mkldnn ON／OFF 之延遲差異與輸出一致性 | PGD／BIM 之配對差中位約 −6.2 ms，8/8 對，無語意差異 | 保留為預設關閉之實驗選項；不作為攻擊加速方法 |
+| Opt-in 選項驗證 | 選項關閉時行為不變、範圍限制正確 | PASS | 本輪 Phase 1 結束 |
 
 ### 3.3 Phase 1a／1b：thread 與額外開銷
 
@@ -123,7 +125,7 @@
 
 **1c v2 formal 結果**（72 cells，0 fail；`overall = PASS (workers flagged for thermal/throttling review)`；batched 輸出中 BIT_IDENTICAL 18,945、BITWISE_DIFFERENT_SEMANTIC_SAME 63、SEMANTIC_DIFFERENT 0）：
 
-| 攻擊 | intra | B | throughput 加速比（batch / sequential） | 批次完成 ≤ 40 ms（flag A） | B=1 呼叫 ≤ 40 ms（flag C） |
+| 攻擊 | intra | B | throughput 比（batch / sequential） | 批次完成 ≤ 40 ms（flag A） | B=1 呼叫 ≤ 40 ms（flag C） |
 |---|---:|---:|---:|---|---|
 | PGD | 1 | 32 | 3.32× | False | False |
 | PGD | 4 | 32 | 5.03× | False | False |
@@ -186,9 +188,9 @@
 - ON 與 OFF 的 logits 並非 bitwise 相同（B=1 max abs diff 1.34×10⁻⁵），argmax 相同。
 - 依 validation 的聲明範圍，ACL 相關的實作名稱只適用於經 oneDNN 執行的 op，不涵蓋 ATen slow-conv／BLAS 路徑。現有證據不足以將延遲差異歸因於 NEON 或特定 kernel。
 
-**解讀**：B=1 時關閉 mkldnn 使 forward 較快，B=32 時則明顯較慢。這支持「只在 B=1 攻擊呼叫期間關閉 mkldnn」的假設，並由 Phase 1d3 驗證。
+**解讀**：在此平台與 torch 版本下，B=1 時關閉 mkldnn 之 forward 較快，B=32 時則明顯較慢。現有證據不足以解釋差異來源（見上段），此觀察僅適用於本次量測條件，不推論至其他平台、torch 版本或 batch 設定。
 
-### 3.7 MKLDNN B=1 驗證與整合
+### 3.7 Backend toggle（mkldnn ON／OFF）B=1 探索性量測
 
 **Phase 1d3**（`accel_phase1d3_mkldnn_b1_20260927_135420/validation.json`）：32/32 planned cells ACCEPTED，0 thermal review，0 start rejection。mkldnn 設定只作用於 `atk(x, y)`，執行後恢復原狀態。
 
@@ -202,9 +204,9 @@
 
 ![Figure 1](figures/fig1_attack_acceleration.png)
 
-**圖 1　B=1 攻擊生成延遲：MKLDNN ON 與 OFF**　Raspberry Pi 5、PGD／BIM ε = 0.03、88 樣本子集、熱控制（全部 cell 為 THERMAL_CLEAN）。細線與小點為每一對相鄰 ON／OFF cell 的中位延遲（每種攻擊 8 對），菱形為所有 accepted cell 的合併中位；個別 cell 之水平位移僅供視覺辨識，不改變任何量測值。MKLDNN OFF 只作用於 attack call。此圖為 benchmark 路徑結果，不代表正式 CPU full matrix 已重跑。來源：`accel_phase1d3_mkldnn_b1_20260927_135420/paired_comparisons.csv`、`validation.json`；繪圖數值見 `tables/figure_sources/fig1_attack_acceleration.csv`。
+**圖 1　B=1 攻擊生成延遲：MKLDNN ON 與 OFF（exploratory backend-toggle measurement）**　探索性 backend-toggle latency 量測，不作為攻擊加速結論，亦不推論至其他平台。Raspberry Pi 5、PGD／BIM ε = 0.03、88 樣本子集、熱控制（全部 cell 為 THERMAL_CLEAN）。細線與小點為每一對相鄰 ON／OFF cell 的中位延遲（每種攻擊 8 對），菱形為所有 accepted cell 的合併中位；個別 cell 之水平位移僅供視覺辨識，不改變任何量測值。MKLDNN OFF 只作用於 attack call。此圖為 benchmark 路徑結果，不代表正式 CPU full matrix 已重跑。來源：`accel_phase1d3_mkldnn_b1_20260927_135420/paired_comparisons.csv`、`validation.json`；繪圖數值見 `tables/figure_sources/fig1_attack_acceleration.csv`。
 
-**整合驗證**（`accel_phase1_final_integration_20260927_153520`，`overall = PASS`）：
+**Opt-in 選項驗證**（`accel_phase1_final_integration_20260927_153520`，`overall = PASS`）：
 
 - 實作：`AttackAdapter(b1_pgd_bim_mkldnn_off=True)` 為 opt-in 選項，預設 `False`（`src/adapters/attack_adapter.py`，`mkldnn_disabled_scope`）。本機 working tree 中此檔為 modified、尚未 commit。
 - 選項 OFF 與修改前路徑：FGSM／PGD／BIM 各 88/88 相同。
@@ -213,12 +215,12 @@
 - Latency sanity（完整 `apply()` 牆鐘時間，含其內部 clean forward 與狀態輸出；n = 88 對，THERMAL_CLEAN）：PGD 中位 46.76 → 39.52 ms（配對差 −7.25 ms），BIM 48.04 → 40.80 ms（−7.27 ms），88/88 對皆為選項 ON 較快。依 validation 之註記，此處絕對值與 Phase 1d3 的 benchmark 路徑不可直接比較。
 - 此前另有一次 state diagnostic（`accel_phase1_final_integration_statediag_20260927_153354`，僅 FGSM 3 筆，PASS）；其 `fresh_adapters.modules_in_training_mode` 列出兩個 wrapper root，目前證據不足以判定此旗標對結果的影響。
 
-### 3.8 可支持的結論與範圍
+### 3.8 觀察與範圍
 
-1. 在 Pi 5、88 樣本、B=1、熱控制條件下，只在 PGD／BIM 攻擊呼叫期間關閉 mkldnn，可使 benchmark 路徑的中位延遲低於 40 ms，且未觀察到攻擊語意改變。
+1. 在 Pi 5、88 樣本、B=1、熱控制條件下，只在 PGD／BIM 攻擊呼叫期間關閉 mkldnn 時，benchmark 路徑的中位延遲較低（配對差約 −6.2 ms），且未觀察到攻擊語意改變。此為探索性 backend-toggle latency 觀察，不作為攻擊加速方法，不足以推論關閉 mkldnn 對 ARM 平台具一般性效果，亦不可跨平台泛化。
 2. Batching 提升 throughput（熱控制下 PGD B=32 intra4 為 112.4 samples/s），但不降低單樣本決策延遲。
 3. BIM 的 batch 分歧與 batched forward 的數值差異假設一致；目前證據不足以判定其根本原因。
-4. 以上結論不涵蓋其他 15 種攻擊、其他 ε 或完整 2200 樣本。正式 full matrix 尚未以此選項重跑，0921 報告的攻擊生成延遲數值不因本週結果而改變。
+4. 以上觀察不涵蓋其他 15 種攻擊、其他 ε 或完整 2200 樣本。正式 full matrix 尚未以此選項重跑，0921 報告的攻擊生成延遲數值不因本週結果而改變。
 
 ---
 
@@ -442,7 +444,7 @@ Evaluation path 量測值與推導估計之間的差（evaluation 額外開銷�
 
 ## 9. 限制與有效性威脅
 
-1. **攻擊加速的範圍**：只研究 FGSM、PGD、BIM（ε = 0.03）與 88 樣本子集；其他 15 種攻擊、其他 ε 與完整 2200 樣本皆未驗證。
+1. **攻擊生成延遲量測的範圍**：研究線 A 為探索性量測，只涵蓋 FGSM、PGD、BIM（ε = 0.03）與 88 樣本子集；backend toggle 之結果僅適用於 Raspberry Pi 5、torch 2.14.0+cpu、B=1，不構成攻擊加速方法，亦不推論至其他平台。
 2. **語意相同的定義**：只比較 attacked prediction 與 attack_success，不涵蓋 logit margin 或擾動範數分布的變化。
 3. **統計檢定力**：1d0b 每種攻擊只有 4 對（sign test 最小 p = 0.125）；1d3 為 8 對。
 4. **熱與平台狀態**：1a、1c v2 formal 執行時有 throttle 歷史位元或高溫，已依此降低其絕對數值的權重；正式延遲 run 無法讀取 Hailo 端溫度。
@@ -460,7 +462,7 @@ Evaluation path 量測值與推導估計之間的差（evaluation 額外開銷�
 
 | 研究項目 | 直接來源 | 本次 evidence | 目前狀態 |
 |---|---|---|---|
-| Pi 5 上 B=1 攻擊生成加速（PGD／BIM） | 本週研究主線；背景為 0921 報告 §8 第 4 點（攻擊生成為離線 host CPU 成本） | Phase 1 各 run（§3）；`accel_phase1_final_integration_20260927_153520` 為 `overall = PASS` | 方法研究與整合驗證完成；`b1_pgd_bim_mkldnn_off` 為 opt-in（預設 `False`）；正式 CPU full matrix 尚未使用此選項重跑 |
+| Pi 5 上 B=1 攻擊生成延遲之探索性量測（PGD／BIM） | 本週研究主線；背景為 0921 報告 §8 第 4 點（攻擊生成為離線 host CPU 成本） | Phase 1 各 run（§3）；`accel_phase1_final_integration_20260927_153520` 為 `overall = PASS` | 探索性量測完成；backend toggle 不作為攻擊加速方法；`b1_pgd_bim_mkldnn_off` 為預設關閉之實驗選項，正式 CPU full matrix 未使用；攻擊計算量之正式分析改以 reduced-iteration 為主線 |
 | Adaptive-K 之 parity、CPU effectiveness、Hailo 配對評估 | 0921 報告 §10 第 7 點（「未評估自適應 K」） | `adaptive_k_parity_20260927_162249`、`adaptive_k_effectiveness_20260927_164906`、`adaptive_k_hailo_paired_20260928`，皆 `overall = PASS` | 本次完成（digital A0、surrogate transfer 條件） |
 | 正式、具熱控制之延遲量測 | 0921 報告 §10 第 8 點（延遲量測未記錄硬體狀態、含 run-to-run 變動） | `formal_latency_20260928d`：PRIMARY_FORMAL，10/10 accepted，全部 gate 為 true，`overall = PASS` | 本次完成（5 個 block、B=1、不含攻擊生成） |
 | Adaptive-K 整合至 main pipeline | `docs/PROJECT_STATUS.md` Part 2 §4「Not implemented」：`adaptive_k_v2_defense` 未接入 `TopKAdapter` | 本機 `src/adapters/topk_adapter.py` 仍註明 `adaptive_k_v2_defense`「not wired yet」；`src/utils/pipeline.py` 只呼叫固定 K 的 `TopKAdapter`（未指定 `--use-real-topk` 時使用 `dummy_topk_defense`）；`experiments/run_hailo_full_matrix.py` 與 `configs/hailo_full_matrix.json` 無 Adaptive-K 設定。各 benchmark 直接呼叫 production 函式 `adaptive_k_v2_snr_defense`，不構成 main pipeline 整合之證據 | 演算法與實驗驗證完成；最終 production／main-pipeline integration 尚待完成 |
@@ -482,7 +484,7 @@ Evaluation path 量測值與推導估計之間的差（evaluation 額外開銷�
 
 ### 本週已完成
 
-1. **Attack acceleration Phase 1 方法研究與整合驗證**：thread baseline、額外開銷移除、batching 與 BIM 語意稽核、熱控制配對、B=1 profiling、backend profiling、MKLDNN B=1 驗證，以及 final integration validation（`overall = PASS`）。完成範圍限於 PGD／BIM、B=1、88 樣本子集；不代表正式 full matrix 已重新執行。
+1. **Pi 5 B=1 攻擊生成延遲之探索性量測（Phase 1）**：thread baseline、額外開銷移除、batching 與 BIM 語意稽核、熱控制配對、B=1 profiling、backend profiling、backend toggle（mkldnn ON／OFF）B=1 量測，以及 opt-in 選項驗證（`overall = PASS`）。範圍限於 PGD／BIM、B=1、88 樣本子集；為探索性 latency 觀察，不構成攻擊加速結論。
 2. **Adaptive-K parity validation**：`adaptive_k_parity_20260927_162249` 為 PASS（第一次 run `160808` 為 FAIL，gate 6、7 之定義於兩次 run 之間修訂，§4.1）。
 3. **Adaptive-K CPU effectiveness**：`adaptive_k_effectiveness_20260927_164906`，執行 24 profile、6 種防禦，PASS；合併結果限於 FGSM／PGD／CW／EAD 9 個 profile。
 4. **Adaptive-K／Top-K Hailo-8 paired evaluation**：`adaptive_k_hailo_paired_20260928`，執行 24 profile，PASS；合併結果限於 FGSM／PGD／CW／EAD 9 個 profile。
@@ -490,12 +492,12 @@ Evaluation path 量測值與推導估計之間的差（evaluation 額外開銷�
 
 ### 部分完成／待收尾
 
-1. **Attack acceleration 選項之正式採用**：`b1_pgd_bim_mkldnn_off` 已整合為 opt-in（預設 `False`），正式 CPU full matrix 尚未使用此選項重跑。是否納入正式 pipeline 需另行核准（依 1d3 validation 的適用範圍聲明），核准後才重跑正式 full matrix。
-2. **Attack acceleration 範圍**：
+1. **Backend toggle 選項之定位**：`b1_pgd_bim_mkldnn_off` 為預設關閉之實驗選項，屬探索性量測，不列為正式採用之攻擊加速方法；正式 CPU full matrix 未使用此選項。
+2. **攻擊生成延遲量測範圍**：
    - 1b 的 `reuse_clean_pred` 尚未納入整合（整合後的 `apply()` 仍含內部 clean forward）。
    - 其餘 15 種攻擊、其他 ε 與完整 2200 樣本尚未在熱控制條件下驗證。
 3. **Adaptive-K main-pipeline integration**（原有待辦，來源：`docs/PROJECT_STATUS.md` Part 2 §4）：演算法與實驗驗證已完成；`src/adapters/topk_adapter.py` 與 `src/utils/pipeline.py` 尚未接入 `adaptive_k_v2_defense`，最終 production／main-pipeline integration 尚待完成。
-4. **Adaptive-K 結果解讀**：CPU 與 Hailo 上防禦排序不同（CPU 上 Adaptive-K 淨增益最高；Hailo 上低於 K=40），需依 profile、調變與分支拆解差異來源。另需記錄 parity gate 的修訂依據，並補足 odd-K 合成案例。
+4. **Adaptive-K 結果解讀**：Adaptive-K 之淨增益在 CPU 上與 K=40 相近（+15.49 vs +15.61 pp），在 Hailo 上低於 K=40（+3.79 vs +4.81 pp），且 Hailo 上之 recovery 為各防禦最低，需依 profile、調變與分支拆解差異來源。另需記錄 parity gate 的修訂依據，並補足 odd-K 合成案例。
 5. **Formal latency 範圍**：目前只涵蓋 5 個 block 且不含攻擊生成；Hailo 端溫度無法讀取，需補充讀取方式或記錄方法。
 6. **Provenance 收尾**：Pi 端的程式修改（`src/adapters/attack_adapter.py`、`experiments/*_pi5.py` 等）尚未 commit，evidence 中的 `git_head` 與本機 repository 版本無法對應。
 

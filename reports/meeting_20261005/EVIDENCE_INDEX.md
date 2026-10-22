@@ -4,7 +4,9 @@
 
 類型說明：measured＝直接量測之統計彙總；validation＝正確性或 gate 判定；statistics＝配對或推導統計；provenance＝執行紀錄（命令、設定、雜湊）。
 
-## 1. Attack execution acceleration（報告第 3 節）
+## 1. PyTorch backend toggle 探索性 latency 量測（報告附錄 A.1）
+
+本節所列為探索性 backend-toggle latency 量測之歷史紀錄，不作為攻擊加速結論；artifact 名稱沿用原始 run 目錄名稱。
 
 | Claim／metric | Source artifact | Evidence type | Persistent artifact | 備註 |
 |---|---|---|---|---|
@@ -15,12 +17,12 @@
 | 彙整表 | `data/attack_acceleration_summary.csv` | measured（衍生彙整） | 有 | 由上列 artifact 產生 |
 | 圖 1 | `figures/fig1_attack_acceleration.png`；資料 `figure_sources/fig1_attack_acceleration.csv` | measured（衍生） | 有 | 降低比例由 ON／OFF 中位延遲計算，計算欄位保存於 figure source |
 
-## 2. Extended attack integration（報告第 4 節）
+## 2. Backend-toggle opt-in 選項之輸出一致性驗證（報告附錄 A.2）
 
 | Claim／metric | Source artifact | Evidence type | Persistent artifact | 備註 |
 |---|---|---|---|---|
 | Extended 13 attacks：overall PASS、失敗 0、88 樣本、各 profile option ON 分類計數；FGSM／PGD／BIM／DeepFool control 各 88 bit-identical | `review_evidence/02_attack_integration/accel_b1_extended_integration_20261004_223455/validation.json` | validation | 有 | AutoAttack 以 `attack_params["seed"]` 設為每列 formal seed |
-| PGD／BIM `b1_pgd_bim_mkldnn_off` 整合驗證 PASS | `review_evidence/02_attack_integration/accel_phase1_final_integration_20260927_153520/validation.json` | validation | 有 | `scope_checks.json` 為支持檔 |
+| PGD／BIM `b1_pgd_bim_mkldnn_off` 選項驗證 PASS | `review_evidence/02_attack_integration/accel_phase1_final_integration_20260927_153520/validation.json` | validation | 有 | `scope_checks.json` 為支持檔 |
 | 彙整表 | `data/attack_integration_validation_summary.csv` | validation（衍生彙整） | 有 | |
 
 ## 3. CPU defense comparison（報告第 5 節）
@@ -62,5 +64,5 @@
 |---|---|---|---|---|
 | Adaptive-K pipeline：55 PASS／0 FAIL | 無（`experiments/validate_adaptive_k_pipeline_wiring.py` 於 Raspberry Pi 互動執行） | validation | **無**（interactive validation，僅使用暫存目錄） | 數值紀錄於 repository `docs/research/RESEARCH_CLOSEOUT_STATUS_ZH_TW.md` 第十節；未產生 validation.json |
 | Hailo-8 pipeline：34 PASS／0 FAIL | 無（`experiments/validate_hailo_main_pipeline_wiring.py` 於 Raspberry Pi 互動執行） | validation | **無**（interactive validation，僅使用暫存目錄） | 同上 |
-| Attack B=1 mkldnn 選項整合驗證 | 見第 2 項之兩個 `validation.json` | validation | 有 | |
+| Attack B=1 mkldnn 選項（探索性 backend toggle）之輸出一致性驗證 | 見第 2 項之兩個 `validation.json` | validation | 有 | 預設關閉；正式 pipeline 未使用 |
 | 彙整表 | `data/pipeline_validation_summary.csv` | 衍生彙整 | 有 | interactive 項目之 `source_result_dir` 標示為 none |

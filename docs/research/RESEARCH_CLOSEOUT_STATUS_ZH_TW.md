@@ -6,10 +6,10 @@
 
 | 項目 | 結果目錄／來源 |
 |---|---|
-| 17-attack B=1 加速（full） | `results/attack_b1_accel_full_20261004_100032/`（`b1_acceleration_summary.csv`、`attack_conclusions.csv`） |
+| 17-attack B=1 backend toggle 探索性量測（full） | `results/attack_b1_accel_full_20261004_100032/`（`b1_acceleration_summary.csv`、`attack_conclusions.csv`） |
 | Targeted rerun（FAB eps0.005／eps0.01、AutoAttack、DeepFool） | `results/attack_b1_accel_full_20261004_174620/` |
-| PGD／BIM integration validation | `results/accel_phase1_final_integration_20260927_153520/validation.json` |
-| Extended 13 attacks integration validation | `results/accel_b1_extended_integration_20261004_223455/validation.json` |
+| PGD／BIM backend-toggle opt-in 選項驗證 | `results/accel_phase1_final_integration_20260927_153520/validation.json` |
+| Extended 13 attacks backend-toggle opt-in 選項驗證 | `results/accel_b1_extended_integration_20261004_223455/validation.json` |
 | Adaptive-K CPU effectiveness | `results/adaptive_k_effectiveness_20260927_164906/`（`validation.json` overall = PASS） |
 | Adaptive-K Hailo paired | `results/adaptive_k_hailo_paired_20260928/`（`validation.json` overall = PASS） |
 | Formal latency | `formal_latency_20260928d`（彙整表 `reports/meeting_20260928/tables/formal_latency_primary.csv`） |
@@ -18,11 +18,13 @@
 | Leakage-free AT-only transfer comparison | `results/defense_recovery_full_20261005_152728/` |
 | Adaptive-K／Hailo main-pipeline wiring validation | 互動執行（terminal 輸出），無持久化 artifact，見第十節 |
 
-## 二、17-attack B=1 加速最終處置
+## 二、17-attack B=1 backend toggle 探索性 latency 量測（歷史紀錄）
+
+**定位**：本節為 Raspberry Pi 5（ARM64／AArch64）上 PyTorch backend toggle（僅於攻擊呼叫期間關閉 oneDNN／mkldnn）之探索性 latency 量測，數值保留原始量測結果，不構成攻擊加速結論，亦不推論關閉 mkldnn 對 ARM 平台具一般性效果或可跨平台泛化。「處置」欄為當時將 profile 列入 opt-in 選項之分類（歷史紀錄），正式 pipeline 未使用此選項。攻擊計算量之正式分析以降低迭代次數與搜尋預算（reduced-iteration）為主線，見 `reports/reduced_iteration_crc_fec_defense_study_20261022/`。
 
 條件：Raspberry Pi 5、torch 2.14.0+cpu、intra 4／interop 1、正式 88-sample 子集、正式 profile 參數（`configs/hailo_full_matrix.json`）、THERMAL_CLEAN gate、每 profile 8 組 ON/OFF 配對（Phase 1D-3 方法）。延遲為 B=1 完整 attack block（prep + construct + atk + post）之 pooled median；speedup 為配對 median（baseline／candidate）。
 
-| Attack | 處置 | mkldnn ON → OFF median (ms) | 配對 speedup | OFF 較快配對 | 語意結果（timed 呼叫） |
+| Attack | 當時之處置（歷史紀錄） | mkldnn ON → OFF median (ms) | 配對 speedup | OFF 較快配對 | 語意結果（timed 呼叫） |
 |---|---|---|---|---|---|
 | PGD | 已整合（`b1_pgd_bim_mkldnn_off`） | 42.53 → 36.33（Phase 1D-3） | — | 8/8 | 88/88 bit-identical |
 | BIM | 已整合（`b1_pgd_bim_mkldnn_off`） | 43.84 → 37.63（Phase 1D-3） | — | 8/8 | 87 bit-identical + 1 semantic same |
@@ -44,7 +46,7 @@
 | FGSM | 不整合（NO_SAFE_SPEEDUP_FOUND） | eps0.03：5.32 → 4.73 | 1.127 | 8/8 | 全部 bit-identical；配對 median 減少約 0.5–0.6 ms，低於 1 ms 實用門檻 |
 | DeepFool | 不整合 | 不適用（pre-validation 即停止，full 與 targeted rerun 結果相同） | — | — | pre-validation：1 bit + 85 semantic same + 2 SEMANTIC_DIFFERENT |
 
-所有整合之 profile：0 SEMANTIC_DIFFERENT、0 INVALID、0 exception、0 mkldnn state mismatch、baseline 可重現、benchmark ON path 與 production `AttackAdapter.apply()` 在 88/88 樣本 bit-identical；sign test p = 0.0078（8/8）；targeted rerun 的 FAB eps0.005／eps0.01 與 AutoAttack 全部 16 planned cells 均為 THERMAL_CLEAN accepted。
+上表列入 opt-in 選項之 profile：0 SEMANTIC_DIFFERENT、0 INVALID、0 exception、0 mkldnn state mismatch、baseline 可重現、benchmark ON path 與 production `AttackAdapter.apply()` 在 88/88 樣本 bit-identical；sign test p = 0.0078（8/8）；targeted rerun 的 FAB eps0.005／eps0.01 與 AutoAttack 全部 16 planned cells 均為 THERMAL_CLEAN accepted。
 
 **`anchor_formal_sha_match = 0`（VMI-FGSM、VNI-FGSM、RFGSM、TPGD）**：這些攻擊使用 torch 全域 RNG，正式 runner 未於每次呼叫重設 RNG，正式 adversarial_sha256 取決於整個 run 的 RNG 推進，不可重現。`reports/meeting_20260921/meeting_report.md` §4.3 已記錄同一組 8 個 profile（PGD×3、VMI-FGSM、VNI-FGSM、RFGSM、TPGD、AutoAttack）在 CPU／NPU 兩次正式執行之間即非 bit-identical。該欄因此不適用於這些 profile；適用的檢查（同 seed 下 benchmark ON path == production apply()）為 88/88。
 
@@ -57,11 +59,11 @@
 | 25 | BPSK | −20 | 1 | 306358848 | 601 | 4／7 | 7 → 10 | False → False |
 | 37 | CPFSK | 6 | 1 | 1459427369 | 931 | 5／5 | 5 → 9 | False → True |
 
-兩筆 ON 輸出的 top-1／top-2 logit margin 分別為 5.96×10⁻⁸ 與 4.77×10⁻⁷（其餘 86 筆 ON margin 中位數為 8.59×10⁻³），即位於決策邊界附近的數值容差範圍內；在僅切換 mkldnn 設定的配對比較中，ON／OFF 輸出最大絕對差為 1.86×10⁻⁹，攻擊後預測不同。此差異可重現（DeepFool 無隨機性，ON 輸出可重現，full run 與 targeted rerun 結果相同），但攻擊後預測與 attack success 改變，不符合整合條件。
+兩筆 ON 輸出的 top-1／top-2 logit margin 分別為 5.96×10⁻⁸ 與 4.77×10⁻⁷（其餘 86 筆 ON margin 中位數為 8.59×10⁻³），即位於決策邊界附近的數值容差範圍內；在僅切換 mkldnn 設定的配對比較中，ON／OFF 輸出最大絕對差為 1.86×10⁻⁹，攻擊後預測不同。此差異可重現（DeepFool 無隨機性，ON 輸出可重現，full run 與 targeted rerun 結果相同），但攻擊後預測與 attack success 改變，不符合當時之分類條件。
 
-**Production 狀態**：`src/adapters/attack_adapter.py` 之 `_B1_MKLDNN_OFF_EXTENDED_ATTACKS` = mifgsm、difgsm、vmifgsm、vnifgsm、rfgsm、tpgd、cw、fab、square、apgd、apgdt、autoattack、ead；以 `AttackAdapter(b1_mkldnn_off_extended=True)` 明確 opt-in，預設關閉，僅作用於 B=1 的 `atk(x, y)` 呼叫。PGD／BIM 維持獨立的 `b1_pgd_bim_mkldnn_off`，不受 extended 旗標影響。加速數字僅為上述 Pi 5 執行條件下之量測。
+**Opt-in 選項狀態**：`src/adapters/attack_adapter.py` 之 `_B1_MKLDNN_OFF_EXTENDED_ATTACKS` = mifgsm、difgsm、vmifgsm、vnifgsm、rfgsm、tpgd、cw、fab、square、apgd、apgdt、autoattack、ead；以 `AttackAdapter(b1_mkldnn_off_extended=True)` 明確 opt-in，預設關閉，僅作用於 B=1 的 `atk(x, y)` 呼叫。PGD／BIM 維持獨立的 `b1_pgd_bim_mkldnn_off`，不受 extended 旗標影響。兩個選項皆預設關閉，正式 pipeline 未使用；延遲數字僅為上述 Pi 5 執行條件下之探索性量測，不作為攻擊加速方法。
 
-## 三、Integration validation
+## 三、Backend-toggle opt-in 選項驗證
 
 ### 3.1 PGD／BIM（`results/accel_phase1_final_integration_20260927_153520/`）
 
@@ -193,7 +195,7 @@ Runner：`experiments/benchmark_defense_recovery_comparison_pi5.py --full --adv-
 |---|---|---|---|
 | Adaptive-K（`--use-real-topk --topk-mode adaptive`） | `src/adapters/topk_adapter.py`、`src/utils/config.py`、`src/utils/pipeline.py` | `experiments/validate_adaptive_k_pipeline_wiring.py` | Pi 互動執行完成：55 PASS、0 FAIL；僅使用暫存目錄，無持久化 artifact |
 | Hailo-8 evaluation backend（`--inference-backend hailo --hef-path <hef>`；attack surrogate 固定為 CPU AWN） | `src/utils/config.py`、`src/utils/pipeline.py` | `experiments/validate_hailo_main_pipeline_wiring.py` | Pi 互動執行完成：34 PASS、0 FAIL；僅使用暫存目錄，無持久化 artifact |
-| Extended B=1 mkldnn-off | `src/adapters/attack_adapter.py` | `experiments/validate_attack_mkldnn_b1_extended_integration.py` | overall PASS（第 3.2 節） |
+| Extended B=1 mkldnn-off（探索性 backend toggle，預設關閉；main pipeline 未使用） | `src/adapters/attack_adapter.py` | `experiments/validate_attack_mkldnn_b1_extended_integration.py` | 輸出一致性驗證 overall PASS（第 3.2 節）；不作為攻擊加速方法 |
 
 ## 十一、結論邊界
 
@@ -202,7 +204,7 @@ Runner：`experiments/benchmark_defense_recovery_comparison_pi5.py --full --adv-
 3. Leakage-free AT 僅以 SNR ≥ 0 dB 訓練，評估涵蓋 −20 至 18 dB；AT 模型 clean accuracy（50.73%）低於標準 AWN（59.00%），clean degradation 18.57%。
 4. Exploratory 與 leakage-free AT 的訓練設定不同（攻擊組合、eps、資料切分），兩者之差不能作為資料洩漏效應的估計。
 5. Hailo-8 結果為 surrogate transfer；未評估直接針對量化模型的攻擊。
-6. 加速結果僅適用於 Raspberry Pi 5、intra 4／interop 1、B=1；AutoAttack 延遲分佈具重尾（p95 遠高於 median），speedup 以配對 median 表示。
+6. Backend toggle（mkldnn ON／OFF）之延遲差異為探索性 latency observation，僅適用於 Raspberry Pi 5、torch 2.14.0+cpu、intra 4／interop 1、B=1，不足以建立 ARM 平台之一般性 acceleration claim，亦不可跨平台泛化；AutoAttack 延遲分佈具重尾（p95 遠高於 median），配對比值以 median 表示。
 7. Adaptive-K 與 Hailo main-pipeline wiring 驗證為互動執行結果，數字來自執行輸出，未保存可重新檢查的結果檔。
 8. 全部結果屬 A0 數位域（攻擊直接作用於記憶體中的 AWN 輸入 IQ），不涉及空中傳輸或實體射頻通道，不能據以推論 OTA／RF 攻擊或防禦的可行性。
 9. Adaptive-K 與 AT 呈取捨關係：在同一分母下，leakage-free AT transfer 的 recovery（56.67%）與 net gain（35.90 pp）較高，但 clean degradation（18.57%）較高且需要重新訓練；Adaptive-K v2 的 recovery（27.08%）較低，clean degradation（5.24%）較低且不需訓練。兩者評估設定皆為 non-adaptive，不據此排定一般性的優劣。

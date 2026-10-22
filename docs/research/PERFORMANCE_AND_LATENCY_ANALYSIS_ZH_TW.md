@@ -396,27 +396,29 @@ CW 不放入本節的正式 Before/After 加速表（見 16.3 節），僅以獨
 
 ---
 
-## 十七、Raspberry Pi 5 單筆（B=1）PGD／BIM 攻擊加速：僅在攻擊呼叫期間停用 mkldnn
+## 十七、Raspberry Pi 5 單筆（B=1）PGD／BIM 攻擊生成延遲之探索性 backend toggle 量測（僅在攻擊呼叫期間停用 mkldnn）
 
-**適用範圍：** 本節結論只適用於 **Raspberry Pi 5（4× Cortex-A76）＋ 目前安裝的 PyTorch 2.14.0+cpu（oneDNN v3.12.0＋ACL、OpenBLAS 0.3.34）**、**PGD 與 BIM（eps=0.03）**、**batch size = 1**。不得推論到其他 ARM 裝置、其他 PyTorch 版本、其他攻擊或批次化情境。
+**定位：** 本節為探索性 PyTorch backend toggle latency 量測，不構成攻擊加速方法。Raspberry Pi 5 為 ARM64／AArch64 平台，此量測僅為單一平台、單一 PyTorch 版本、B=1 之 latency observation，不得推論關閉 mkldnn 對 ARM 平台具一般性加速效果，亦不得跨平台泛化。攻擊計算量之正式分析以降低迭代次數與搜尋預算（reduced-iteration）為主線，見 `reports/reduced_iteration_crc_fec_defense_study_20261022/`。
 
-**做法：** `AttackAdapter(b1_pgd_bim_mkldnn_off=True)`（`src/adapters/attack_adapter.py`，預設為 `False`，即舊行為完全不變）。啟用時，`apply()` 只在 `atk(x, y)` 這一行前後以 `mkldnn_disabled_scope()` 暫時停用 mkldnn，並在 `finally` 中還原「呼叫前的狀態」且驗證還原成功（例外發生時亦同）。僅在攻擊名稱為 `pgd`／`bim` 且輸入 N == 1 時生效；clean prediction、前處理（min-max 正規化）、後處理、diagnostics、其他攻擊與 N > 1 皆維持原本的 mkldnn 狀態。啟用時 meta 會多一個 `attack_b1_pgd_bim_mkldnn_off_applied` 欄位；未啟用時 meta 欄位與舊版完全相同。既有正式設定與歷史結果檔皆未修改。
+**適用範圍：** 本節量測只適用於 **Raspberry Pi 5（4× Cortex-A76）＋ 目前安裝的 PyTorch 2.14.0+cpu（oneDNN v3.12.0＋ACL、OpenBLAS 0.3.34）**、**PGD 與 BIM（eps=0.03）**、**batch size = 1**。不得推論到其他 ARM 裝置、其他 PyTorch 版本、其他攻擊或批次化情境。
 
-**依據（量測證據）：**
+**量測選項：** `AttackAdapter(b1_pgd_bim_mkldnn_off=True)`（`src/adapters/attack_adapter.py`，預設為 `False`，即舊行為完全不變）。啟用時，`apply()` 只在 `atk(x, y)` 這一行前後以 `mkldnn_disabled_scope()` 暫時停用 mkldnn，並在 `finally` 中還原「呼叫前的狀態」且驗證還原成功（例外發生時亦同）。僅在攻擊名稱為 `pgd`／`bim` 且輸入 N == 1 時生效；clean prediction、前處理（min-max 正規化）、後處理、diagnostics、其他攻擊與 N > 1 皆維持原本的 mkldnn 狀態。啟用時 meta 會多一個 `attack_b1_pgd_bim_mkldnn_off_applied` 欄位；未啟用時 meta 欄位與舊版完全相同。既有正式設定與歷史結果檔皆未修改。
+
+**量測紀錄：**
 
 - Phase 1D-2 後端證據（`results/accel_phase1d2_backend_20260927_124938/`）：B=1 時 oneDNN 只執行 AWN 前向的 4 個 GEMM（`matmul gemm:acl`，且每次呼叫都重新 reorder 權重），卷積走 ATen `_slow_conv2d` 路徑；B=1 前向微基準 mkldnn ON 2.568 ms、OFF 1.962 ms（20/20 次 OFF 較快）。B=32 時 OFF 反而慢 4.24 倍，因此**不可用於批次**。
-- Phase 1D-3 正式實驗（`results/accel_phase1d3_mkldnn_b1_20260927_135420/`，intra-op 4／inter-op 1，88 筆驗證子集，溫控 ABBA 配對，每種攻擊 8 對、全部 THERMAL_CLEAN、無降頻）：
+- Phase 1D-3 配對量測（`results/accel_phase1d3_mkldnn_b1_20260927_135420/`，intra-op 4／inter-op 1，88 筆驗證子集，溫控 ABBA 配對，每種攻擊 8 對、全部 THERMAL_CLEAN、無降頻）：
 
 | 攻擊 | mkldnn ON 中位數 | mkldnn OFF 中位數 | 配對差中位數 | OFF 較快的配對 | 符號檢定 p | OFF ≤ 40 ms |
 |---|---|---|---|---|---|---|
 | PGD | 42.53 ms | 36.33 ms | −6.20 ms（−14.6%） | 8/8 | 0.0078 | 是 |
 | BIM | 43.84 ms | 37.63 ms | −6.19 ms（−14.1%） | 8/8 | 0.0078 | 是 |
 
-**語意保持準則：** 以 mkldnn ON 輸出為錨點，每筆 OFF 輸出分類為 BIT_IDENTICAL／BITWISE_DIFFERENT_SEMANTIC_SAME／SEMANTIC_DIFFERENT／INVALID；「語意相同」要求攻擊後預測、attack_success 相同，輸出有限、形狀與 dtype 正確，且正規化域與 IQ 域 eps 界限皆成立。Phase 1D-3 結果：PGD 88/88（及 2112 次計時呼叫）位元一致；BIM 87/88 位元一致，唯一例外為先前已知的 PAM4／6 dB／index 1（最大差 1.07e-3，5 個元素，語意相同）；SEMANTIC_DIFFERENT 與 INVALID 皆為 0。任何 SEMANTIC_DIFFERENT 即視為失敗、不得採用。
+**語意保持準則：** 以 mkldnn ON 輸出為錨點，每筆 OFF 輸出分類為 BIT_IDENTICAL／BITWISE_DIFFERENT_SEMANTIC_SAME／SEMANTIC_DIFFERENT／INVALID；「語意相同」要求攻擊後預測、attack_success 相同，輸出有限、形狀與 dtype 正確，且正規化域與 IQ 域 eps 界限皆成立。Phase 1D-3 結果：PGD 88/88（及 2112 次計時呼叫）位元一致；BIM 87/88 位元一致，唯一例外為先前已知的 PAM4／6 dB／index 1（最大差 1.07e-3，5 個元素，語意相同）；SEMANTIC_DIFFERENT 與 INVALID 皆為 0。任何 SEMANTIC_DIFFERENT 即視為失敗。
 
-**整合後的回歸驗證：** `experiments/validate_attack_mkldnn_b1_integration.py`（輸出 `results/accel_phase1_final_integration_<timestamp>/`）檢查：(A) 選項關閉時與修改前路徑位元一致；(B) 選項開啟時 PGD／BIM B=1 的語意分類；(C) 以執行期探針驗證 FGSM、B>1、clean inference 不受影響，以及例外時狀態會還原；(E) 短時間溫控延遲方向檢查。該驗證已於 Raspberry Pi 5 完成（`results/accel_phase1_final_integration_20260927_153520/`），`overall = PASS`。選項關閉時，FGSM、PGD 與 BIM 各 88/88 與修改前路徑一致；選項開啟時，PGD 88/88 位元一致，BIM 87/88 位元一致，另 1 筆為語意一致（PAM4、6 dB、index 1），`SEMANTIC_DIFFERENT` 與 `INVALID` 皆為 0。完整 `apply()` 路徑之延遲方向檢查在 88 對 `THERMAL_CLEAN` 樣本中，中位數為 PGD 46.76 → 39.52 ms、BIM 48.04 → 40.80 ms。此路徑包含 `apply()` 內部 clean forward 與狀態輸出，因此其絕對延遲不可與 Phase 1D-3 基準路徑直接比較。
+**Opt-in 選項之回歸驗證：** `experiments/validate_attack_mkldnn_b1_integration.py`（輸出 `results/accel_phase1_final_integration_<timestamp>/`）檢查：(A) 選項關閉時與修改前路徑位元一致；(B) 選項開啟時 PGD／BIM B=1 的語意分類；(C) 以執行期探針驗證 FGSM、B>1、clean inference 不受影響，以及例外時狀態會還原；(E) 短時間溫控延遲方向檢查。該驗證已於 Raspberry Pi 5 完成（`results/accel_phase1_final_integration_20260927_153520/`），`overall = PASS`。選項關閉時，FGSM、PGD 與 BIM 各 88/88 與修改前路徑一致；選項開啟時，PGD 88/88 位元一致，BIM 87/88 位元一致，另 1 筆為語意一致（PAM4、6 dB、index 1），`SEMANTIC_DIFFERENT` 與 `INVALID` 皆為 0。完整 `apply()` 路徑之延遲方向檢查在 88 對 `THERMAL_CLEAN` 樣本中，中位數為 PGD 46.76 → 39.52 ms、BIM 48.04 → 40.80 ms。此路徑包含 `apply()` 內部 clean forward 與狀態輸出，因此其絕對延遲不可與 Phase 1D-3 基準路徑直接比較。
 
-**限制：** 延遲數字為 Phase 1D-3 基準路徑（重用 clean prediction）的測量值，不等於整條 pipeline 的端到端延遲；結果依賴目前 PyTorch 建置的後端路由（B=1 卷積不經 oneDNN），PyTorch／oneDNN／OpenBLAS 版本變更後須重新驗證。本選項尚未套用於正式 pipeline（`src/utils/pipeline.py` 與正式設定），是否採用需另行評估。
+**限制：** 延遲數字為 Phase 1D-3 基準路徑（重用 clean prediction）的測量值，不等於整條 pipeline 的端到端延遲；結果依賴目前 PyTorch 建置的後端路由（B=1 卷積不經 oneDNN），PyTorch／oneDNN／OpenBLAS 版本變更後須重新驗證。本選項為預設關閉之實驗選項，未套用於正式 pipeline（`src/utils/pipeline.py` 與正式設定），不作為攻擊加速方法。
 
 ---
 
